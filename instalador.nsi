@@ -4,6 +4,9 @@
 ; ============================================================================
 
 !include "MUI2.nsh"
+!include "FileFunc.nsh"
+!include "LogicLib.nsh"
+!include "WordFunc.nsh"
 
 ; ----------------------------------------------------------------------------
 ; Configurações Globais (Codificação e Resolução)
@@ -23,6 +26,18 @@ OutFile "dist\RealTimeScreenTranslator_Setup.exe"
 InstallDir "$PROGRAMFILES64\RealTimeScreenTranslator"
 RequestExecutionLevel admin
 
+; Versão deste instalador; o build pode trocar com makensis /DVERSAO=x.y.z
+!ifndef VERSAO
+  !define VERSAO "1.1.0"
+!endif
+!define NOME_EXE "RealTimeScreenTranslator.exe"
+!define CHAVE_DESINSTALAR "Software\Microsoft\Windows\CurrentVersion\Uninstall\RealTimeScreenTranslator"
+
+; Preenchidas no .onInit, conforme já exista ou não uma versão instalada
+Var Atualizando
+Var VersaoInstalada
+Var TextoBoasVindas
+
 ; ----------------------------------------------------------------------------
 ; Configurações da Interface Visual (Modern UI)
 ; ----------------------------------------------------------------------------
@@ -30,7 +45,8 @@ RequestExecutionLevel admin
 !define MUI_ICON "assets\icone.ico"
 !define MUI_UNICON "assets\icone.ico"
 !define MUI_WELCOMEPAGE_TITLE "Bem-vindo ao instalador do RealTime Screen Translator"
-!define MUI_WELCOMEPAGE_TEXT "Este assistente guiará você na instalação do RealTime Screen Translator no seu computador.\r\n\r\nClique em Avançar para continuar."
+; O texto muda quando já existe uma versão instalada (veja o .onInit)
+!define MUI_WELCOMEPAGE_TEXT "$TextoBoasVindas"
 
 ; Opção para rodar o programa automaticamente na tela final de conclusão
 !define MUI_FINISHPAGE_RUN "$INSTDIR\RealTimeScreenTranslator.exe"
@@ -40,6 +56,8 @@ RequestExecutionLevel admin
 ; Páginas do Instalador (Inseridas apenas uma vez)
 ; ----------------------------------------------------------------------------
 !insertmacro MUI_PAGE_WELCOME
+; Na atualização a pasta é a da versão instalada, então a escolha de pasta não aparece
+!define MUI_PAGE_CUSTOMFUNCTION_PRE PularPastaSeAtualizando
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
 !insertmacro MUI_PAGE_FINISH
@@ -58,9 +76,84 @@ RequestExecutionLevel admin
 !insertmacro MUI_LANGUAGE "PortugueseBR"
 
 ; ----------------------------------------------------------------------------
+; Detecção de Versão Instalada (Atualização)
+; ----------------------------------------------------------------------------
+; A atualização só sobrescreve os arquivos da pasta do programa. As configurações e
+; as chaves de API ficam em %APPDATA%\RealTimeScreenTranslator e não são tocadas.
+Function .onInit
+  StrCpy $Atualizando "0"
+  ReadRegStr $0 HKLM "${CHAVE_DESINSTALAR}" "UninstallString"
+  ${If} $0 == ""
+    StrCpy $TextoBoasVindas "Este assistente guiará você na instalação do RealTime Screen Translator ${VERSAO} no seu computador.$\r$\n$\r$\nClique em Avançar para continuar."
+    Return
+  ${EndIf}
+
+  StrCpy $Atualizando "1"
+
+  ; Instala por cima, na mesma pasta. A 1.0.0 não gravava InstallLocation, então a
+  ; pasta sai do caminho do desinstalador ("C:\...\uninstall.exe", com aspas).
+  ReadRegStr $1 HKLM "${CHAVE_DESINSTALAR}" "InstallLocation"
+  ${If} $1 == ""
+    StrCpy $2 $0 1
+    ${If} $2 == '"'
+      StrCpy $0 $0 "" 1
+      StrCpy $0 $0 -1
+    ${EndIf}
+    ${GetParent} $0 $1
+  ${EndIf}
+  ${If} $1 != ""
+    StrCpy $INSTDIR $1
+  ${EndIf}
+
+  ReadRegStr $VersaoInstalada HKLM "${CHAVE_DESINSTALAR}" "DisplayVersion"
+  StrCpy $3 "Suas configurações e chaves de API serão mantidas. Se o programa estiver aberto, ele será fechado.$\r$\n$\r$\nClique em Avançar para continuar."
+  ${If} $VersaoInstalada == ""
+    StrCpy $TextoBoasVindas "Uma versão anterior já está instalada e será atualizada para a ${VERSAO}.$\r$\n$\r$\n$3"
+    Return
+  ${EndIf}
+
+  ; 0 = versões iguais, 1 = a instalada é mais nova, 2 = a instalada é mais antiga
+  ${VersionCompare} "$VersaoInstalada" "${VERSAO}" $4
+  ${If} $4 == "0"
+    StrCpy $TextoBoasVindas "A versão ${VERSAO} já está instalada e será reinstalada.$\r$\n$\r$\n$3"
+  ${ElseIf} $4 == "1"
+    StrCpy $TextoBoasVindas "Uma versão mais nova ($VersaoInstalada) já está instalada e será substituída pela ${VERSAO}.$\r$\n$\r$\n$3"
+  ${Else}
+    StrCpy $TextoBoasVindas "A versão $VersaoInstalada será atualizada para a ${VERSAO}.$\r$\n$\r$\n$3"
+  ${EndIf}
+FunctionEnd
+
+Function PularPastaSeAtualizando
+  ${If} $Atualizando == "1"
+    Abort
+  ${EndIf}
+FunctionEnd
+
+; O .exe aberto fica travado e não pode ser sobrescrito nem apagado. O PyInstaller
+; abre dois processos com o mesmo nome, por isso o taskkill usa /T.
+!macro FUNCAO_FECHAR_APP_ABERTO PREFIXO
+Function ${PREFIXO}FecharAppAberto
+  nsExec::ExecToStack '"$SYSDIR\cmd.exe" /c tasklist /FI "IMAGENAME eq ${NOME_EXE}" /NH | "$SYSDIR\find.exe" /I "${NOME_EXE}"'
+  Pop $0 ; código de saída: 0 quando o processo foi encontrado
+  Pop $1 ; texto da saída, não usado
+  ${If} $0 == "0"
+    MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION "O RealTime Screen Translator está aberto e será fechado para continuar." /SD IDOK IDOK +2
+    Abort
+    nsExec::Exec '"$SYSDIR\taskkill.exe" /F /T /IM "${NOME_EXE}"'
+    Pop $0
+    Sleep 1500 ; dá tempo de o Windows liberar o arquivo
+  ${EndIf}
+FunctionEnd
+!macroend
+!insertmacro FUNCAO_FECHAR_APP_ABERTO ""
+!insertmacro FUNCAO_FECHAR_APP_ABERTO "un."
+
+; ----------------------------------------------------------------------------
 ; Seção Principal de Instalação
 ; ----------------------------------------------------------------------------
 Section "Instalar Arquivos" SecPrincipal
+
+Call FecharAppAberto
 
 ; Define a pasta de destino
 SetOutPath "$INSTDIR"
@@ -85,19 +178,22 @@ CreateShortcut "$DESKTOP\RealTime Screen Translator.lnk" "$INSTDIR\RealTimeScree
 ; --------------------------------------------------------------------------
 ; Registro do Windows (Para "Adicionar ou Remover Programas")
 ; --------------------------------------------------------------------------
-WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RealTimeScreenTranslator" "DisplayName" "RealTime Screen Translator"
-WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RealTimeScreenTranslator" "DisplayIcon" '"$INSTDIR\RealTimeScreenTranslator.exe"'
-WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RealTimeScreenTranslator" "UninstallString" '"$INSTDIR\uninstall.exe"'
-WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RealTimeScreenTranslator" "DisplayVersion" "1.0.0"
-WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RealTimeScreenTranslator" "Publisher" "Desenvolvimento Próprio"
-WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RealTimeScreenTranslator" "NoModify" 1
-WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RealTimeScreenTranslator" "NoRepair" 1
+WriteRegStr HKLM "${CHAVE_DESINSTALAR}" "DisplayName" "RealTime Screen Translator"
+WriteRegStr HKLM "${CHAVE_DESINSTALAR}" "DisplayIcon" '"$INSTDIR\RealTimeScreenTranslator.exe"'
+WriteRegStr HKLM "${CHAVE_DESINSTALAR}" "UninstallString" '"$INSTDIR\uninstall.exe"'
+WriteRegStr HKLM "${CHAVE_DESINSTALAR}" "InstallLocation" "$INSTDIR"
+WriteRegStr HKLM "${CHAVE_DESINSTALAR}" "DisplayVersion" "${VERSAO}"
+WriteRegStr HKLM "${CHAVE_DESINSTALAR}" "Publisher" "Desenvolvimento Próprio"
+WriteRegDWORD HKLM "${CHAVE_DESINSTALAR}" "NoModify" 1
+WriteRegDWORD HKLM "${CHAVE_DESINSTALAR}" "NoRepair" 1
 SectionEnd
 
 ; ----------------------------------------------------------------------------
 ; Seção de Desinstalação
 ; ----------------------------------------------------------------------------
 Section "Uninstall"
+
+Call un.FecharAppAberto
 
 ; Deleta o executável e o próprio desinstalador
 Delete "$INSTDIR\RealTimeScreenTranslator.exe"
@@ -115,6 +211,11 @@ Delete "$DESKTOP\RealTime Screen Translator.lnk"
 RMDir "$INSTDIR"
 
 ; Limpa as chaves criadas no Registro do Windows
-DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RealTimeScreenTranslator"
+DeleteRegKey HKLM "${CHAVE_DESINSTALAR}"
+
+; As configurações e as chaves de API só são apagadas se a pessoa pedir. A
+; atualização não passa por aqui, então nunca as apaga.
+MessageBox MB_YESNO|MB_ICONQUESTION "Apagar também as configurações e as chaves de API salvas?$\r$\n$\r$\nEscolha Não para mantê-las caso instale o programa de novo." /SD IDNO IDNO +2
+RMDir /r "$APPDATA\RealTimeScreenTranslator"
 
 SectionEnd
