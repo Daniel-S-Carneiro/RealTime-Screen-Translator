@@ -51,7 +51,8 @@ The tray icon shows or hides the overlay and closes the app.
 The settings screen has the sign-up link for each service, a field for the key and a **Testar** (Test) button.
 
 - **Fallback order:** the engine you chose → Google Translate → Offline.
-- **Your keys stay on your PC:** they are saved in `%APPDATA%\RealTimeScreenTranslator\config.json` and are only sent to the service they belong to.
+- **Your keys stay on your PC:** they are saved in `%APPDATA%\RealTimeScreenTranslator\config.json`, encrypted with Windows DPAPI (only your Windows account on that PC can read them), and are only sent to the service they belong to.
+- **Updates keep your settings:** installing a new version over an old one keeps your keys. Uninstalling asks whether to delete them.
 
 ## 🚀 Getting started
 
