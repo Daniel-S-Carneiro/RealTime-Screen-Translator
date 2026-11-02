@@ -29,3 +29,18 @@ processada.png
 # Executáveis / Instaladores
 # ==========================================
 *.exe
+
+# ==========================================
+# Modelos baixados e rascunhos do benchmark
+# ==========================================
+modelos/
+benchmark/dataset/*.rascunho.txt
+
+# ==========================================
+# Laboratórios antigos e relatórios (ficam só na máquina local)
+# ==========================================
+laboratorios/
+relatorios/
+
+# Rascunho do post do LinkedIn (só vai a público quando for publicado)
+docs/post-linkedin.md
