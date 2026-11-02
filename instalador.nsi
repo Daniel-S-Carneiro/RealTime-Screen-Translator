@@ -27,6 +27,8 @@ RequestExecutionLevel admin
 ; Configurações da Interface Visual (Modern UI)
 ; ----------------------------------------------------------------------------
 !define MUI_ABORTWARNING
+!define MUI_ICON "assets\icone.ico"
+!define MUI_UNICON "assets\icone.ico"
 !define MUI_WELCOMEPAGE_TITLE "Bem-vindo ao instalador do RealTime Screen Translator"
 !define MUI_WELCOMEPAGE_TEXT "Este assistente guiará você na instalação do RealTime Screen Translator no seu computador.\r\n\r\nClique em Avançar para continuar."
 
@@ -84,6 +86,7 @@ CreateShortcut "$DESKTOP\RealTime Screen Translator.lnk" "$INSTDIR\RealTimeScree
 ; Registro do Windows (Para "Adicionar ou Remover Programas")
 ; --------------------------------------------------------------------------
 WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RealTimeScreenTranslator" "DisplayName" "RealTime Screen Translator"
+WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RealTimeScreenTranslator" "DisplayIcon" '"$INSTDIR\RealTimeScreenTranslator.exe"'
 WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RealTimeScreenTranslator" "UninstallString" '"$INSTDIR\uninstall.exe"'
 WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RealTimeScreenTranslator" "DisplayVersion" "1.0.0"
 WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RealTimeScreenTranslator" "Publisher" "Desenvolvimento Próprio"

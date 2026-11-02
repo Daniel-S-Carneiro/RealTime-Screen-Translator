@@ -24,7 +24,8 @@ IF NOT EXIST "%PY_SCRIPT%" (
 
 echo [INFO] Executando PyInstaller...
 :: O uso direto do .exe evita ambiguidades e a necessidade do comando CALL
-pyinstaller.exe --clean --noconsole --onefile --name="%APP_NAME%" "%PY_SCRIPT%"
+:: --icon define o icone do .exe; --add-data leva o mesmo arquivo para a janela e a bandeja
+pyinstaller.exe --clean --noconsole --onefile --name="%APP_NAME%" --icon="assets\icone.ico" --add-data="assets\icone.ico;assets" "%PY_SCRIPT%"
 IF %ERRORLEVEL% NEQ 0 (
     echo [ERRO] Falha no PyInstaller!
     EXIT /b 1
