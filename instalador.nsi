@@ -158,8 +158,11 @@ Call FecharAppAberto
 ; Define a pasta de destino
 SetOutPath "$INSTDIR"
 
-; Copia o executável usando caminho relativo à pasta do projeto
-File "dist\RealTimeScreenTranslator.exe"
+; O app é uma pasta: o .exe e a _internal. Na atualização, a _internal antiga sai
+; inteira, para não sobrar arquivo de uma versão anterior. A pasta gpu fica: o app
+; confere sozinho se ela ainda serve para a versão nova.
+RMDir /r "$INSTDIR\_internal"
+File /r "dist\RealTimeScreenTranslator\*.*"
 
 ; Cria o desinstalador executável dentro da pasta do programa
 WriteUninstaller "$INSTDIR\uninstall.exe"
@@ -186,6 +189,19 @@ WriteRegStr HKLM "${CHAVE_DESINSTALAR}" "DisplayVersion" "${VERSAO}"
 WriteRegStr HKLM "${CHAVE_DESINSTALAR}" "Publisher" "Desenvolvimento Próprio"
 WriteRegDWORD HKLM "${CHAVE_DESINSTALAR}" "NoModify" 1
 WriteRegDWORD HKLM "${CHAVE_DESINSTALAR}" "NoRepair" 1
+
+; --------------------------------------------------------------------------
+; Aceleração por GPU (pacote baixado depois da instalação)
+; --------------------------------------------------------------------------
+; O PyTorch com CUDA passa de 2 GB, o limite do NSIS. Em PCs com placa NVIDIA, o
+; próprio app abre a janela que baixa esse pacote (cerca de 2,5 GB) do site do
+; PyTorch. Se ele já estiver instalado e na versão certa, a janela nem aparece.
+; O Sysnative enxerga a System32 de 64 bits a partir deste instalador de 32 bits.
+${IfNot} ${Silent}
+${AndIf} ${FileExists} "$WINDIR\Sysnative\nvidia-smi.exe"
+  DetailPrint "Placa NVIDIA encontrada: abrindo a janela da aceleração por GPU..."
+  ExecWait '"$INSTDIR\${NOME_EXE}" --instalar-gpu'
+${EndIf}
 SectionEnd
 
 ; ----------------------------------------------------------------------------
@@ -195,8 +211,12 @@ Section "Uninstall"
 
 Call un.FecharAppAberto
 
-; Deleta o executável e o próprio desinstalador
+; Deleta o programa (o .exe, a pasta _internal e o pacote GPU) e o desinstalador
 Delete "$INSTDIR\RealTimeScreenTranslator.exe"
+RMDir /r "$INSTDIR\_internal"
+RMDir /r "$INSTDIR\gpu"
+RMDir /r "$INSTDIR\gpu.novo"
+RMDir /r "$INSTDIR\gpu.download"
 Delete "$INSTDIR\uninstall.exe"
 
 ; Remove os atalhos do Menu Iniciar

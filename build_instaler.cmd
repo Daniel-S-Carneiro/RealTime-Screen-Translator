@@ -13,6 +13,10 @@ SET "PY_SCRIPT=main.py"
 SET "APP_NAME=RealTimeScreenTranslator"
 SET "MAKENSIS=C:\Program Files (x86)\NSIS\makensis.exe"
 SET "NSIS_SCRIPT=%~dp0instalador.nsi"
+:: Ambiente so de build, com o PyTorch de CPU (veja "Build the installer" no README).
+:: O PyTorch com CUDA passa de 2 GB, o limite do NSIS; ele e baixado depois da
+:: instalacao, so em PCs com placa NVIDIA (aceleracao_gpu.py).
+SET "PYINSTALLER=%~dp0env_build\Scripts\pyinstaller.exe"
 
 echo [INFO] Iniciando build do RealTimeScreenTranslator...
 
@@ -21,11 +25,17 @@ IF NOT EXIST "%PY_SCRIPT%" (
     echo [ERRO] Arquivo %PY_SCRIPT% nao encontrado!
     EXIT /b 1
 )
+IF NOT EXIST "%PYINSTALLER%" (
+    echo [ERRO] Ambiente de build nao encontrado em env_build. Veja "Build the installer" no README.
+    EXIT /b 1
+)
 
 echo [INFO] Executando PyInstaller...
 :: O uso direto do .exe evita ambiguidades e a necessidade do comando CALL
+:: --onedir gera uma pasta: o app abre sem descompactar tudo a cada uso
 :: --icon define o icone do .exe; --add-data leva o mesmo arquivo para a janela e a bandeja
-pyinstaller.exe --clean --noconsole --onefile --name="%APP_NAME%" --icon="assets\icone.ico" --add-data="assets\icone.ico;assets" "%PY_SCRIPT%"
+:: --runtime-hook faz o app usar o PyTorch com CUDA da pasta gpu, quando ele existir
+"%PYINSTALLER%" --clean --noconfirm --noconsole --onedir --name="%APP_NAME%" --icon="assets\icone.ico" --add-data="assets\icone.ico;assets" --runtime-hook="pyi_gancho_gpu.py" "%PY_SCRIPT%"
 IF %ERRORLEVEL% NEQ 0 (
     echo [ERRO] Falha no PyInstaller!
     EXIT /b 1

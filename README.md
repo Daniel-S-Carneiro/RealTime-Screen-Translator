@@ -65,6 +65,14 @@ The settings screen has the sign-up link for each service, a field for the key a
 
 There is no public release yet. When there is, the installer `RealTimeScreenTranslator_Setup.exe` will be available on the [Releases](https://github.com/Daniel-S-Carneiro/RealTime-Screen-Translator/releases) page.
 
+### GPU acceleration (NVIDIA)
+
+The installer includes the CPU version of PyTorch, which works on any PC and keeps the installer under the 2 GB limit of NSIS. On PCs with an NVIDIA graphics card, the installer then offers to download PyTorch with CUDA (about 2.5 GB) from the official PyTorch site.
+
+- You can skip it and download it later from the tray icon (**Ativar aceleração por GPU**).
+- An interrupted download resumes where it stopped, and the file is checked against the SHA-256 published by PyTorch.
+- Without it, the app works normally on the CPU.
+
 ### Run from source
 
 Requires [Python 3.12](https://www.python.org/downloads/).
@@ -79,11 +87,22 @@ python main.py
 ```
 
 - The first run downloads the OCR models, so it takes longer.
-- For GPU acceleration, replace PyTorch with its CUDA build from [pytorch.org](https://pytorch.org/get-started/locally/). Without it, the OCR runs on the CPU.
+- For GPU acceleration, replace PyTorch with its CUDA build. Without it, the OCR runs on the CPU:
+
+  ```bash
+  pip install torch==2.6.0 torchvision==0.21.0 --index-url https://download.pytorch.org/whl/cu124
+  ```
 
 ### Build the installer
 
-`build_instaler.cmd` builds the `.exe` with PyInstaller and the installer with [NSIS](https://nsis.sourceforge.io/), which must be installed.
+The installer is built from a separate environment, `env_build`, with the CPU version of PyTorch (the one on PyPI), so the CUDA libraries stay out of it:
+
+```bash
+python -m venv env_build
+env_build\Scripts\pip install -r requirements.txt
+```
+
+Then `build_instaler.cmd` builds the app folder with PyInstaller and the installer with [NSIS](https://nsis.sourceforge.io/), which must be installed.
 
 ## 📊 OCR accuracy
 
