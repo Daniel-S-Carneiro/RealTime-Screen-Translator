@@ -3,6 +3,7 @@
 # pylint: disable=no-member
 
 # 1. Imports da Biblioteca Padrão (Standard Library)
+import ctypes
 import os
 import sys
 import threading
@@ -17,7 +18,7 @@ import cv2
 import mss
 import numpy as np
 from PySide6.QtCore import QSize, Qt, QTimer, Signal
-from PySide6.QtGui import QAction  # Removido o import não utilizado (QIcon)
+from PySide6.QtGui import QAction, QIcon
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -50,6 +51,8 @@ DEBUG_MODE = True  # Mude para False para desativar os logs no terminal
 DIRETORIO_PROJETO = os.path.dirname(os.path.abspath(__file__))
 # Onde o "Salvar prints para o benchmark" (menu da bandeja) guarda as capturas
 PASTA_DATASET = os.path.join(DIRETORIO_PROJETO, "benchmark", "dataset")
+# Ícone da janela, da barra de tarefas e da bandeja (o .ico tem do 16 ao 256 px)
+ICONE_APP = os.path.join(DIRETORIO_PROJETO, "assets", "icone.ico")
 
 # Silencia avisos irritantes do PyTorch rodando na CPU
 warnings.filterwarnings("ignore", category=UserWarning, module="torch")
@@ -126,8 +129,10 @@ class OverlayTradutor(QWidget):
         """Configura o ícone na bandeja do sistema (System Tray) e seu menu."""
         self.tray_icon = QSystemTrayIcon(self)
 
-        icone_padrao = self.style().standardIcon(QStyle.StandardPixmap.SP_ComputerIcon)
-        self.tray_icon.setIcon(icone_padrao)
+        icone = QIcon(ICONE_APP)
+        if icone.isNull():  # build sem a pasta assets: usa o ícone genérico do Qt
+            icone = self.style().standardIcon(QStyle.StandardPixmap.SP_ComputerIcon)
+        self.tray_icon.setIcon(icone)
         self.tray_icon.setToolTip("Tradutor Gameplay")
 
         tray_menu = QMenu()
@@ -492,7 +497,13 @@ class OverlayTradutor(QWidget):
 
 
 if __name__ == "__main__":
+    # Sem um ID próprio, o Windows agrupa o app com o python.exe na barra de tarefas
+    # e mostra o ícone do Python no lugar do nosso
+    if sys.platform == "win32":
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("RealTimeScreenTranslator")
+
     app = QApplication(sys.argv)
+    app.setWindowIcon(QIcon(ICONE_APP))
 
     # ATENÇÃO: Isso garante que o app continue rodando mesmo se a janela "X" for fechada
     app.setQuitOnLastWindowClosed(False)
