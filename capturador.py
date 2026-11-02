@@ -1,32 +1,65 @@
+"""Módulo para processamento de imagem usando OpenCV com foco em OCR."""
+
 # pylint: disable=no-member
-"""Módulo para captura e processamento de imagem usando OpenCV."""
 
 import cv2
+import numpy as np
+
+# "cinza" teve o menor erro médio e o menor tempo nas imagens de benchmark/dataset
+# (nov/2026: CER 0,78% contra 1,41% do "binarizado", que foi 2 a 4x mais lento).
+# "binarizado" é o pipeline campeão dos laboratórios, mantido para comparação.
+MODOS_IMAGEM = ("original", "cinza", "binarizado")
+MODO_IMAGEM_PADRAO = "cinza"
 
 
 class ProcessadorImagem:
     """Classe responsável por preparar imagens para o motor de OCR."""
 
     @staticmethod
-    def preparar_para_ocr(
-        caminho_entrada: str, caminho_saida: str = "processada.png"
-    ) -> str:
-        """Aplica filtros para melhorar a precisão do OCR."""
-        # Carrega a imagem
-        img = cv2.imread(caminho_entrada)
-        if img is None:
-            return caminho_entrada
+    def preparar(img: np.ndarray, modo: str = MODO_IMAGEM_PADRAO) -> np.ndarray:
+        """Recebe a imagem BGR capturada e devolve a versão que vai para o OCR."""
+        if modo not in MODOS_IMAGEM:
+            raise ValueError(f"Modo de imagem desconhecido: {modo}")
 
-        # 1. Escala de cinza
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        if modo == "original":
+            return img
+        if modo == "binarizado":
+            return ProcessadorImagem.binarizar(img)
 
-        # 2. Upscaling: Aumenta o tamanho em 2x
-        img_grande = cv2.resize(gray, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+        if len(img.shape) == 3:
+            return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        return img
 
-        # 3. Binarização adaptativa
-        processada = cv2.adaptiveThreshold(
-            img_grande, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2
-        )
+    @staticmethod
+    def binarizar(img: np.ndarray) -> np.ndarray:
+        """
+        Pipeline vencedor dos laboratórios (Pipeline #1), feito para o teste.png.
+        Fluxo 100% OpenCV: Aumentar(CV) ->
+        Ruido_Ini(CV) -> Cor(CV) -> Binarizar Dinâmico(CV) -> Ruido_Fim(CV)
+        Atenção: em prints reais ele trocou "14%" por "74%" e "turn" por "tum".
+        """
+        # 1. Aumentar(CV) - Upscaling 200% via Interpolação Vizinho
+        # Mais Próximo (Rápido e mantém bordas duras)
+        img = cv2.resize(img, (0, 0), fx=2, fy=2, interpolation=cv2.INTER_NEAREST)
 
-        cv2.imwrite(caminho_saida, processada)
-        return caminho_saida
+        # 2. Ruido_Ini(CV) - Suavização via Median Blur (Remove artefatos menores sem borrar bordas)
+        img = cv2.medianBlur(img, 3)
+
+        # 3. Cor(CV) - Extração de um único canal de cor (Canal Verde) para focar no brilho
+        if len(img.shape) == 3:
+            img = img[:, :, 1]
+
+        # 4. Binarizar Dinâmico(CV) - Analisa o fundo antes de aplicar o Otsu
+        # Como o texto ocupa menos espaço que o fundo, a média de brilho revela a cor predominante.
+        # Media > 127 = Fundo claro | Media < 127 = Fundo escuro
+        if np.mean(img) > 127:
+            # Fundo já é claro: Binarização normal (mantém fundo branco, texto preto)
+            _, img = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        else:
+            # Fundo é escuro: Binarização invertida
+            # (transforma fundo escuro em branco e texto em preto)
+            _, img = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+
+        # 5. Ruido_Fim(CV) - Morfologia Open para limpar ruído "sal e pimenta" após binarizar
+        kernel = np.ones((2, 2), np.uint8)
+        return cv2.morphologyEx(img, cv2.MORPH_OPEN, kernel)

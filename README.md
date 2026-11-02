@@ -1,6 +1,6 @@
 # RealTime-Screen-Translator
 
-A powerful, lightweight, and universal real-time screen translation tool for Windows. It captures text from any part of your screen using advanced OCR (Optical Character Recognition) and instantly translates it into over 80 languages. Perfect for translating video games, images, documents, and non-copyable text in real time.
+A powerful, lightweight, and universal real-time screen translation tool for Windows. It captures text from any part of your screen using advanced OCR (Optical Character Recognition) and instantly translates it into over 80 languages. Perfect for translating video games, images, documents, and non copyable text in real time.
 
 ## 🌟 Features
 
@@ -14,20 +14,27 @@ A powerful, lightweight, and universal real-time screen translation tool for Win
 ## 🚀 Getting Started
 
 ### Prerequisites
+
 - Windows 10 or 11 (64-bit)
 
 ### Installation
-1. Download the latest installer `TradutorGameplay_Setup.exe` from the Releases section.
+
+1. Download the latest installer `RealTimeScreenTranslator_Setup.exe` from the Releases section.
 2. Run the installer (Administrator privileges required to install to Program Files).
 3. Follow the setup wizard and launch the application.
 
 ## 🛠️ Technology Stack
 
-- **Backend:** Python
-- **GUI Framework:** PySide6 / Qt
-- **OCR Engine:** EasyOCR / OpenCV
-- **Packaging:** PyInstaller
-- **Installer System:** NSIS (Nullsoft Scriptable Install System)
+O projeto é desenvolvido em **Python** e utiliza bibliotecas robustas para processamento de imagem, IA e interface gráfica.
+
+| Componente               | Tecnologia                                                                                                |
+| :----------------------- | :-------------------------------------------------------------------------------------------------------- |
+| **Interface (GUI)**      | [PySide6](https://pypi.org/project/PySide6/) (Qt)                                                         |
+| **OCR (Reconhecimento)** | [EasyOCR](https://pypi.org/project/easyocr/) & [OpenCV](https://pypi.org/project/opencv-python-headless/) |
+| **Tradução**             | [Deep-Translator](https://pypi.org/project/deep-translator/)                                              |
+| **Processamento**        | [Pillow](https://pypi.org/project/pillow/) & [NumPy](https://numpy.org/)                                  |
+| **Distribuição**         | [PyInstaller](https://www.pyinstaller.org/)                                                               |
+| **Instalador**           | [NSIS](https://nsis.sourceforge.io/)                                                                      |
 
 ## 📄 License
 

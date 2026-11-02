@@ -1,0 +1,6 @@
+Dream of Realms lv5
+Makes self enter the [Sleep] status for 4 turn(s), revives all fallen allies, then grants all allies 2 turns of [Shield] and [DEF Boost]
+[Sleep] Cannot act; but reduces duration by 1 turn when taking DMG
+[Revive] Revives fallen allies and restores 20% HP
+[Shield] Negates part of incoming DMG; the negated DMG by the shield equals 14% of HP
+[DEF Boost] Increases DEF by 48%
