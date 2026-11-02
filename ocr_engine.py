@@ -3,6 +3,40 @@
 import os
 from typing import List, Optional
 import easyocr
+import torch
+
+
+def ordenar_por_linhas(resultados):
+    """Ordena as caixas do EasyOCR em ordem de leitura: linha a linha, da esquerda para a direita.
+
+    O EasyOCR devolve as caixas inclinadas no fim da lista, o que jogava trechos
+    como "your key:" para o final do texto.
+    """
+    if len(resultados) < 2:
+        return resultados
+
+    caixas = []
+    for item in resultados:
+        xs = [ponto[0] for ponto in item[0]]
+        ys = [ponto[1] for ponto in item[0]]
+        caixas.append(((min(ys) + max(ys)) / 2, max(ys) - min(ys), min(xs), item))
+    caixas.sort(key=lambda caixa: caixa[0])
+
+    linhas = []
+    for centro, altura, esquerda, item in caixas:
+        if linhas:
+            linha = linhas[-1]
+            # Mesma linha quando os centros verticais estão a menos de meia altura de texto
+            if abs(centro - linha["centro"]) < min(altura, linha["altura"]) / 2:
+                linha["itens"].append((esquerda, item))
+                continue
+        linhas.append({"centro": centro, "altura": altura, "itens": [(esquerda, item)]})
+
+    return [
+        item
+        for linha in linhas
+        for _, item in sorted(linha["itens"], key=lambda par: par[0])
+    ]
 
 
 class MotorOCR:
@@ -11,32 +45,37 @@ class MotorOCR:
     def __init__(self, idiomas: Optional[List[str]] = None) -> None:
         self.idiomas_atuais = idiomas if idiomas else ["en", "pt"]
 
-        print(f"Inicializando EasyOCR: {self.idiomas_atuais}...")
-        self.reader = easyocr.Reader(self.idiomas_atuais, gpu=False)
+        # Detecção automática de Hardware (Nvidia GPU vs CPU)
+        self.use_gpu = torch.cuda.is_available()
+        hardware_nome = "NVIDIA GPU" if self.use_gpu else "CPU"
+
+        print(f"Inicializando EasyOCR ({hardware_nome}): {self.idiomas_atuais}...")
+        self.reader = easyocr.Reader(
+            self.idiomas_atuais, gpu=self.use_gpu, recog_network="standard"
+        )
 
     def extrair_texto(self, caminho_imagem: str) -> str:
-        """Lê uma imagem local e retorna o texto consolidado em uma string."""
+        """Lê uma imagem e retorna o texto bruto."""
         if not os.path.exists(caminho_imagem):
             return "Erro: Imagem não encontrada."
 
         try:
-            # paragraph=True agrupa blocos de texto logicamente
-            resultados = self.reader.readtext(caminho_imagem, paragraph=True)
+            # Mantive esse método para retrocompatibilidade, se você ainda usar em algum lugar.
+            # O main.py usa o extrair_dados_completos
+            resultados = self.reader.readtext(
+                caminho_imagem,
+                paragraph=True,
+                decoder="greedy",
+                adjust_contrast=0.0,
+            )
 
-            texto_extraido = []
-            for item in resultados:
-                if isinstance(item, (list, tuple)) and len(item) > 1:
-                    texto_extraido.append(str(item[1]))
+            texto_extraido = [
+                str(item[1])
+                for item in resultados
+                if isinstance(item, (list, tuple)) and len(item) > 1
+            ]
 
-            # Consolidação do texto
-            texto_bruto = " ".join(texto_extraido).strip()
-
-            # CAMADA DE LIMPEZA INTELIGENTE:
-            # Corrige artefatos comuns gerados por fontes estilizadas em jogos
-            texto_limpo = texto_bruto.replace("; ", ", ")
-            texto_limpo = texto_limpo.replace("claimlit", "claim it")
-
-            return texto_limpo
+            return " ".join(texto_extraido).strip()
 
         except (RuntimeError, TypeError, ValueError) as e:
             return f"Erro processamento OCR: {str(e)}"
@@ -48,7 +87,24 @@ class MotorOCR:
 
         print(f"Baixando/Carregando novo modelo para: {novo_idioma}")
         self.idiomas_atuais = [novo_idioma]
-        self.reader = easyocr.Reader(self.idiomas_atuais, gpu=False)
+        self.reader = easyocr.Reader(
+            self.idiomas_atuais, gpu=self.use_gpu, recog_network="standard"
+        )
+
+    def extrair_dados_completos(self, imagem):
+        """Retorna a lista completa de resultados do EasyOCR, já em ordem de leitura.
+
+        Aceita o caminho de um arquivo ou a imagem como array numpy.
+        """
+        resultados = self.reader.readtext(
+            imagem,
+            decoder="greedy",  # <-- Mais rápido que beamsearch e não engole letras duplas
+            batch_size=1,  # <-- Processamento único
+            adjust_contrast=0.0,  # <-- Desativado: valores testados nos laboratórios
+            contrast_ths=0.1,
+            paragraph=False,  # <-- Mantemos False para o processador_texto.py cuidar da junção
+        )
+        return ordenar_por_linhas(resultados)
 
 
 if __name__ == "__main__":

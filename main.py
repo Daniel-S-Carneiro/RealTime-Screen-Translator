@@ -1,9 +1,11 @@
 """Módulo principal com overlay arrastável e integrado."""
 
+# pylint: disable=no-member
+
 # 1. Imports da Biblioteca Padrão (Standard Library)
 import os
 import sys
-import tempfile
+import threading
 import traceback
 import warnings
 from datetime import datetime
@@ -11,8 +13,10 @@ from datetime import datetime
 from typing import Optional
 
 # 2. Imports de Bibliotecas de Terceiros (Third-Party)
-from PIL import ImageGrab
-from PySide6.QtCore import Qt, QTimer
+import cv2
+import mss
+import numpy as np
+from PySide6.QtCore import QSize, Qt, QTimer, Signal
 from PySide6.QtGui import QAction  # Removido o import não utilizado (QIcon)
 from PySide6.QtWidgets import (
     QApplication,
@@ -31,15 +35,21 @@ from PySide6.QtWidgets import (
 )
 
 # 3. Imports Locais do Projeto (Local Application)
+from config_usuario import carregar_config
+from motores_traducao import MOTORES
 from ocr_engine import MotorOCR
 from tradutor_engine import MotorTradutor
-from capturador import ProcessadorImagem
 from interface_config import JanelaConfiguracao
+from pipeline_ocr import reconhecer_texto
 
 # ==========================================
 # CONFIGURAÇÃO DE PRODUÇÃO / AMBIENTE
 # ==========================================
 DEBUG_MODE = True  # Mude para False para desativar os logs no terminal
+
+DIRETORIO_PROJETO = os.path.dirname(os.path.abspath(__file__))
+# Onde o "Salvar prints para o benchmark" (menu da bandeja) guarda as capturas
+PASTA_DATASET = os.path.join(DIRETORIO_PROJETO, "benchmark", "dataset")
 
 # Silencia avisos irritantes do PyTorch rodando na CPU
 warnings.filterwarnings("ignore", category=UserWarning, module="torch")
@@ -55,6 +65,9 @@ def log_debug(mensagem: str) -> None:
 class OverlayTradutor(QWidget):
     """Janela de overlay arrastável que alterna entre Tradução e Configurações."""
 
+    # Leva o resultado da thread de OCR de volta para a thread da interface
+    traducao_concluida = Signal(str)
+
     def __init__(self, motor_ocr: MotorOCR, motor_tradutor: MotorTradutor) -> None:
         super().__init__()
         self.ocr = motor_ocr
@@ -62,6 +75,9 @@ class OverlayTradutor(QWidget):
         self.posicao_mouse = None
         self.regiao_alvo = (0, 0, 0, 0)
         self.idioma_atual = "en"
+        self.processando = False
+        self.salvar_para_benchmark = False
+        self.btn_traduzir: Optional[QPushButton] = None
 
         self.paginas: Optional[QStackedWidget] = None
         self.label_texto: Optional[QLabel] = None
@@ -70,9 +86,12 @@ class OverlayTradutor(QWidget):
 
         self.widget_config: Optional[JanelaConfiguracao] = None
         self.tray_icon: Optional[QSystemTrayIcon] = None
+        self.tamanho_antes_config: Optional[QSize] = None
 
         self.init_ui()
         self.init_tray_icon()
+        # pylint: disable=no-member
+        self.traducao_concluida.connect(self._exibir_resultado)
 
     def init_ui(self) -> None:
         """Configura a interface gráfica arrastável e empilhada."""
@@ -123,6 +142,13 @@ class OverlayTradutor(QWidget):
         acao_tela_inteira.triggered.connect(self.traduzir_tela_inteira)
         tray_menu.addAction(acao_tela_inteira)
 
+        if DEBUG_MODE:
+            acao_coleta = QAction("Salvar prints para o benchmark", self)
+            acao_coleta.setCheckable(True)
+            # pylint: disable=no-member
+            acao_coleta.toggled.connect(self.alternar_coleta_benchmark)
+            tray_menu.addAction(acao_coleta)
+
         tray_menu.addSeparator()
 
         acao_sair = QAction("Encerrar Tradutor", self)
@@ -149,6 +175,12 @@ class OverlayTradutor(QWidget):
             self.activateWindow()
             log_debug("[UI] Overlay exibido.")
 
+    def alternar_coleta_benchmark(self, ativo: bool) -> None:
+        """Liga/desliga o salvamento de cada captura em benchmark/dataset."""
+        self.salvar_para_benchmark = ativo
+        estado = "ligada" if ativo else "desligada"
+        log_debug(f"[COLETA] Coleta de prints para o benchmark {estado}: {PASTA_DATASET}")
+
     def traduzir_tela_inteira(self) -> None:
         """Método placeholder para a futura funcionalidade de tradução em tela cheia."""
         log_debug("[AÇÃO] Função de tela inteira chamada (Pendente).")
@@ -156,6 +188,10 @@ class OverlayTradutor(QWidget):
     def ir_para_configuracao(self) -> None:
         """Navega para a página de configurações."""
         if self.paginas:
+            # As configurações precisam de mais espaço que a tradução; o tamanho
+            # original volta em voltar_para_traducao
+            self.tamanho_antes_config = self.size()
+            self.resize(max(self.width(), 460), max(self.height(), 520))
             self.paginas.setCurrentIndex(1)
 
     def montar_pagina_traducao(self) -> None:
@@ -167,6 +203,7 @@ class OverlayTradutor(QWidget):
 
         barra_controle = QHBoxLayout()
         btn_traduzir = QPushButton("Traduzir Área", widget_traducao)
+        self.btn_traduzir = btn_traduzir
         # Quebra de linha no CSS para evitar o erro C0301 (Line too long)
         btn_traduzir.setStyleSheet("""
             QPushButton { 
@@ -266,6 +303,9 @@ class OverlayTradutor(QWidget):
         """Método seguro para mudar a página."""
         if self.paginas:
             self.paginas.setCurrentIndex(0)
+        if self.tamanho_antes_config is not None:
+            self.resize(self.tamanho_antes_config)
+            self.tamanho_antes_config = None
 
     def montar_pagina_configuracao(self) -> None:
         """Cria o painel de configurações delegando para o arquivo importado."""
@@ -276,16 +316,18 @@ class OverlayTradutor(QWidget):
         if self.paginas:
             self.paginas.addWidget(self.widget_config)
 
-    def salvar_configuracoes(self, novo_origem, novo_destino) -> None:
-        """Aplica os novos idiomas selecionados."""
+    def salvar_configuracoes(self, novo_origem, novo_destino, motor, credenciais) -> None:
+        """Aplica os novos idiomas e o motor de tradução selecionados."""
         self.ocr.alterar_idioma(novo_origem)
         self.tradutor.origem = novo_origem
         self.tradutor.destino = novo_destino
+        self.tradutor.configurar(motor, credenciais)
         self.idioma_atual = novo_origem
         if self.label_texto:
-            self.label_texto.setText(f"Idioma alterado para: {novo_origem}")
-        if self.paginas:
-            self.paginas.setCurrentIndex(0)
+            self.label_texto.setText(
+                f"Idioma: {novo_origem} → {novo_destino} | Tradutor: {MOTORES[motor].nome_curto}"
+            )
+        self.voltar_para_traducao()
 
     def mousePressEvent(self, event) -> None:
         """Captura o clique inicial do mouse para arrastar."""
@@ -318,11 +360,15 @@ class OverlayTradutor(QWidget):
 
     def processar_traducao_local(self) -> None:
         """Etapa 1: Calcula a geometria com ajuste de bordas úteis e oculta a janela."""
-        if self.label_texto is None:
+        if self.label_texto is None or self.processando:
             return
 
         log_debug("[AÇÃO] Botão 'Traduzir Área' clicado! Ocultando overlay...")
 
+        # Impede um segundo OCR enquanto o primeiro ainda roda (o EasyOCR não é thread-safe)
+        self.processando = True
+        if self.btn_traduzir is not None:
+            self.btn_traduzir.setEnabled(False)
         self.label_texto.setText("Processando...")
         tela = QApplication.screenAt(self.geometry().center())
         fator_dpi = tela.devicePixelRatio() if tela else 1.0
@@ -335,82 +381,114 @@ class OverlayTradutor(QWidget):
         x_final = geo.x() + geo.width() - 5
         y_final = geo.y() + geo.height() - 20
 
-        self.regiao_alvo = (
-            int(x_inicial * fator_dpi),
-            int(y_inicial * fator_dpi),
-            int(x_final * fator_dpi),
-            int(y_final * fator_dpi),
-        )
+        # MSS exige width e height em vez de x_final e y_final
+        largura = (x_final - x_inicial) * fator_dpi
+        altura = (y_final - y_inicial) * fator_dpi
+
+        self.regiao_alvo = {
+            "top": int(y_inicial * fator_dpi),
+            "left": int(x_inicial * fator_dpi),
+            "width": int(largura),
+            "height": int(altura),
+        }
 
         self.setVisible(False)
         QApplication.processEvents()
         QTimer.singleShot(300, self._executar_print_e_ocr)
 
     def _executar_print_e_ocr(self) -> None:
-        """Etapa 2: Executa print, processa imagem com OpenCV e faz o OCR."""
-        caminho_bruto = ""
-        caminho_processado = ""
-
+        """Etapa 2: Tira o print (thread da interface) e dispara o OCR em segundo plano."""
         try:
             log_debug(
                 f"[PROCESSO] Tirando print da região física real: {self.regiao_alvo}"
             )
 
-            # 1. Definição do diretório (Temp para Produção, Local para Dev)
+            # 1. Captura da imagem bruta com MSS (BGRA -> BGR, direto na memória)
+            with mss.mss() as sct:
+                sct_img = sct.grab(self.regiao_alvo)
+            imagem = cv2.cvtColor(np.array(sct_img), cv2.COLOR_BGRA2BGR)
+
+            # Fallback seguro caso a janela de configuração ainda não tenha definido o idioma
+            idioma_origem = "en"
+            if self.widget_config and self.widget_config.combo_origem:
+                idioma_origem = self.widget_config.combo_origem.currentData()
+
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            log_debug(f"[ERRO CRÍTICO] Captura falhou: {str(e)}")
             if DEBUG_MODE:
-                diretorio_base = os.path.dirname(__file__)
-            else:
-                diretorio_base = tempfile.gettempdir()
-
-            caminho_bruto = os.path.join(diretorio_base, "captura.png")
-            caminho_processado = os.path.join(diretorio_base, "processada.png")
-
-            # 2. Captura da imagem bruta
-            print_tela = ImageGrab.grab(bbox=self.regiao_alvo)
-            print_tela.save(caminho_bruto)
-
-            # 3. Processamento (OpenCV)
-            # Passamos explicitamente o caminho_processado para o capturador
-            ProcessadorImagem.preparar_para_ocr(caminho_bruto, caminho_processado)
-
-            # 4. Restaura interface para o usuário
+                traceback.print_exc()
             self.setVisible(True)
             self.activateWindow()
-            QApplication.processEvents()
+            self._exibir_resultado(f"Erro: {str(e)}")
+            return
 
-            # 5. OCR
-            log_debug("[PROCESSO] Enviando imagem processada para o MotorOCR...")
-            texto_original = self.ocr.extrair_texto(caminho_processado)
-            log_debug(f"[RESULTADO OCR] '{texto_original}'")
+        # 2. Restaura interface para o usuário; ela continua respondendo durante o OCR
+        self.setVisible(True)
+        self.activateWindow()
 
-            if self.label_texto is not None:
-                if not texto_original.strip():
-                    self.label_texto.setText("[Nenhum texto detectado]")
-                    return
+        threading.Thread(
+            target=self._processar_em_segundo_plano,
+            args=(imagem, idioma_origem),
+            daemon=True,
+        ).start()
 
-                log_debug("[PROCESSO] Enviando para o Tradutor...")
-                texto_traduzido = self.tradutor.traduzir_texto(texto_original)
-                log_debug(f"[RESULTADO TRADUÇÃO] '{texto_traduzido}'")
+    def _processar_em_segundo_plano(self, imagem: np.ndarray, idioma_origem: str) -> None:
+        """Etapa 3 (thread separada): imagem -> OCR -> limpeza -> tradução.
 
-                self.label_texto.setText(texto_traduzido)
+        Não mexe em widgets aqui: o resultado volta pelo sinal traducao_concluida.
+        """
+        try:
+            log_debug("[PROCESSO] Enviando imagem para o pipeline de OCR...")
+            reconhecimento = reconhecer_texto(imagem, self.ocr, idioma=idioma_origem)
+            texto_final = reconhecimento.texto
+            tempos = ", ".join(
+                f"{etapa} {segundos:.2f}s" for etapa, segundos in reconhecimento.tempos.items()
+            )
+            log_debug(f"[TEMPOS] {tempos}")
+            log_debug(f"[TEXTO PRONTO PARA TRADUÇÃO] '{texto_final}'")
+
+            if DEBUG_MODE:
+                cv2.imwrite(os.path.join(DIRETORIO_PROJETO, "captura.png"), imagem)
+                cv2.imwrite(
+                    os.path.join(DIRETORIO_PROJETO, "processada.png"),
+                    reconhecimento.imagem_ocr,
+                )
+            if self.salvar_para_benchmark:
+                self._salvar_no_dataset(imagem, texto_final)
+
+            if not texto_final.strip():
+                self.traducao_concluida.emit("[Nenhum texto detectado]")
+                return
+
+            # Tradução (Deep Translator faz a magia pesada de entender contexto)
+            log_debug("[PROCESSO] Enviando para o Tradutor...")
+            texto_traduzido = self.tradutor.traduzir_texto(texto_final)
+            log_debug(f"[RESULTADO TRADUÇÃO] '{texto_traduzido}'")
+            self.traducao_concluida.emit(texto_traduzido)
 
         except Exception as e:  # pylint: disable=broad-exception-caught
             log_debug(f"[ERRO CRÍTICO] Pipeline falhou: {str(e)}")
             if DEBUG_MODE:
                 traceback.print_exc()
-            self.setVisible(True)
-            self.activateWindow()
-            if self.label_texto:
-                self.label_texto.setText(f"Erro: {str(e)}")
+            self.traducao_concluida.emit(f"Erro: {str(e)}")
 
-        finally:
-            # 6. Limpeza de rastros (Executa apenas em Produção)
-            if not DEBUG_MODE:
-                if os.path.exists(caminho_bruto):
-                    os.remove(caminho_bruto)
-                if os.path.exists(caminho_processado):
-                    os.remove(caminho_processado)
-                log_debug("[PROCESSO] Arquivos de imagem temporários excluídos.")
+    def _salvar_no_dataset(self, imagem: np.ndarray, texto_ocr: str) -> None:
+        """Guarda o print e o texto lido como rascunho de gabarito para o benchmark."""
+        os.makedirs(PASTA_DATASET, exist_ok=True)
+        nome = datetime.now().strftime("coleta_%Y%m%d_%H%M%S")
+        cv2.imwrite(os.path.join(PASTA_DATASET, f"{nome}.png"), imagem)
+        caminho_rascunho = os.path.join(PASTA_DATASET, f"{nome}.rascunho.txt")
+        with open(caminho_rascunho, "w", encoding="utf-8") as arquivo:
+            arquivo.write(texto_ocr + "\n")
+        log_debug(f"[COLETA] Print salvo para o benchmark: {nome}.png")
+
+    def _exibir_resultado(self, texto: str) -> None:
+        """Etapa 4 (thread da interface): mostra o resultado e libera um novo OCR."""
+        if self.label_texto is not None:
+            self.label_texto.setText(texto)
+        self.processando = False
+        if self.btn_traduzir is not None:
+            self.btn_traduzir.setEnabled(True)
 
 
 if __name__ == "__main__":
@@ -420,7 +498,13 @@ if __name__ == "__main__":
     app.setQuitOnLastWindowClosed(False)
 
     log_debug("[INÍCIO] Inicializando Motor Tradutor...")
-    instancia_tradutor = MotorTradutor(origem="en", destino="pt")
+    config_usuario = carregar_config()
+    instancia_tradutor = MotorTradutor(
+        origem="en",
+        destino="pt",
+        motor=config_usuario["motor"],
+        credenciais=config_usuario["credenciais"],
+    )
 
     log_debug("[INÍCIO] Criando instância do MotorOCR...")
     instancia_ocr = MotorOCR(idiomas=["en", "pt"])
