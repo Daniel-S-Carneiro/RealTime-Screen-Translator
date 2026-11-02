@@ -36,7 +36,9 @@ from PySide6.QtWidgets import (
 )
 
 # 3. Imports Locais do Projeto (Local Application)
+import aceleracao_gpu
 from config_usuario import carregar_config
+from janela_pacote_gpu import JanelaPacoteGpu
 from motores_traducao import MOTORES
 from ocr_engine import MotorOCR
 from tradutor_engine import MotorTradutor
@@ -46,7 +48,9 @@ from pipeline_ocr import reconhecer_texto
 # ==========================================
 # CONFIGURAÇÃO DE PRODUÇÃO / AMBIENTE
 # ==========================================
-DEBUG_MODE = True  # Mude para False para desativar os logs no terminal
+# Ligado só rodando pelo código: o app instalado não tem terminal para os logs, e a
+# pasta do programa não aceita gravar os prints de depuração
+DEBUG_MODE = not getattr(sys, "frozen", False)
 
 DIRETORIO_PROJETO = os.path.dirname(os.path.abspath(__file__))
 # Onde o "Salvar prints para o benchmark" (menu da bandeja) guarda as capturas
@@ -154,6 +158,12 @@ class OverlayTradutor(QWidget):
             acao_coleta.toggled.connect(self.alternar_coleta_benchmark)
             tray_menu.addAction(acao_coleta)
 
+        if aceleracao_gpu.pode_instalar():
+            acao_gpu = QAction("Ativar aceleração por GPU (NVIDIA)...", self)
+            # pylint: disable=no-member
+            acao_gpu.triggered.connect(self.abrir_instalador_gpu)
+            tray_menu.addAction(acao_gpu)
+
         tray_menu.addSeparator()
 
         acao_sair = QAction("Encerrar Tradutor", self)
@@ -179,6 +189,15 @@ class OverlayTradutor(QWidget):
             self.show()
             self.activateWindow()
             log_debug("[UI] Overlay exibido.")
+
+    def abrir_instalador_gpu(self) -> None:
+        """Abre a janela do pacote GPU numa cópia do app com permissão de administrador.
+
+        A pasta do programa fica em Arquivos de Programas, que só aceita gravação como
+        administrador; por isso o Windows pede confirmação antes.
+        """
+        shell32 = ctypes.windll.shell32
+        shell32.ShellExecuteW(None, "runas", sys.executable, "--instalar-gpu", None, 1)
 
     def alternar_coleta_benchmark(self, ativo: bool) -> None:
         """Liga/desliga o salvamento de cada captura em benchmark/dataset."""
@@ -504,6 +523,12 @@ if __name__ == "__main__":
 
     app = QApplication(sys.argv)
     app.setWindowIcon(QIcon(ICONE_APP))
+
+    # O instalador e o menu da bandeja abrem o app assim para baixar o pacote GPU
+    if "--instalar-gpu" in sys.argv:
+        if aceleracao_gpu.pode_instalar():
+            JanelaPacoteGpu().exec()
+        sys.exit(0)
 
     # ATENÇÃO: Isso garante que o app continue rodando mesmo se a janela "X" for fechada
     app.setQuitOnLastWindowClosed(False)
