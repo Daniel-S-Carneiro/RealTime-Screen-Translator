@@ -9,6 +9,16 @@ from spellchecker import SpellChecker
 _MASK_FILLER = None
 _BERT_INDISPONIVEL = False
 
+# Palavras curtas que o OCR costuma grudar na vizinha ("ofthe", "withan", "buffis").
+# A divisão por dicionário só corta onde um dos lados é uma delas, para que termos de
+# jogo que o dicionário não conhece ("cooldown", "loadout") continuem inteiros.
+PALAVRAS_DE_LIGACAO = frozenset(
+    "a an the of to in on at by for from with and or is as if all per".split()
+)
+# No fim da palavra só valem estas: com "in", "on" e "at", "admin" virava "adm in"
+LIGACAO_NO_FIM = frozenset("a an the of to and is for with all".split())
+ARTIGOS = frozenset({"a", "an", "the"})
+
 
 def obter_mask_filler():
     """Carrega o pipeline fill-mask do HuggingFace sob demanda (ou None se falhar)."""
@@ -46,7 +56,7 @@ class ProcessadorInteligente:
 
     @property
     def spell(self) -> SpellChecker:
-        """SpellChecker em inglês, criado só quando a correção por IA é usada."""
+        """SpellChecker em inglês, criado na primeira vez que for usado."""
         if self._spell is None:
             self._spell = SpellChecker(language="en")
         return self._spell
@@ -130,6 +140,70 @@ class ProcessadorInteligente:
             texto_modificado = texto_modificado.replace(" _ ", ". ")
         return texto_modificado.strip()
 
+    def separar_palavras_grudadas(self, texto: str, idioma: str) -> str:
+        """Separa palavras que o OCR juntou quando o espaço entre elas era estreito."""
+        # Valem para qualquer idioma
+        texto = re.sub(r"(?<=\d%)(?=[A-Za-z])", " ", texto)  # 25%own -> 25% own
+        texto = re.sub(r"(?<=[a-z]{2})(?=[A-Z][a-z]{2})", " ", texto)  # MartialArt
+        texto = re.sub(r"(?<=[A-Za-z\])])([;,:!?])(?=[A-Za-z])", r"\1 ", texto)  # hits;ignores
+        texto = re.sub(r"(?<=[a-z])\.(?=[A-Z][a-z])", ". ", texto)  # blood.It
+
+        # As próximas consultam o dicionário, que é só de inglês
+        if (idioma or "").lower() != "en":
+            return texto
+        texto = re.sub(r"\b(\d+)([a-z]{3,})\b", self._separar_numero, texto)  # 2turns
+        texto = re.sub(r"\b([A-Z]{2,})([a-z]{2,})\b", self._separar_sigla, texto)  # DMGto
+        return re.sub(r"\b[a-z]{3,}\b", self._separar_por_dicionario, texto)  # ofincoming
+
+    def _separar_numero(self, match) -> str:
+        """2turns -> 2 turns. Ordinais (5th, 2nd) têm só 2 letras e nem entram aqui."""
+        numero, palavra = match.groups()
+        return f"{numero} {palavra}" if palavra in self.spell else match.group(0)
+
+    def _separar_sigla(self, match) -> str:
+        """DMGto -> DMG to, DMGRed -> DMG Red: fica o corte cuja palavra é mais comum."""
+        sigla, resto = match.groups()
+        opcoes = []
+        if resto in self.spell:
+            opcoes.append((self.spell[resto], f"{sigla} {resto}"))
+        palavra = sigla[-1] + resto
+        if len(sigla) >= 3 and palavra in self.spell:
+            opcoes.append((self.spell[palavra], f"{sigla[:-1]} {palavra}"))
+        return max(opcoes)[1] if opcoes else match.group(0)
+
+    def _separar_por_dicionario(self, match) -> str:
+        """ofincoming -> of incoming. Só mexe em palavras minúsculas que o dicionário
+        não conhece; nomes com inicial maiúscula (Azureblade, Bloodburn) ficam de fora."""
+        palavra = match.group(0)
+        if palavra in self.spell:
+            return palavra
+        # Entre os cortes válidos, fica o de partes mais comuns
+        cortes = [
+            (min(self.spell[palavra[:i]], self.spell[palavra[i:]]), f"{palavra[:i]} {palavra[i:]}")
+            for i in range(1, len(palavra))
+            if self._divisao_valida(palavra[:i], palavra[i:])
+        ]
+        return max(cortes)[1] if cortes else palavra
+
+    def _divisao_valida(self, esquerda: str, direita: str) -> bool:
+        """Aceita o corte só se as duas partes existem e uma delas é palavra de ligação."""
+        if esquerda not in self.spell or direita not in self.spell:
+            return False
+        ligacao_esquerda = esquerda in PALAVRAS_DE_LIGACAO
+        ligacao_direita = direita in LIGACAO_NO_FIM
+        if ligacao_esquerda and ligacao_direita:
+            # "ofthe", "witha"; artigo seguido de outra ligação ("athe") não vale
+            return esquerda not in ARTIGOS
+        if ligacao_direita:
+            # "buffis" -> "buff is"; artigo no fim só depois de ligação, então "mana" fica
+            return direita not in ARTIGOS and len(esquerda) >= 3
+        if ligacao_esquerda:
+            # Em inglês "a" vem antes de consoante e "an" antes de vogal: "aether" fica
+            vogal = direita[0] in "aeiou"
+            artigo_errado = (esquerda == "a" and vogal) or (esquerda == "an" and not vogal)
+            return len(direita) >= 3 and not artigo_errado
+        return False
+
     def _escolher_correcao(self, erro: str, palavras_bert: list):
         """Escolhe a sugestão do BERT mais parecida com o erro, ou cai no SpellChecker."""
         melhor_palavra_bert = None
@@ -203,6 +277,7 @@ class ProcessadorInteligente:
         try:
             # 1. Limpeza Bruta
             texto_regex = self.aplicar_regex_limpeza(texto)
+            texto_regex = self.separar_palavras_grudadas(texto_regex, idioma)
 
             # 2. Refinamento de Contexto. O modelo carregado (bert-base-uncased)
             # só conhece inglês, então em outros idiomas ele só atrapalharia.
