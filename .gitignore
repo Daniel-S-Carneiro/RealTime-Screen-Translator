@@ -32,10 +32,15 @@ processada.png
 *.exe
 
 # ==========================================
-# Modelos baixados e rascunhos do benchmark
+# Modelos baixados e prints do benchmark
 # ==========================================
 modelos/
-benchmark/dataset/*.rascunho.txt
+# Os prints coletados (e os rascunhos do OCR) ficam só na máquina local: são telas
+# de jogos de terceiros e mudam a cada coleta. Só os 3 exemplos abaixo vão para o git.
+benchmark/dataset/*
+!benchmark/dataset/sintetico_labs.*
+!benchmark/dataset/jogo_tooltip_habilidade.*
+!benchmark/dataset/documento_tooltip_habilidade.*
 
 # ==========================================
 # Laboratórios antigos e relatórios (ficam só na máquina local)

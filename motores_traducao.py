@@ -2,6 +2,7 @@
 
 Cada motor recebe (texto, origem, destino, credenciais) e devolve a tradução, ou
 levanta ErroMotor com uma mensagem em português pronta para mostrar ao usuário.
+Os motores pagos somam no uso_motores os caracteres que o serviço vai cobrar.
 
 As APIs oficiais (Azure, DeepL e Google Cloud) são chamadas direto pela REST, com
 tempo limite: as classes do deep-translator para elas fazem pedidos extras, usam
@@ -21,6 +22,7 @@ from deep_translator.exceptions import (
     TranslationNotFound,
 )
 
+import uso_motores
 from tradutor_offline import traduzir_offline
 
 TEMPO_LIMITE = 15  # segundos por pedido às APIs
@@ -126,16 +128,26 @@ def traduzir_azure(texto: str, _origem: str, destino: str, credenciais: dict) ->
         raise ErroMotor("pedidos demais para a Azure em pouco tempo", PAUSA_RAJADA)
     if not resposta.ok:
         raise ErroMotor(f"a Azure respondeu {resposta.status_code}: {_mensagem_da_api(resposta)}")
-    return resposta.json()[0]["translations"][0]["text"]
+    traducao = resposta.json()[0]["translations"][0]["text"]
+    # A Azure diz no cabeçalho quantos caracteres vai cobrar por este pedido
+    try:
+        cobrados = int(resposta.headers.get("X-Metered-Usage", len(texto)))
+    except ValueError:
+        cobrados = len(texto)
+    uso_motores.registrar("azure", cobrados)
+    return traducao
+
+
+def _servidor_deepl(chave: str) -> str:
+    # Chaves do plano grátis terminam em ":fx" e usam outro endereço
+    return "api-free.deepl.com" if chave.endswith(":fx") else "api.deepl.com"
 
 
 def traduzir_deepl(texto: str, _origem: str, destino: str, credenciais: dict) -> str:
     """DeepL API (v2)."""
     chave = _chave(credenciais, "do DeepL")
-    # Chaves do plano grátis terminam em ":fx" e usam outro endereço
-    servidor = "api-free.deepl.com" if chave.endswith(":fx") else "api.deepl.com"
     resposta = _postar(
-        f"https://{servidor}/v2/translate",
+        f"https://{_servidor_deepl(chave)}/v2/translate",
         headers={"Authorization": f"DeepL-Auth-Key {chave}"},
         json={"text": [texto], "target_lang": _CODIGOS_DEEPL.get(destino, destino.upper())},
     )
@@ -147,7 +159,31 @@ def traduzir_deepl(texto: str, _origem: str, destino: str, credenciais: dict) ->
         raise ErroMotor("pedidos demais para o DeepL em pouco tempo", PAUSA_RAJADA)
     if not resposta.ok:
         raise ErroMotor(f"o DeepL respondeu {resposta.status_code}: {_mensagem_da_api(resposta)}")
-    return resposta.json()["translations"][0]["text"]
+    traducao = resposta.json()["translations"][0]["text"]
+    uso_motores.registrar("deepl", len(texto))  # o DeepL cobra pelo texto de origem
+    return traducao
+
+
+def consultar_uso_deepl(credenciais: dict) -> tuple:
+    """Uso oficial do mês no DeepL: (caracteres usados, limite do plano).
+
+    O DeepL é o único dos motores pagos que informa o uso pela própria chave.
+    """
+    chave = _chave(credenciais, "do DeepL")
+    try:
+        resposta = requests.get(
+            f"https://{_servidor_deepl(chave)}/v2/usage",
+            headers={"Authorization": f"DeepL-Auth-Key {chave}"},
+            timeout=TEMPO_LIMITE,
+        )
+    except requests.RequestException as e:
+        raise ErroMotor("sem conexão com o DeepL") from e
+    if resposta.status_code == 403:
+        raise ErroMotor("chave do DeepL inválida")
+    if not resposta.ok:
+        raise ErroMotor(f"o DeepL respondeu {resposta.status_code}: {_mensagem_da_api(resposta)}")
+    dados = resposta.json()
+    return int(dados["character_count"]), int(dados["character_limit"])
 
 
 def traduzir_google_cloud(texto: str, _origem: str, destino: str, credenciais: dict) -> str:
@@ -169,7 +205,9 @@ def traduzir_google_cloud(texto: str, _origem: str, destino: str, credenciais: d
         raise ErroMotor("cota do Google Cloud atingida", PAUSA_COTA)
     if not resposta.ok:
         raise ErroMotor(f"o Google Cloud respondeu {resposta.status_code}: {mensagem}")
-    return resposta.json()["data"]["translations"][0]["translatedText"]
+    traducao = resposta.json()["data"]["translations"][0]["translatedText"]
+    uso_motores.registrar("google_cloud", len(texto))  # conta tudo, até os espaços
+    return traducao
 
 
 def traduzir_argos(texto: str, origem: str, destino: str, _credenciais: dict) -> str:
@@ -190,6 +228,9 @@ class InfoMotor:
     traduzir: Callable[[str, str, str, dict], str]
     links: tuple = ()  # pares (texto, url)
     campos: tuple = ()  # "chave" e/ou "regiao"
+    limite_gratis: int = 0  # caracteres grátis por mês; 0 = motor sem limite contado
+    # True quando passar do limite grátis pode gerar cobrança (o DeepL Free só recusa)
+    trava_de_custo: bool = False
 
 
 # A ordem aqui é a ordem da lista na tela de configurações
@@ -225,6 +266,8 @@ MOTORES = {
             ),
         ),
         campos=("chave", "regiao"),
+        limite_gratis=2_000_000,
+        trava_de_custo=True,
     ),
     "deepl": InfoMotor(
         nome="DeepL",
@@ -239,6 +282,7 @@ MOTORES = {
             ("Pegar a chave", "https://www.deepl.com/your-account/keys"),
         ),
         campos=("chave",),
+        limite_gratis=500_000,
     ),
     "google_cloud": InfoMotor(
         nome="Google Cloud Translation",
@@ -255,8 +299,14 @@ MOTORES = {
                 "https://console.cloud.google.com/apis/library/translate.googleapis.com",
             ),
             ("Criar a chave", "https://console.cloud.google.com/apis/credentials"),
+            (
+                "Limitar o uso por dia",
+                "https://console.cloud.google.com/apis/api/translate.googleapis.com/quotas",
+            ),
         ),
         campos=("chave",),
+        limite_gratis=500_000,
+        trava_de_custo=True,
     ),
     "offline": InfoMotor(
         nome="Offline (Argos Translate)",

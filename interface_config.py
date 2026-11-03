@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,
     QLabel,
+    QCheckBox,
     QComboBox,
     QFrame,
     QLineEdit,
@@ -18,11 +19,111 @@ from PySide6.QtCore import Qt, Signal
 import aceleracao_gpu
 from config_usuario import carregar_config, salvar_config
 from gerenciador_idiomas import JanelaGerenciarIdiomas
-from motores_traducao import MOTORES, ErroMotor, traduzir_com
+from motores_traducao import MOTORES, ErroMotor, consultar_uso_deepl, traduzir_com
+import uso_motores
 
 ROTULOS_CAMPOS = {"chave": "Chave:", "regiao": "Região:"}
 FRASE_TESTE = "Welcome, adventurer! Your quest begins now."
 ESTILO_TEXTO_AJUDA = "color: #BBB; font-size: 12px; border: none;"
+
+# O que o app não consegue saber pela chave de cada motor que conta o uso sozinho
+AVISOS_USO = {
+    "azure": (
+        "A chave não diz se o recurso é F0 (grátis: ao passar do limite, a Azure só "
+        "recusa) ou S1 (pago por uso). Confira o tipo de preço do recurso no portal do Azure."
+    ),
+    "google_cloud": (
+        "O Google não informa o uso pela chave e cobra o que passar do grátis. Para "
+        'garantir, use o link "Limitar o uso por dia" e defina uns 16.000 caracteres por dia.'
+    ),
+}
+
+
+def _milhar(numero: int) -> str:
+    return f"{numero:,}".replace(",", ".")
+
+
+def _porcentagem(parte: int, total: int) -> str:
+    return f"{parte / total:.1%}".replace(".", ",") if total else "0%"
+
+
+class SecaoUso(QWidget):
+    """Uso do mês e trava de custo do motor escolhido (só aparece nos motores pagos)."""
+
+    # (motor, texto): o uso oficial do DeepL chega de outra thread
+    uso_consultado = Signal(str, str)
+
+    def __init__(self) -> None:
+        super().__init__()
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        self._motor = ""
+
+        self.texto = QLabel()
+        self.texto.setWordWrap(True)
+        self.texto.setStyleSheet(ESTILO_TEXTO_AJUDA)
+        layout.addWidget(self.texto)
+
+        # Texto curto: o QCheckBox não quebra linha e o overlay pode ser estreito
+        self.check_trava = QCheckBox("Parar ao chegar no limite grátis do mês")
+        self.check_trava.setToolTip(
+            "Vale para o Azure e o Google Cloud. Ao chegar no limite, o app usa as "
+            "reservas (Google grátis e Offline) até o mês virar."
+        )
+        self.check_trava.setStyleSheet("color: #DDD; font-size: 12px;")
+        self.check_trava.setChecked(uso_motores.trava_ligada())
+        layout.addWidget(self.check_trava)
+
+        getattr(self.uso_consultado, "connect")(self._mostrar_uso_oficial)
+
+    def mostrar(self, motor: str, credenciais: dict) -> None:
+        """Atualiza a seção para o motor escolhido; credenciais é o dict de todos."""
+        self._motor = motor
+        info = MOTORES[motor]
+        self.setVisible(info.limite_gratis > 0)
+        self.check_trava.setVisible(info.trava_de_custo)
+        if motor == "deepl":
+            self._consultar_deepl(credenciais.get("deepl", {}))
+        elif info.limite_gratis:
+            usado = uso_motores.usado_no_mes(motor)
+            texto = (
+                f"Uso este mês, contado por este app: {_milhar(usado)} de "
+                f"{_milhar(info.limite_gratis)} caracteres grátis "
+                f"({_porcentagem(usado, info.limite_gratis)})."
+            )
+            if usado >= info.limite_gratis and uso_motores.trava_ligada():
+                texto += " Limite atingido: até o mês virar, o app usa as reservas."
+            self.texto.setText(f"{texto}\n{AVISOS_USO[motor]}")
+
+    def _consultar_deepl(self, credenciais_deepl: dict) -> None:
+        if not credenciais_deepl.get("chave", "").strip():
+            self.texto.setText("Cole a chave do DeepL e clique em Testar para ver o uso do mês.")
+            return
+        self.texto.setText("Consultando o uso do mês no DeepL...")
+        threading.Thread(
+            target=self._buscar_uso_deepl, args=(dict(credenciais_deepl),), daemon=True
+        ).start()
+
+    def _buscar_uso_deepl(self, credenciais_deepl: dict) -> None:
+        """Roda em outra thread: não mexe em widgets, só emite o texto."""
+        try:
+            usado, limite = consultar_uso_deepl(credenciais_deepl)
+        except ErroMotor as erro:
+            self.uso_consultado.emit("deepl", f"Não consegui consultar o uso no DeepL: {erro}")
+            return
+        if credenciais_deepl["chave"].strip().endswith(":fx"):
+            plano = "Plano Free: ao chegar no limite, o DeepL só recusa as traduções, sem cobrança."
+        else:
+            plano = "Plano Pro: o DeepL cobra pelo uso."
+        self.uso_consultado.emit(
+            "deepl",
+            f"Uso oficial do DeepL este mês: {_milhar(usado)} de {_milhar(limite)} "
+            f"caracteres ({_porcentagem(usado, limite)}).\n{plano}",
+        )
+
+    def _mostrar_uso_oficial(self, motor: str, texto: str) -> None:
+        if motor == self._motor:  # a pessoa pode ter trocado de motor durante a consulta
+            self.texto.setText(texto)
 
 # Dicionário com as 80 línguas suportadas pelo EasyOCR
 TODOS_IDIOMAS = {
@@ -190,6 +291,7 @@ class JanelaConfiguracao(QWidget):
         self.campos_motor: dict[str, tuple] = {}  # campo -> (linha, QLineEdit)
         self.btn_testar = QPushButton("Testar")
         self.label_teste = QLabel()
+        self.secao_uso = SecaoUso()
 
         # Dados Padrão (Top 10)
         self.top_10 = {
@@ -288,6 +390,7 @@ class JanelaConfiguracao(QWidget):
         """Grava o motor e as chaves no config do usuário e aplica tudo no app."""
         motor = self.combo_motor.currentData()
         salvar_config(motor, self.credenciais)
+        uso_motores.definir_trava(self.secao_uso.check_trava.isChecked())
         self.callback_salvar(
             self.combo_origem.currentData(),
             self.combo_destino.currentData(),
@@ -346,6 +449,7 @@ class JanelaConfiguracao(QWidget):
         layout_teste.addStretch()
         layout.addLayout(layout_teste)
         layout.addWidget(self.label_teste)
+        layout.addWidget(self.secao_uso)
 
         getattr(self.resultado_teste, "connect")(self._mostrar_resultado_teste)
         getattr(self.combo_motor.currentIndexChanged, "connect")(self._atualizar_secao_motor)
@@ -368,6 +472,9 @@ class JanelaConfiguracao(QWidget):
             linha.setVisible(campo in info.campos)
             entrada.setText(valores.get(campo, ""))
         self.label_teste.clear()
+        # Fechada, a tela não consulta nada: o showEvent atualiza o uso quando ela abrir
+        if self.isVisible():
+            self.secao_uso.mostrar(motor, self.credenciais)
 
     def _guardar_campo(self, campo: str, valor: str) -> None:
         """Guarda o que o usuário digitou na chave/região do motor escolhido."""
@@ -399,6 +506,14 @@ class JanelaConfiguracao(QWidget):
     def _mostrar_resultado_teste(self, texto: str) -> None:
         self.label_teste.setText(texto)
         self.btn_testar.setEnabled(True)
+        # O teste também conta no uso, e a chave pode ter acabado de ser colada
+        self.secao_uso.mostrar(self.combo_motor.currentData(), self.credenciais)
+
+    def showEvent(self, event) -> None:  # pylint: disable=invalid-name
+        """Ao abrir a tela, relê o uso do mês (que muda a cada tradução) e a trava salva."""
+        super().showEvent(event)
+        self.secao_uso.check_trava.setChecked(uso_motores.trava_ligada())
+        self.secao_uso.mostrar(self.combo_motor.currentData(), self.credenciais)
 
     def _criar_combo(self) -> QComboBox:
         """Cria e preenche um QComboBox com as línguas do sistema."""
