@@ -51,6 +51,8 @@ The tray icon shows or hides the overlay and closes the app.
 The settings screen has the sign-up link for each service, a field for the key and a **Testar** (Test) button.
 
 - **Fallback order:** the engine you chose → Google Translate → Offline.
+- **Monthly usage and cost guard:** the settings screen shows how much of the free tier you used this month. DeepL reports it officially through its API; for Azure and Google Cloud, which don't report usage through the key, the app counts the characters it sends from your PC. With **"Parar ao chegar no limite grátis do mês"** on (the default), the app stops using Azure and Google Cloud when the next text would go past the free tier, and uses the fallback engines until the month changes.
+- **Extra protection on Google Cloud:** set a daily character quota in the Cloud Console (around 16,000 per day ≈ 500,000 per month). Past it, Google refuses instead of charging, and the app falls back automatically.
 - **Your keys stay on your PC:** they are saved in `%APPDATA%\RealTimeScreenTranslator\config.json`, encrypted with Windows DPAPI (only your Windows account on that PC can read them), and are only sent to the service they belong to.
 - **Updates keep your settings:** installing a new version over an old one keeps your keys. Uninstalling asks whether to delete them.
 
