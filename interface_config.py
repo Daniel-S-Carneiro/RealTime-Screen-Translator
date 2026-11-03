@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QScrollArea,
 )
 from PySide6.QtCore import Qt, Signal
+import aceleracao_gpu
 from config_usuario import carregar_config, salvar_config
 from gerenciador_idiomas import JanelaGerenciarIdiomas
 from motores_traducao import MOTORES, ErroMotor, traduzir_com
@@ -109,6 +110,48 @@ TODOS_IDIOMAS = {
     "Vietnamese": "vi",
     "Welsh": "cy",
 }
+
+
+class SecaoGpu(QWidget):
+    """Seção "Aceleração por GPU": diz se o app usa a placa NVIDIA e oferece o
+    download que ficou para depois da instalação."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(10)
+
+        titulo = QLabel("Aceleração por GPU")
+        titulo.setStyleSheet("color: white; font-size: 14px; font-weight: bold; border: none;")
+        layout.addWidget(titulo)
+
+        self.situacao = QLabel()
+        self.situacao.setWordWrap(True)
+        self.situacao.setStyleSheet(ESTILO_TEXTO_AJUDA)
+        layout.addWidget(self.situacao)
+
+        self.btn_baixar = QPushButton("Baixar aceleração por GPU (2,5 GB)")
+        self.btn_baixar.setToolTip("O Windows vai pedir permissão de administrador.")
+        getattr(self.btn_baixar.clicked, "connect")(self._baixar)
+        layout_botao = QHBoxLayout()
+        layout_botao.addWidget(self.btn_baixar)
+        layout_botao.addStretch()
+        layout.addLayout(layout_botao)
+        self.atualizar()
+
+    def atualizar(self) -> None:
+        """Relê a situação: o download roda em outra janela e pode ter terminado."""
+        self.situacao.setText(aceleracao_gpu.descrever_situacao())
+        self.btn_baixar.setVisible(aceleracao_gpu.pode_instalar())
+
+    def _baixar(self) -> None:
+        aceleracao_gpu.abrir_instalador()
+
+    def showEvent(self, event) -> None:  # pylint: disable=invalid-name
+        """Toda vez que a tela de configurações aparece, a situação é atualizada."""
+        super().showEvent(event)
+        self.atualizar()
 
 
 class JanelaConfiguracao(QWidget):
@@ -225,6 +268,7 @@ class JanelaConfiguracao(QWidget):
         layout.addWidget(btn_add)
 
         self._montar_secao_motor(layout)
+        layout.addWidget(SecaoGpu())
 
         layout.addStretch()
 

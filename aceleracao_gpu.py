@@ -10,6 +10,7 @@ com CUDA, e a de CPU embutida fica de reserva. Rodando pelo código, nada disso 
 e vale o PyTorch instalado no env.
 """
 
+import ctypes
 import hashlib
 import importlib.metadata
 import json
@@ -93,6 +94,39 @@ def tem_placa_nvidia() -> bool:
 def pode_instalar() -> bool:
     """True quando faz sentido oferecer o download: app instalado, placa NVIDIA e sem pacote."""
     return EMPACOTADO and tem_placa_nvidia() and not pacote_instalado()
+
+
+def abrir_instalador() -> None:
+    """Abre a janela do pacote GPU numa cópia do app com permissão de administrador.
+
+    A pasta do programa fica em Arquivos de Programas, que só aceita gravação como
+    administrador; por isso o Windows pede confirmação antes.
+    """
+    ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, "--instalar-gpu", None, 1)
+
+
+def descrever_situacao() -> str:
+    """Frase para a tela de configurações dizendo se o app está usando a placa."""
+    # Fica aqui para o gancho de inicialização não carregar o torch antes da hora;
+    # quando esta função roda, o OCR já carregou o torch e o import é imediato
+    import torch  # pylint: disable=import-outside-toplevel
+
+    placa_respondeu = torch.cuda.is_available()
+    if not EMPACOTADO:
+        uso = "usa" if placa_respondeu else "não usa"
+        return f"Rodando pelo código: o PyTorch do env {uso} a placa NVIDIA."
+    if not tem_placa_nvidia():
+        return "Nenhuma placa NVIDIA encontrada: o app usa o processador."
+    if str(PASTA_GPU) in sys.path:  # o gancho ativou a pasta gpu nesta abertura
+        if placa_respondeu:
+            return "Ativa: o app está usando a placa NVIDIA."
+        return (
+            "Instalada, mas a placa não respondeu. Atualize o driver da NVIDIA; "
+            "enquanto isso, o app usa o processador."
+        )
+    if pacote_instalado():
+        return "Instalada. Feche e abra o app de novo para usar a placa."
+    return "Não instalada: o app usa o processador. O download tem cerca de 2,5 GB."
 
 
 def _nome_roda(pacote: str, versao: str) -> str:

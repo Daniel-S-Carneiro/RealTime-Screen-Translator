@@ -191,13 +191,8 @@ class OverlayTradutor(QWidget):
             log_debug("[UI] Overlay exibido.")
 
     def abrir_instalador_gpu(self) -> None:
-        """Abre a janela do pacote GPU numa cópia do app com permissão de administrador.
-
-        A pasta do programa fica em Arquivos de Programas, que só aceita gravação como
-        administrador; por isso o Windows pede confirmação antes.
-        """
-        shell32 = ctypes.windll.shell32
-        shell32.ShellExecuteW(None, "runas", sys.executable, "--instalar-gpu", None, 1)
+        """Abre a janela que baixa o pacote GPU (o Windows pede permissão antes)."""
+        aceleracao_gpu.abrir_instalador()
 
     def alternar_coleta_benchmark(self, ativo: bool) -> None:
         """Liga/desliga o salvamento de cada captura em benchmark/dataset."""
