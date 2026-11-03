@@ -2,6 +2,7 @@
 # Ambientes Virtuais e Cache Python
 # ==========================================
 env/
+env_build/
 venv/
 __pycache__/
 *.py[cod]
