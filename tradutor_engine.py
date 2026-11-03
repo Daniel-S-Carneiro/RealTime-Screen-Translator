@@ -3,6 +3,7 @@
 import time
 from typing import Optional
 
+import uso_motores
 from motores_traducao import MOTORES, ErroMotor, traduzir_com
 
 # Se o motor escolhido falhar, tenta estes, nesta ordem
@@ -54,6 +55,9 @@ class MotorTradutor:
             if time.monotonic() < self._pausado_ate.get(motor, 0.0):
                 motivos.append(f"{nome}: em pausa depois de um bloqueio")
                 continue
+            if self._passaria_do_limite(motor, texto):
+                motivos.append(f"{nome}: limite grátis do mês atingido (trava de custo)")
+                continue
             try:
                 traducao = traduzir_com(motor, texto, self.origem, self.destino, self.credenciais)
             except ErroMotor as erro:
@@ -66,6 +70,14 @@ class MotorTradutor:
             return traducao if motor == self.motor else f"[{nome}] {traducao}"
 
         return "Erro: nenhum tradutor funcionou (" + "; ".join(motivos) + ")."
+
+    @staticmethod
+    def _passaria_do_limite(motor: str, texto: str) -> bool:
+        """True se a trava está ligada e este texto faria o motor passar do limite grátis."""
+        info = MOTORES[motor]
+        if not info.trava_de_custo or not uso_motores.trava_ligada():
+            return False
+        return uso_motores.usado_no_mes(motor) + len(texto) > info.limite_gratis
 
 
 if __name__ == "__main__":
