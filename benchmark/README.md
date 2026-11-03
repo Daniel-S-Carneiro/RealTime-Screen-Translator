@@ -18,6 +18,10 @@ que copiavam o pipeline e usavam uma imagem só.
 
 Imagens sem `.txt` aparecem como `[PENDENTE]` e ficam fora da conta.
 
+Os prints coletados ficam só no seu PC: a pasta `dataset/` está no `.gitignore`,
+menos os 3 exemplos que vêm com o repositório (`sintetico_labs`,
+`jogo_tooltip_habilidade` e `documento_tooltip_habilidade`).
+
 ### O que vale coletar (15 a 30 prints)
 
 - fundo claro e fundo escuro;
