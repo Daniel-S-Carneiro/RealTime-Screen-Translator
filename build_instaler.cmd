@@ -17,6 +17,9 @@ SET "NSIS_SCRIPT=%~dp0instalador.nsi"
 :: O PyTorch com CUDA passa de 2 GB, o limite do NSIS; ele e baixado depois da
 :: instalacao, so em PCs com placa NVIDIA (aceleracao_gpu.py).
 SET "PYINSTALLER=%~dp0env_build\Scripts\pyinstaller.exe"
+:: Arquivos intermediarios do PyInstaller ficam fora do projeto: o .exe que ele deixava
+:: em build\ parecia o app, mas nao roda sem a pasta _internal ao lado
+SET "PASTA_TRABALHO=%TEMP%\%APP_NAME%_build"
 
 echo [INFO] Iniciando build do RealTimeScreenTranslator...
 
@@ -30,12 +33,17 @@ IF NOT EXIST "%PYINSTALLER%" (
     EXIT /b 1
 )
 
+:: Sobras de builds antigos que nao rodam sozinhas: o .exe unico de antes e o .exe
+:: intermediario em build\
+IF EXIST "dist\%APP_NAME%.exe" DEL /Q "dist\%APP_NAME%.exe"
+IF EXIST "build\%APP_NAME%" RMDIR /S /Q "build\%APP_NAME%"
+
 echo [INFO] Executando PyInstaller...
 :: O uso direto do .exe evita ambiguidades e a necessidade do comando CALL
 :: --onedir gera uma pasta: o app abre sem descompactar tudo a cada uso
 :: --icon define o icone do .exe; --add-data leva o mesmo arquivo para a janela e a bandeja
 :: --runtime-hook faz o app usar o PyTorch com CUDA da pasta gpu, quando ele existir
-"%PYINSTALLER%" --clean --noconfirm --noconsole --onedir --name="%APP_NAME%" --icon="assets\icone.ico" --add-data="assets\icone.ico;assets" --runtime-hook="pyi_gancho_gpu.py" "%PY_SCRIPT%"
+"%PYINSTALLER%" --clean --noconfirm --noconsole --onedir --name="%APP_NAME%" --icon="assets\icone.ico" --add-data="assets\icone.ico;assets" --runtime-hook="pyi_gancho_gpu.py" --workpath="%PASTA_TRABALHO%" "%PY_SCRIPT%"
 IF %ERRORLEVEL% NEQ 0 (
     echo [ERRO] Falha no PyInstaller!
     EXIT /b 1
@@ -50,7 +58,8 @@ IF %ERRORLEVEL% NEQ 0 (
 )
 
 echo.
-echo [SUCESSO] O instalador foi gerado na pasta do projeto.
+echo [SUCESSO] Instalador gerado: dist\%APP_NAME%_Setup.exe
+echo           App sem instalar:   dist\%APP_NAME%\%APP_NAME%.exe
 echo.
 
 ENDLOCAL
