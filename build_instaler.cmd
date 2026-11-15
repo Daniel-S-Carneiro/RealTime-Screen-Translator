@@ -43,7 +43,10 @@ echo [INFO] Executando PyInstaller...
 :: --onedir gera uma pasta: o app abre sem descompactar tudo a cada uso
 :: --icon define o icone do .exe; --add-data leva o mesmo arquivo para a janela e a bandeja
 :: --runtime-hook faz o app usar o PyTorch com CUDA da pasta gpu, quando ele existir
-"%PYINSTALLER%" --clean --noconfirm --noconsole --onedir --name="%APP_NAME%" --icon="assets\icone.ico" --add-data="assets\icone.ico;assets" --runtime-hook="pyi_gancho_gpu.py" --workpath="%PASTA_TRABALHO%" "%PY_SCRIPT%"
+:: --exclude-module nltk: o app nao usa o nltk (so um tokenizador opcional do transformers
+:: o importa), mas com ele no pacote o PyInstaller o carrega a cada abertura, antes ate
+:: da tela de carregamento: cerca de 3 s a mais
+"%PYINSTALLER%" --clean --noconfirm --noconsole --onedir --name="%APP_NAME%" --icon="assets\icone.ico" --add-data="assets\icone.ico;assets" --runtime-hook="pyi_gancho_gpu.py" --exclude-module nltk --workpath="%PASTA_TRABALHO%" "%PY_SCRIPT%"
 IF %ERRORLEVEL% NEQ 0 (
     echo [ERRO] Falha no PyInstaller!
     EXIT /b 1
