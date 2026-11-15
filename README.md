@@ -22,6 +22,7 @@ It captures the part of the screen under a transparent window, reads the text wi
 - **Translate any part of the screen:** a transparent window stays on top of the game; drag it over the text and click once.
 - **OCR tested on game screenshots:** EasyOCR with GPU acceleration (NVIDIA CUDA) when available, and automatic fallback to the CPU.
 - **Cleans up the OCR output:** separates words that the OCR glued together (`DMGto` → `DMG to`, `ofincoming` → `of incoming`) before translating.
+- **Keeps the layout of the text:** titles, paragraphs, menu options and effect lines stay on their own lines in the translation, while sentences that only wrapped to fit the box are translated as a whole.
 - **80+ languages** for translation.
 - **Choose your translation engine:** free Google Translate, the official Azure, DeepL and Google Cloud APIs with your own key, or a fully offline mode.
 - **Automatic fallback:** if the chosen engine fails or hits its limit, the app tries the next one.

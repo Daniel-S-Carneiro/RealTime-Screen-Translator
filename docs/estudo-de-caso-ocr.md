@@ -253,9 +253,129 @@ variados.
 
 ## 7. Resultados no dataset real
 
-> **[A COMPLETAR]** Depois de juntar os prints: número de imagens e de jogos,
-> tabela de CER/WER por configuração, a imagem em que cada uma errou mais e se
-> algum padrão da produção mudou por causa disso.
+Juntei **90 prints com gabarito, de 11 jogos**: o RPG de cultivo do primeiro teste e
+mais dez escolhidos para variar o máximo possível.
+
+| Jogo | O que ele testa |
+|---|---|
+| Undertale | fonte em pixel |
+| Doki Doki Literature Club | legenda com glitch |
+| Danganronpa | título inclinado |
+| Persona 4 Golden | menus coloridos |
+| Fallout: New Vegas | painéis lado a lado |
+| Morrowind | fonte medieval pequena |
+| Mass Effect | legendas centralizadas |
+| Night in the Woods | cartazes, letreiros e uma fonte gótica de pixel |
+| EVE Online | menus de letra miúda |
+| Caves of Qud | fonte monoespaçada e tabelas |
+
+Prints com letra de música ou texto completo de terceiros ficaram sem gabarito. Nas
+telas com painéis, o gabarito segue a ordem de leitura de uma pessoa: um painel de cada
+vez.
+
+Além de CER e WER, o benchmark passou a medir as **quebras de linha**:
+- **achadas:** das quebras do gabarito, quantas o app pôs;
+- **certas:** das que o app pôs, quantas estavam no gabarito.
+
+Isso importa porque o texto vai para o tradutor parágrafo por parágrafo. Uma frase
+cortada no meio sai mal traduzida, mesmo com todas as letras certas.
+
+**Antes de comparar, uma surpresa: o OCR varia entre execuções.** Rodei o mesmo
+benchmark duas vezes, e 13 dos 52 prints de letra pequena mudaram de resultado (um foi
+de 11% para 7% de erro). Para comparar ideias com justiça, rodei o OCR uma vez em cada
+versão da imagem e guardei as caixas lidas. Depois testei todas as regras sobre
+exatamente a mesma leitura. De quebra, cada teste passou a levar segundos, em vez de
+minutos.
+
+### Preparar a imagem: nada ganhou do cinza
+
+| Versão da imagem | CER | WER | Tempo | Prints melhores / piores |
+|---|---|---|---|---|
+| **Tons de cinza (atual)** | **12,27%** | **26,15%** | **2,8 s** | — |
+| Inverter as cores quando o fundo é escuro | 12,42% | 29,27% | 2,8 s | 21 / 28 |
+| Inverter só com muito fundo preto | 12,49% | 26,93% | 2,8 s | 16 / 24 |
+| Desfoque leve, para suavizar fonte em pixel | 17,25% | 39,20% | 3,0 s | 13 / 52 |
+| Ampliar 2x e desfocar | 13,32% | 28,49% | 10,1 s | 25 / 38 |
+| Reduzir e ampliar de volta | 22,99% | 46,80% | 3,1 s | 11 / 60 |
+
+**Inverter as cores** parecia óbvio, já que 67 a 80 dos 90 prints têm fundo escuro.
+Mas o EasyOCR não ficou melhor com letra escura em fundo claro: ganhou em alguns jogos e
+perdeu em outros.
+
+**Suavizar as letras** ajudou a fonte em pixel grande, como a do minijogo do Night in
+the Woods, e destruiu a letra pequena do EVE e do Morrowind. Aplicar a suavização só nos
+prints em pixel art também não compensaria: o Undertale, que é todo em pixel, melhorou
+num print e piorou em dois.
+
+### Ler o texto: o que entrou na produção
+
+| Mudança (acumulada) | CER | WER | Quebras achadas | Quebras certas |
+|---|---|---|---|---|
+| Produção anterior | 12,27% | 26,15% | 69% | 78% |
+| + corrigir letras que a fonte confunde | 11,73% | 23,74% | 69% | 78% |
+| + descartar desenhos lidos como texto e endireitar texto inclinado | 11,29% | 23,29% | 68% | 78% |
+| + ler painéis lado a lado separadamente | 10,31% | 22,67% | 74% | 80% |
+| + regras de quebra novas | **10,31%** | **22,67%** | **74%** | **86%** |
+
+**Letras confundidas.** A fonte medieval do Morrowind faz o OCR trocar *e* por *c* e *t*
+por *r*: sai "chc" no lugar de "the" e "durics" no lugar de "duties". Agora, quando uma
+palavra não existe no dicionário, o app testa essas trocas e aceita a que formar uma
+palavra comum. Palavra curta só vira palavra muito comum, para "Misc" não virar "Mist".
+O app também troca "1 was" por "I was" e "g0" por "go". Nenhum dos 90 prints piorou, e o
+Morrowind caiu de 29% para 23% de erro.
+
+**Painéis lado a lado.** Era o maior problema. O EasyOCR devolve caixas soltas, e o app
+as lia linha a linha da tela inteira. Numa tela com a lista de traços à esquerda e a
+descrição à direita, a descrição saía picada entre os itens.
+
+Agora o print é dividido em blocos pelas faixas vazias entre eles. É o "corte XY", uma
+técnica clássica de análise de documentos. Ele tem duas exceções:
+- **tabelas**, como "Perception ....... 28 points": rótulo e valor ficam juntos;
+- **rótulos soltos**, como as opções de uma roda de diálogo, que não viram painel.
+
+A tela de traços do Fallout foi de 35% para 4,5% de erro, e a do baú, de 43% para 6,5%.
+
+**Quebras.** Três regras novas:
+- texto centralizado não conta mais como recuo (legendas do Fallout e do Mass Effect);
+- linha que começa com minúscula continua a frase de cima ("Sensei! Mind your /
+  health, okay?");
+- menu de uma palavra por linha é quebrado item a item.
+
+Uma quarta regra, separar itens da mesma linha com vão grande, achava mais quebras, mas
+errava mais do que acertava, e ficou de fora.
+
+Erro por jogo (CER), antes e depois:
+
+| Jogo | Antes | Depois |
+|---|---|---|
+| Mass Effect | 0,80% | 0,56% |
+| Danganronpa | 8,69% | 1,47% |
+| RPG de cultivo | 1,95% | 1,95% |
+| Persona 4 Golden | 9,60% | 6,39% |
+| Doki Doki Literature Club | 8,85% | 8,40% |
+| Undertale | 9,84% | 9,84% |
+| Fallout: New Vegas | 22,92% | 14,37% |
+| EVE Online | 16,26% | 14,64% |
+| Night in the Woods | 15,79% | 15,24% |
+| Caves of Qud | 14,28% | 16,31% |
+| Morrowind | 29,03% | 22,72% |
+
+O único jogo que piorou foi o Caves of Qud, por causa de um print só. Na tela de resumo
+do personagem, o app agora lê a caixa de tutorial depois das colunas, e o gabarito a põe
+antes. As duas ordens fazem sentido, mas contei como erro mesmo assim.
+
+**O que continua difícil:**
+- Letreiros de rua miúdos e borrados: 54% e 86% de erro no Night in the Woods.
+- Números e palavras de uma letra em fonte pequena ("a", "I", "2"). O detector do
+  EasyOCR nem chega a criar a caixa. Baixar o tamanho mínimo e os limiares da detecção
+  não resolveu.
+- Fontes muito estilizadas: a de faroeste da tela SPECIAL do Fallout e a gótica de
+  pixel do Night in the Woods.
+
+Com o app como está, o benchmark completo dos 90 prints deu:
+- CER de 10,31% e WER de 22,66%;
+- 74% das quebras achadas e 86% certas;
+- 2,9 s por print, o mesmo tempo de antes.
 
 ## 8. O que aprendi
 
@@ -275,6 +395,14 @@ variados.
    parecia perfeita e trocou um 1 por um 7.
 7. **Confira os erros silenciosos.** Metade da força bruta virou `ERRO` dentro do CSV,
    e só percebi muito depois.
+8. **Uma ideia boa num jogo pode ser ruim em dez.** Inverter as cores ajudava o jogo de
+   cultivo e piorava outros cinco. Só entrou na produção o que melhorou a média sem
+   piorar a maioria dos prints.
+9. **Uma métrica não vê tudo.** A CER ignora quebras de linha, e uma frase cortada ao
+   meio estraga a tradução. Por isso o benchmark ganhou a métrica de quebras.
+10. **Isole o que é aleatório.** O OCR variava de uma execução para outra. Guardar a
+    leitura e testar as regras sobre ela deixou a comparação justa, e cada teste passou
+    de minutos para segundos.
 
 ## Como reproduzir
 

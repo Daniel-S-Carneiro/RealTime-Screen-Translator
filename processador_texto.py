@@ -1,8 +1,11 @@
 """Módulo responsável pela unificação e limpeza de texto bruto extraído pelo OCR."""
 
+import itertools
 import re
 from difflib import SequenceMatcher
 from spellchecker import SpellChecker
+
+from paragrafos import montar_paragrafos
 
 # O BERT só é carregado na primeira vez que a correção por IA for usada.
 # Ele deixava a abertura do app lenta mesmo com a correção desligada.
@@ -18,6 +21,20 @@ PALAVRAS_DE_LIGACAO = frozenset(
 # No fim da palavra só valem estas: com "in", "on" e "at", "admin" virava "adm in"
 LIGACAO_NO_FIM = frozenset("a an the of to and is for with all".split())
 ARTIGOS = frozenset({"a", "an", "the"})
+
+# "1 was" -> "I was": verbos que vêm depois de "I" e quase nunca depois de um número
+# ("only 1 can trigger" é número, então "can" ficou de fora)
+_PRONOME_I = re.compile(
+    r"(?<![\w.+\-/\[(])1(?= (?:am|was|wasn't|have|haven't|don't|didn't|think|know|want|"
+    r"guess|mean|feel|hope|wonder|believe|never|really|need)\b|'(?:m|ve|ll|d)\b)"
+)
+# Letras que fontes de jogo fazem o OCR confundir (Morrowind: "chc" = "the", "durics"
+# = "duties"; DDLC: "whac" = "what"; Fallout: "Riflc" = "Rifle")
+LETRAS_CONFUNDIDAS = {"c": ("e", "t"), "r": ("t",), "l": ("i",)}
+# A troca só vale se der palavra comum: palavra curta precisa ser bem comum ("Misc"
+# não pode virar "Mist", nem "taur" virar "taut")
+FREQUENCIA_MINIMA_CURTA = 1e-5
+FREQUENCIA_MINIMA = 5e-7
 
 
 def obter_mask_filler():
@@ -60,31 +77,6 @@ class ProcessadorInteligente:
         if self._spell is None:
             self._spell = SpellChecker(language="en")
         return self._spell
-
-    def analisar_confianca(self, resultados_ocr):
-        """Extrai o texto bruto e calcula a confiança média do OCR."""
-        if not resultados_ocr:
-            return "", 0.0
-
-        texto_limpo = []
-        confianca_total = 0.0
-
-        for item in resultados_ocr:
-            if len(item) >= 3:
-                texto = item[1]
-                confianca = item[2]
-            elif len(item) == 2:
-                texto = item[1]
-                confianca = 1.0
-            else:
-                continue
-
-            texto = " ".join(str(texto).split())
-            texto_limpo.append(texto)
-            confianca_total += float(confianca)
-
-        media_confianca = confianca_total / len(resultados_ocr)
-        return " ".join(texto_limpo), media_confianca
 
     def aplicar_regex_limpeza(self, texto: str) -> str:
         """Aplica regex para limpar e padronizar o texto OCR com pontuação inteligente."""
@@ -204,6 +196,48 @@ class ProcessadorInteligente:
             return len(direita) >= 3 and not artigo_errado
         return False
 
+    @staticmethod
+    def corrigir_numeros_trocados(texto: str) -> str:
+        """Letra que o OCR leu como número (só inglês): "1 was" -> "I was", "g0" -> "go",
+        e o contrário dentro de número: "1Omm" -> "10mm", "3Oth" -> "30th"."""
+        texto = _PRONOME_I.sub("I", texto)
+        texto = re.sub(r"(?<=[A-Za-z])0(?=[a-z]|\b)", "o", texto)
+        return re.sub(r"(?<=\b\d)[Oo](?=\d|mm\b|th\b)", "0", texto)
+
+    def corrigir_letras_confundidas(self, texto: str) -> str:
+        """Desfaz trocas de letra que fontes de jogo provocam (c/e, c/t, r/t, l/i).
+
+        Só mexe em palavra que o dicionário não conhece, e só aceita a troca que der
+        palavra comum. Palavras com apóstrofo e siglas (tudo maiúsculo) ficam de fora.
+        """
+        return re.sub(r"[A-Za-z]+(?:'[A-Za-z]+)*", self._trocar_letras_confundidas, texto)
+
+    def _trocar_letras_confundidas(self, match) -> str:
+        palavra = match.group(0)
+        minuscula = palavra.lower()
+        if "'" in palavra or len(minuscula) < 3 or minuscula in self.spell:
+            return palavra
+        if not (palavra.islower() or palavra.istitle()):
+            return palavra
+        posicoes = [i for i, letra in enumerate(minuscula) if letra in LETRAS_CONFUNDIDAS]
+        if not posicoes or len(posicoes) > 6:
+            return palavra
+        opcoes = [(minuscula[i],) + LETRAS_CONFUNDIDAS[minuscula[i]] for i in posicoes]
+        candidatas = set()
+        for escolha in itertools.product(*opcoes):
+            letras = list(minuscula)
+            for i, nova in zip(posicoes, escolha):
+                letras[i] = nova
+            candidatas.add("".join(letras))
+        candidatas = [c for c in candidatas if c != minuscula and c in self.spell]
+        if not candidatas:
+            return palavra
+        nova = max(candidatas, key=self.spell.word_usage_frequency)
+        minima = FREQUENCIA_MINIMA_CURTA if len(nova) <= 4 else FREQUENCIA_MINIMA
+        if self.spell.word_usage_frequency(nova) < minima:
+            return palavra
+        return nova.capitalize() if palavra.istitle() else nova
+
     def _escolher_correcao(self, erro: str, palavras_bert: list):
         """Escolhe a sugestão do BERT mais parecida com o erro, ou cai no SpellChecker."""
         melhor_palavra_bert = None
@@ -273,15 +307,25 @@ class ProcessadorInteligente:
         return texto_final
 
     def corrigir_texto(self, texto: str, idioma: str) -> str:
-        """Pipeline mestre de correção: Regex -> IA (opcional, só para inglês)."""
+        """Pipeline mestre de correção: Regex -> trocas do OCR -> IA (opcional).
+
+        As trocas do OCR e a IA usam dicionário e regras do inglês, então só rodam nele.
+        """
         try:
             # 1. Limpeza Bruta
             texto_regex = self.aplicar_regex_limpeza(texto)
             texto_regex = self.separar_palavras_grudadas(texto_regex, idioma)
+            if (idioma or "").lower() != "en":
+                return texto_regex
 
-            # 2. Refinamento de Contexto. O modelo carregado (bert-base-uncased)
+            # 2. Trocas de letra que o OCR faz (benchmark de 2026-11-15: CER de 29% para
+            # 23% no Morrowind, sem piorar nenhum dos 90 prints)
+            texto_regex = self.corrigir_numeros_trocados(texto_regex)
+            texto_regex = self.corrigir_letras_confundidas(texto_regex)
+
+            # 3. Refinamento de Contexto. O modelo carregado (bert-base-uncased)
             # só conhece inglês, então em outros idiomas ele só atrapalharia.
-            if not self.usar_ia or (idioma or "").lower() != "en":
+            if not self.usar_ia:
                 return texto_regex
             return self.analisar_e_corrigir_ia(texto_regex)
 
@@ -300,10 +344,13 @@ def pipeline_processamento(
     usar_ia: bool = False,
     pontuacao_agressiva: bool = False,
 ) -> str:
-    """Pipeline unificado consumido pelo main.py."""
+    """Pipeline unificado consumido pelo main.py: um parágrafo corrigido por linha."""
     chave = (usar_ia, pontuacao_agressiva)
     if chave not in _PROCESSADORES:
         _PROCESSADORES[chave] = ProcessadorInteligente(usar_ia, pontuacao_agressiva)
     processador = _PROCESSADORES[chave]
-    texto_bruto, _ = processador.analisar_confianca(resultados_ocr)
-    return processador.corrigir_texto(texto_bruto, idioma_alvo)
+    corrigidos = (
+        processador.corrigir_texto(paragrafo, idioma_alvo)
+        for paragrafo in montar_paragrafos(resultados_ocr)
+    )
+    return "\n".join(paragrafo.strip() for paragrafo in corrigidos if paragrafo.strip())

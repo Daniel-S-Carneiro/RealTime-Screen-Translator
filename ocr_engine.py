@@ -4,39 +4,22 @@ import os
 from typing import List, Optional
 import easyocr
 import torch
+from easyocr.config import MODULE_PATH
+
+from paragrafos import agrupar_em_linhas
+
+
+def modelos_baixados() -> bool:
+    """True se o modelo de detecção do EasyOCR já está no PC.
+
+    Na primeira abertura, o EasyOCR baixa os modelos (cerca de 100 MB).
+    """
+    return os.path.exists(os.path.join(MODULE_PATH, "model", "craft_mlt_25k.pth"))
 
 
 def ordenar_por_linhas(resultados):
-    """Ordena as caixas do EasyOCR em ordem de leitura: linha a linha, da esquerda para a direita.
-
-    O EasyOCR devolve as caixas inclinadas no fim da lista, o que jogava trechos
-    como "your key:" para o final do texto.
-    """
-    if len(resultados) < 2:
-        return resultados
-
-    caixas = []
-    for item in resultados:
-        xs = [ponto[0] for ponto in item[0]]
-        ys = [ponto[1] for ponto in item[0]]
-        caixas.append(((min(ys) + max(ys)) / 2, max(ys) - min(ys), min(xs), item))
-    caixas.sort(key=lambda caixa: caixa[0])
-
-    linhas = []
-    for centro, altura, esquerda, item in caixas:
-        if linhas:
-            linha = linhas[-1]
-            # Mesma linha quando os centros verticais estão a menos de meia altura de texto
-            if abs(centro - linha["centro"]) < min(altura, linha["altura"]) / 2:
-                linha["itens"].append((esquerda, item))
-                continue
-        linhas.append({"centro": centro, "altura": altura, "itens": [(esquerda, item)]})
-
-    return [
-        item
-        for linha in linhas
-        for _, item in sorted(linha["itens"], key=lambda par: par[0])
-    ]
+    """Põe as caixas do EasyOCR em ordem de leitura: linha a linha, da esquerda para a direita."""
+    return [item for linha in agrupar_em_linhas(resultados) for item in linha]
 
 
 class MotorOCR:
@@ -102,7 +85,7 @@ class MotorOCR:
             batch_size=1,  # <-- Processamento único
             adjust_contrast=0.0,  # <-- Desativado: valores testados nos laboratórios
             contrast_ths=0.1,
-            paragraph=False,  # <-- Mantemos False para o processador_texto.py cuidar da junção
+            paragraph=False,  # <-- Mantemos False para o paragrafos.py cuidar da junção
         )
         return ordenar_por_linhas(resultados)
 
