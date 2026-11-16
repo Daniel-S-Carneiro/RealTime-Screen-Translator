@@ -45,7 +45,7 @@ Com a correção por contexto ligada, o acerto vai a 89,8% das letras e 78,1% da
 | Mass Effect Legendary Edition | 5 | 99,4% | 96,9% | 100% | 100% |
 | Exemplos públicos (pasta base) | 3 | 99,3% | 96,1% | 100% | 100% |
 | Danganronpa: Trigger Happy Havoc | 5 | 98,5% | 94,1% | 67% | 100% |
-| RPG de cultivo (primeiro jogo testado) | 15 | 98,1% | 91,5% | 96% | 91% |
+| Immortal Clan | 15 | 98,1% | 91,5% | 96% | 91% |
 | Persona 4 Golden | 7 | 93,6% | 82,8% | 97% | 100% |
 | Doki Doki Literature Club | 3 | 91,6% | 69,7% | 29% | 80% |
 | Undertale | 3 | 90,2% | 63,2% | 38% | 100% |
@@ -94,27 +94,27 @@ Média: 98,5% das letras e 94,1% das palavras.
 
 - `danganronpa_titulo`: texto inclinado: depois de endireitado, as palavras saem na ordem certa, mas as três linhas viram um parágrafo só.
 
-### RPG de cultivo (primeiro jogo testado)
+### Immortal Clan
 
 Média: 98,1% das letras e 91,5% das palavras.
 
 | Print | Acerto de letras | Acerto de palavras | Quebras achadas | A mais |
 |---|---|---|---|---|
-| `coleta_20261102_062239` | 98,8% | 93,4% | 7 de 7 | 0 |
-| `coleta_20261102_062304` | 99,4% | 96,7% | 9 de 9 | 0 |
-| `coleta_20261102_062342` | 99,8% | 98,9% | 9 de 9 | 0 |
-| `coleta_20261102_062420` | 97,8% | 95,2% | 9 de 9 | 1 |
-| `coleta_20261102_062455` | 97,3% | 91,1% | 9 de 9 | 1 |
-| `coleta_20261102_062554` | 99,3% | 96,1% | 8 de 8 | 1 |
-| `coleta_20261102_062706` | 99,3% | 95,6% | 8 de 9 | 0 |
-| `coleta_20261102_062745` | 97,8% | 93,7% | 7 de 7 | 2 |
-| `coleta_20261102_062910` | 97,4% | 88,9% | 9 de 9 | 2 |
-| `coleta_20261102_062943` | 98,5% | 91,8% | 6 de 6 | 1 |
-| `coleta_20261102_063011` | 97,7% | 94,4% | 9 de 9 | 1 |
-| `coleta_20261102_063145` | 96,2% | 78,4% | 7 de 8 | 1 |
-| `coleta_20261102_063316` | 100,0% | 100,0% | 1 de 1 | 0 |
-| `coleta_20261102_063334` | 95,8% | 76,0% | 2 de 2 | 0 |
-| `coleta_20261102_063407` | 95,6% | 82,8% | 6 de 8 | 1 |
+| `immortalclan_fase_efeito` | 95,8% | 76,0% | 2 de 2 | 0 |
+| `immortalclan_loja_investidor` | 96,2% | 78,4% | 7 de 8 | 1 |
+| `immortalclan_mapa_mist_island` | 100,0% | 100,0% | 1 de 1 | 0 |
+| `immortalclan_missoes_capitulo` | 95,6% | 82,8% | 6 de 8 | 1 |
+| `immortalclan_tomo_azure_blade` | 97,8% | 93,7% | 7 de 7 | 2 |
+| `immortalclan_tomo_bloodburn` | 97,8% | 95,2% | 9 de 9 | 1 |
+| `immortalclan_tomo_dragonbind` | 97,4% | 88,9% | 9 de 9 | 2 |
+| `immortalclan_tomo_green_lotus` | 99,3% | 96,1% | 8 de 8 | 1 |
+| `immortalclan_tomo_kunxu` | 99,4% | 96,7% | 9 de 9 | 0 |
+| `immortalclan_tomo_malice` | 97,3% | 91,1% | 9 de 9 | 1 |
+| `immortalclan_tomo_overwhelm` | 98,8% | 93,4% | 7 de 7 | 0 |
+| `immortalclan_tomo_spirit_rhino` | 98,5% | 91,8% | 6 de 6 | 1 |
+| `immortalclan_tomo_thunder_verdict` | 97,7% | 94,4% | 9 de 9 | 1 |
+| `immortalclan_tomo_turbid_fire` | 99,8% | 98,9% | 9 de 9 | 0 |
+| `immortalclan_tomo_windriding` | 99,3% | 95,6% | 8 de 9 | 0 |
 
 ### Persona 4 Golden
 

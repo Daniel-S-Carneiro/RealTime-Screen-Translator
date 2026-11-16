@@ -257,11 +257,13 @@ variados.
 ## 7. Resultados no dataset real
 
 Juntei **90 prints com gabarito**: 87 de 11 jogos e os 3 exemplos públicos do
-repositório. Os jogos são o RPG de cultivo do primeiro teste e mais dez, escolhidos para
-variar o máximo possível:
+repositório. Os jogos são o Immortal Clan, um RPG de cultivo para celular que também tem
+versão para PC na Steam e foi o primeiro testado, e mais dez, escolhidos para variar o
+máximo possível:
 
 | Jogo | O que ele testa |
 |---|---|
+| Immortal Clan | muito texto: descrições de técnicas, loja, mapa e missões |
 | Undertale | fonte em pixel |
 | Doki Doki Literature Club | legenda com glitch |
 | Danganronpa | título inclinado |
@@ -397,7 +399,7 @@ Erro por jogo (CER), antes e depois:
 |---|---|---|
 | Mass Effect | 0,80% | 0,56% |
 | Danganronpa | 8,69% | 1,47% |
-| RPG de cultivo | 1,95% | 1,95% |
+| Immortal Clan | 1,95% | 1,95% |
 | Persona 4 Golden | 9,60% | 6,39% |
 | Doki Doki Literature Club | 8,85% | 8,40% |
 | Undertale | 9,84% | 9,84% |
@@ -493,8 +495,8 @@ outras línguas.
    parecia perfeita e trocou um 1 por um 7.
 7. **Confira os erros silenciosos.** Metade da força bruta virou `ERRO` dentro do CSV,
    e só percebi muito depois.
-8. **Uma ideia boa num jogo pode ser ruim em dez.** Inverter as cores ajudava o jogo de
-   cultivo e piorava outros cinco. Só entrou na produção o que melhorou a média sem
+8. **Uma ideia boa num jogo pode ser ruim em dez.** Inverter as cores ajudava o Immortal
+   Clan e piorava outros cinco. Só entrou na produção o que melhorou a média sem
    piorar a maioria dos prints.
 9. **Uma métrica não vê tudo.** A CER ignora quebras de linha, e uma frase cortada ao
    meio estraga a tradução. Por isso o benchmark ganhou a métrica de quebras.
