@@ -353,13 +353,17 @@ def pipeline_processamento(
     usar_ia: bool = False,
     pontuacao_agressiva: bool = False,
 ) -> str:
-    """Pipeline unificado consumido pelo main.py: um parágrafo corrigido por linha."""
+    """Pipeline unificado consumido pelo main.py: um parágrafo corrigido por linha.
+
+    idioma_alvo é a língua do texto lido na tela (a de origem da tradução): ela decide
+    a direção da leitura e se as correções do inglês rodam.
+    """
     chave = (usar_ia, pontuacao_agressiva)
     if chave not in _PROCESSADORES:
         _PROCESSADORES[chave] = ProcessadorInteligente(usar_ia, pontuacao_agressiva)
     processador = _PROCESSADORES[chave]
     corrigidos = (
         processador.corrigir_texto(paragrafo, idioma_alvo)
-        for paragrafo in montar_paragrafos(resultados_ocr)
+        for paragrafo in montar_paragrafos(resultados_ocr, idioma_alvo)
     )
     return "\n".join(paragrafo.strip() for paragrafo in corrigidos if paragrafo.strip())

@@ -13,6 +13,11 @@ Antes das linhas, o print é dividido em blocos (corte XY): painéis lado a lado
 uma lista à esquerda e a descrição à direita, são lidos um de cada vez. Sem isso, o
 EasyOCR lia linha a linha da tela inteira e picava a descrição entre os itens.
 
+As regras valem para qualquer língua de origem. Em árabe, persa, urdu e uigur as
+caixas são espelhadas, para a leitura ir da direita para a esquerda. Em chinês,
+japonês e tailandês, que não usam espaço, os pedaços são juntados sem espaço e uma
+linha "cabe" mais uma letra, não mais uma palavra.
+
 Nos 90 prints do benchmark (10 jogos, em 2026-11-15), as regras acharam 74% das
 quebras dos gabaritos, e 86% das quebras que puseram estavam certas (antes dos
 blocos e das regras de 2026-11-15: 69% e 78%).
@@ -44,6 +49,13 @@ LIXO_ALTURA = 3.0  # muito mais alta que o texto típico...
 LIXO_LETRAS = 3  # ...e com quase nada escrito
 INCLINACAO_MINIMA = 0.05  # abaixo disso o texto é tratado como reto
 
+# Línguas escritas da direita para a esquerda (códigos do EasyOCR)
+IDIOMAS_DA_DIREITA = frozenset({"ar", "fa", "ur", "ug"})
+# Escritas sem espaço entre palavras: chinês, japonês (kana), tailandês e a pontuação
+# de largura cheia. O coreano usa espaço e fica de fora.
+SEM_ESPACO = re.compile(r"[฀-๿　-ヿ㐀-鿿豈-﫿＀-￯]")
+MENU_SEM_ESPACO = 8  # nessas escritas, opção de menu tem até 8 letras
+
 MARCADORES = "•-*►▶◆●·"
 # Verbete de efeito: "[Shield] Negates part of..." (com minúscula, é só uma frase quebrada)
 VERBETE = re.compile(r"\[[^\]]+\]\s*(\w)")
@@ -60,6 +72,25 @@ def _limites(item) -> tuple:
 
 def _texto(item) -> str:
     return " ".join(str(item[1]).split())
+
+
+def _juntar(partes: list) -> str:
+    """Junta pedaços de texto com espaço, menos entre dois pedaços de escrita sem espaço
+    ("この城の" + "地下に" vira "この城の地下に", e não "この城の 地下に")."""
+    texto = ""
+    for parte in partes:
+        if texto and parte and not (SEM_ESPACO.match(texto[-1]) and SEM_ESPACO.match(parte[0])):
+            texto += " "
+        texto += parte
+    return texto
+
+
+def _espelhar(item) -> tuple:
+    """Espelha a caixa na horizontal, para ler escrita da direita para a esquerda com as
+    mesmas regras: o começo da linha (à direita) vira a esquerda. A ordem dos cantos é
+    refeita para o canto de cima à esquerda continuar sendo o primeiro."""
+    p0, p1, p2, p3 = [(-x, y) for x, y in item[0]]
+    return ([list(p1), list(p0), list(p3), list(p2)],) + tuple(item[1:])
 
 
 def _altura_caixa(item) -> float:
@@ -81,11 +112,14 @@ def _filtrar_lixo(itens: list) -> list:
     if len(itens) < 3:
         return itens
     tipica = statistics.median(_altura_caixa(item) for item in itens)
+    # Só texto ASCII pode ser descartado: em chinês ou japonês, três letras grandes
+    # são uma palavra inteira, como o título "第一章"
     return [
         item
         for item in itens
         if _altura_caixa(item) <= LIXO_ALTURA * tipica
         or len(_texto(item).replace(" ", "")) > LIXO_LETRAS
+        or not _texto(item).isascii()
     ]
 
 
@@ -161,7 +195,7 @@ class Linha:
         self.topo = min(lim[2] for lim in limites)
         self.base = max(lim[3] for lim in limites)
         self.altura = statistics.median(lim[3] - lim[2] for lim in limites)
-        self.texto = " ".join(_texto(item) for item in self.itens)
+        self.texto = _juntar([_texto(item) for item in self.itens])
 
     @property
     def largura_letra(self) -> float:
@@ -335,7 +369,16 @@ def _continua_frase(anterior: Linha, seguinte: Linha) -> bool:
 
 
 def _menu_de_palavras(anterior: Linha, seguinte: Linha) -> bool:
-    """Menu de uma palavra por linha: "Skill / Item / Equip / Persona"."""
+    """Menu de uma palavra por linha: "Skill / Item / Equip / Persona".
+
+    Em escrita sem espaço e sem maiúscula ("はじめから / つづきから / 設定"), valem
+    duas linhas curtas, a de cima sem vírgula no fim: fala quebrada tem linha comprida.
+    """
+    if SEM_ESPACO.match(anterior.texto) and SEM_ESPACO.match(seguinte.texto):
+        return (
+            max(len(anterior.texto), len(seguinte.texto)) <= MENU_SEM_ESPACO
+            and anterior.texto[-1] not in "、，,"
+        )
     return (
         len(anterior.texto.split()) == 1
         and len(seguinte.texto.split()) == 1
@@ -355,7 +398,8 @@ def _comeca_paragrafo(
 
     # A primeira palavra da seguinte caberia no fim da anterior: a anterior acabou ali.
     # A margem é a do print inteiro: medir por bloco juntou itens curtos de menu.
-    primeira = seguinte.texto.split()[0]
+    # Em escrita sem espaço, a linha quebra em qualquer letra: basta caber uma.
+    primeira = seguinte.texto[:1] if SEM_ESPACO.match(seguinte.texto) else seguinte.texto.split()[0]
     cabia = margem_dir - anterior.dir > (len(primeira) + 1) * seguinte.largura_letra
     return (
         vao
@@ -369,9 +413,15 @@ def _comeca_paragrafo(
     )
 
 
-def montar_paragrafos(resultados) -> list:
-    """Resultados do EasyOCR -> lista de parágrafos (cada um já numa linha só)."""
+def montar_paragrafos(resultados, idioma: str = "") -> list:
+    """Resultados do EasyOCR -> lista de parágrafos (cada um já numa linha só).
+
+    idioma é o código do texto lido (o do EasyOCR); em árabe, persa, urdu e uigur
+    a leitura vai da direita para a esquerda.
+    """
     itens = [item for item in resultados if len(item) >= 2 and _texto(item)]
+    if (idioma or "").lower() in IDIOMAS_DA_DIREITA:
+        itens = [_espelhar(item) for item in itens]
     itens = _endireitar(_filtrar_lixo(itens))
     todas = _linhas(itens)
     if not todas:
@@ -391,5 +441,5 @@ def montar_paragrafos(resultados) -> list:
                 atuais.append([seguinte.texto])
             else:
                 atuais[-1].append(seguinte.texto)
-        paragrafos += [" ".join(partes) for partes in atuais]
+        paragrafos += [_juntar(partes) for partes in atuais]
     return paragrafos
