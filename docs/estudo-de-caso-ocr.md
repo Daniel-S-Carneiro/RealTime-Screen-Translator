@@ -8,7 +8,9 @@
 > Usei força bruta, busca binária, quartis e até um modelo de linguagem (BERT) para
 > corrigir o texto. Cheguei a 100% de acerto. Quando testei num print real de jogo,
 > o pipeline "campeão" perdeu para a imagem sem tratamento nenhum, que foi mais
-> precisa e três vezes mais rápida. Este texto conta o que fiz, onde errei e o que mudou.
+> precisa e três vezes mais rápida. Depois, juntei 90 prints de 11 jogos e passei a
+> mudar o app só com o que melhorava a maioria deles. Hoje ele acerta 89,8% das letras
+> e 86% das quebras de linha que põe. Este texto conta o que fiz, onde errei e o que mudou.
 
 ---
 
@@ -24,8 +26,9 @@ transparente fica por cima do jogo. Ao clicar em **Traduzir Área**, o programa:
 5. traduz e mostra o resultado na própria janela.
 
 **Tecnologias:** Python, PySide6 (interface), mss (captura de tela), OpenCV e
-Pillow (imagem), EasyOCR rodando na GPU (OCR) e deep-translator (Google Tradutor).
-Todos os testes rodaram num notebook com uma GeForce MX350.
+Pillow (imagem) e EasyOCR rodando na GPU (OCR). A tradução sai do Google Tradutor, das
+APIs oficiais da Azure, do DeepL e do Google Cloud, ou do Argos Translate, que roda
+offline. Todos os testes rodaram num notebook com uma GeForce MX350.
 
 A etapa difícil é o OCR. Texto de jogo é o pior caso: fontes estilizadas, cores
 fortes, fundos com textura, letras pequenas e números que não podem sair errados
@@ -253,11 +256,228 @@ variados.
 
 ## 7. Resultados no dataset real
 
-> **[A COMPLETAR]** Depois de juntar os prints: número de imagens e de jogos,
-> tabela de CER/WER por configuração, a imagem em que cada uma errou mais e se
-> algum padrão da produção mudou por causa disso.
+Juntei **90 prints com gabarito**: 87 de 11 jogos e os 3 exemplos públicos do
+repositório. Os jogos são o Immortal Clan, um RPG de cultivo para celular que também tem
+versão para PC na Steam e foi o primeiro testado, e mais dez, escolhidos para variar o
+máximo possível:
 
-## 8. O que aprendi
+| Jogo | O que ele testa |
+|---|---|
+| Immortal Clan | muito texto: descrições de técnicas, loja, mapa e missões |
+| Undertale | fonte em pixel |
+| Doki Doki Literature Club | legenda com glitch |
+| Danganronpa | título inclinado |
+| Persona 4 Golden | menus coloridos |
+| Fallout: New Vegas | painéis lado a lado |
+| Morrowind | fonte medieval pequena |
+| Mass Effect | legendas centralizadas |
+| Night in the Woods | cartazes, letreiros e uma fonte gótica de pixel |
+| EVE Online | menus de letra miúda |
+| Caves of Qud | fonte monoespaçada e tabelas |
+
+**Como montei o dataset.** Joguei cada jogo com o app no modo de coleta: cada captura
+salva o print e o texto que o OCR leu. Depois corrigi esse rascunho olhando a imagem, e
+ele virou o gabarito. Algumas regras deixaram a comparação justa:
+- **ordem de leitura de uma pessoa:** numa tela com painéis, um painel de cada vez;
+- **uma linha por parágrafo ou item:** título, opção de menu e fala ficam em linhas
+  próprias, e a frase que só continuou embaixo fica numa linha só;
+- **texto cortado:** o que a borda do print cortou fica fora; o que o próprio jogo
+  cortou ("Manufacture & Researc") entra como aparece;
+- **desenhos ficam fora:** ícones, botões do controle e o cursor de seleção. Marcadores
+  escritos, como o "*" do Undertale, entram;
+- **letra de música e texto completo de terceiros** (um poema, uma carta inteira) ficam
+  sem gabarito, porque o gabarito seria uma cópia da obra.
+
+O resultado de cada print está no anexo
+[Resultados do benchmark, print a print](resultados-benchmark.md).
+
+Além de CER e WER, o benchmark passou a medir as **quebras de linha**:
+- **achadas:** das quebras do gabarito, quantas o app pôs;
+- **certas:** das que o app pôs, quantas estavam no gabarito.
+
+Isso importa porque o texto vai para o tradutor parágrafo por parágrafo. Uma frase
+cortada no meio sai mal traduzida, mesmo com todas as letras certas.
+
+**Antes de comparar, uma surpresa: o OCR varia entre execuções.** Rodei o mesmo
+benchmark duas vezes, e 13 dos 52 prints de letra pequena mudaram de resultado (um foi
+de 11% para 7% de erro). Para comparar ideias com justiça, rodei o OCR uma vez em cada
+versão da imagem e guardei as caixas lidas. Depois testei todas as regras sobre
+exatamente a mesma leitura. De quebra, cada teste passou a levar segundos, em vez de
+minutos.
+
+### Preparar a imagem: nada ganhou do cinza
+
+| Versão da imagem | CER | WER | Tempo | Prints melhores / piores |
+|---|---|---|---|---|
+| **Tons de cinza (atual)** | **12,27%** | **26,15%** | **2,8 s** | — |
+| Inverter as cores quando o fundo é escuro | 12,42% | 29,27% | 2,8 s | 21 / 28 |
+| Inverter só com muito fundo preto | 12,49% | 26,93% | 2,8 s | 16 / 24 |
+| Desfoque leve, para suavizar fonte em pixel | 17,25% | 39,20% | 3,0 s | 13 / 52 |
+| Ampliar 2x e desfocar | 13,32% | 28,49% | 10,1 s | 25 / 38 |
+| Reduzir e ampliar de volta | 22,99% | 46,80% | 3,1 s | 11 / 60 |
+
+**Inverter as cores** parecia óbvio, já que 67 a 80 dos 90 prints têm fundo escuro.
+Mas o EasyOCR não ficou melhor com letra escura em fundo claro: ganhou em alguns jogos e
+perdeu em outros.
+
+**Suavizar as letras** ajudou a fonte em pixel grande, como a do minijogo do Night in
+the Woods, e destruiu a letra pequena do EVE e do Morrowind. Aplicar a suavização só nos
+prints em pixel art também não compensaria: o Undertale, que é todo em pixel, melhorou
+num print e piorou em dois.
+
+### Ler o texto: o que entrou na produção
+
+| Mudança (acumulada) | CER | WER | Quebras achadas | Quebras certas |
+|---|---|---|---|---|
+| Produção anterior | 12,27% | 26,15% | 69% | 78% |
+| + corrigir letras que a fonte confunde | 11,73% | 23,74% | 69% | 78% |
+| + descartar desenhos lidos como texto e endireitar texto inclinado | 11,29% | 23,29% | 68% | 78% |
+| + ler painéis lado a lado separadamente | 10,31% | 22,67% | 74% | 80% |
+| + regras de quebra novas | 10,31% | 22,67% | 74% | 86% |
+| + devolver o apóstrofo que a fonte apagou | **10,24%** | **22,30%** | **74%** | **86%** |
+
+**Letras confundidas.** A fonte medieval do Morrowind faz o OCR trocar *e* por *c* e *t*
+por *r*: sai "chc" no lugar de "the" e "durics" no lugar de "duties". Agora, quando uma
+palavra não existe no dicionário, o app testa essas trocas e aceita a que formar uma
+palavra comum. Palavra curta só vira palavra muito comum, para "Misc" não virar "Mist".
+O app também troca "1 was" por "I was" e "g0" por "go", e devolve o apóstrofo que a
+fonte do Fallout apaga: "dont" vira "don't". Nenhum dos 90 prints piorou, e o Morrowind
+caiu de 29% para 23% de erro.
+
+**Painéis lado a lado.** Era o maior problema. O EasyOCR devolve caixas soltas, e o app
+as lia linha a linha da tela inteira. Numa tela com a lista de traços à esquerda e a
+descrição à direita, a descrição saía picada entre os itens.
+
+Agora o print é dividido em blocos pelas faixas vazias entre eles. É o "corte XY", uma
+técnica clássica de análise de documentos. Ele tem duas exceções:
+- **tabelas**, como "Perception ....... 28 points": rótulo e valor ficam juntos;
+- **rótulos soltos**, como as opções de uma roda de diálogo, que não viram painel.
+
+A tela de traços do Fallout foi de 35% para 4,5% de erro, e a do baú, de 43% para 6,5%.
+
+**Quebras.** Três regras novas:
+- texto centralizado não conta mais como recuo (legendas do Fallout e do Mass Effect);
+- linha que começa com minúscula continua a frase de cima ("Sensei! Mind your /
+  health, okay?");
+- menu de uma palavra por linha é quebrado item a item.
+
+Uma quarta regra, separar itens da mesma linha com vão grande, achava mais quebras, mas
+errava mais do que acertava, e ficou de fora.
+
+### Corrigir pelo contexto: só quando o dicionário e o BERT concordam
+
+Voltei à ideia dos laboratórios: um corretor ortográfico acha a palavra errada e o BERT
+diz qual palavra cabe na frase. Antes, porém, medi quanto uma correção poderia ganhar.
+Das 4.548 palavras dos gabaritos, faltavam 498 no texto lido:
+- 270 nem foram lidas, e não há o que corrigir;
+- só 163 (3,6% do total) foram lidas erradas mas parecidas, que é o que um corretor
+  poderia consertar.
+
+| Correção por contexto | CER | WER | Prints melhores / piores |
+|---|---|---|---|
+| Nenhuma (padrão do app) | 10,24% | 22,30% | — |
+| **Dicionário e BERT precisam concordar** | **10,17%** | **21,95%** | **4 / 0** |
+
+A versão antiga da correção aceitava a sugestão do dicionário mesmo quando o BERT não
+concordava, e acabou empatada: 7 prints melhores e 7 piores. Ela trocava termos de jogo
+por palavras comuns, como "swarmer" por "warmer", "melee" por "pelee" e "dromad" por
+"road". Somar o regex agressivo foi pior ainda: 56 prints pioraram, porque ele põe ponto
+no meio de títulos ("Fire. Technique.").
+
+Na versão nova, o dicionário propõe as palavras parecidas e o BERT lista as que cabem
+naquele lugar. A troca só acontece se uma palavra estiver nas duas listas. Ela consertou
+"hever seeh" (*never seen*), "dleared" (*cleared*) e "knouledge" (*knowledge*), e não
+tocou em nenhum termo de jogo.
+
+Mesmo assim, ela continua desligada por padrão. Carregar o BERT leva uns 5 segundos, e
+cada parágrafo com palavra desconhecida custa mais 0,4 s, um preço alto para um ganho
+pequeno.
+
+Erro por jogo (CER), antes e depois:
+
+| Jogo | Antes | Depois |
+|---|---|---|
+| Mass Effect | 0,80% | 0,56% |
+| Danganronpa | 8,69% | 1,47% |
+| Immortal Clan | 1,95% | 1,95% |
+| Persona 4 Golden | 9,60% | 6,39% |
+| Doki Doki Literature Club | 8,85% | 8,40% |
+| Undertale | 9,84% | 9,84% |
+| Fallout: New Vegas | 22,92% | 13,90% |
+| EVE Online | 16,26% | 14,64% |
+| Night in the Woods | 15,79% | 15,04% |
+| Caves of Qud | 14,28% | 16,31% |
+| Morrowind | 29,03% | 22,72% |
+
+O único jogo que piorou foi o Caves of Qud, por causa de um print só. Na tela de resumo
+do personagem, o app agora lê a caixa de tutorial depois das colunas, e o gabarito a põe
+antes. As duas ordens fazem sentido, mas contei como erro mesmo assim.
+
+**O que continua difícil:**
+- Letreiros de rua miúdos e borrados: 54% e 86% de erro no Night in the Woods.
+- Números e palavras de uma letra em fonte pequena ("a", "I", "2"). O detector do
+  EasyOCR nem chega a criar a caixa. Baixar o tamanho mínimo e os limiares da detecção
+  não resolveu.
+- Fontes muito estilizadas: a de faroeste da tela SPECIAL do Fallout e a gótica de
+  pixel do Night in the Woods.
+
+Com o app como está, o benchmark completo dos 90 prints deu:
+- CER de 10,24% e WER de 22,30%;
+- 74% das quebras achadas e 86% certas;
+- 3,0 s por print, praticamente o mesmo tempo de antes.
+
+Com a correção por contexto ligada, o CER cai para 10,17% e o WER para 21,95%, a 3,1 s
+por print, sem contar os 5 s de carga do BERT.
+
+Em acerto, isso dá **89,8% das letras e 77,7% das palavras**, de 77,3% no Morrowind a
+99,4% no Mass Effect. O anexo traz o resultado de [cada jogo e cada
+print](resultados-benchmark.md).
+
+### Outras línguas
+
+O app lê 83 línguas, mas o benchmark só tem prints em inglês. As correções por palavra e
+por contexto só rodam quando a língua do jogo é o inglês, porque usam um dicionário e um
+modelo de linguagem do inglês. Já as regras de parágrafo rodam em qualquer língua.
+
+Para conferi-las, montei 15 casos com caixas de OCR simuladas em português, espanhol,
+alemão, russo, japonês, chinês e árabe. Os casos acharam três problemas:
+
+| Língua | Problema | Correção |
+|---|---|---|
+| Árabe, persa, urdu e uigur, escritos da direita para a esquerda | As palavras da linha saíam invertidas, a frase alinhada à direita quebrava no meio e os painéis vinham na ordem errada | As caixas são espelhadas antes das regras, e a leitura vai da direita para a esquerda |
+| Chinês, japonês e tailandês, que não usam espaço | Os pedaços ganhavam espaço no meio, e o nome de quem fala e as opções de menu grudavam no texto | Junção sem espaço; basta caber uma letra, não uma palavra, para a linha de cima ter acabado; linhas curtas seguidas viram itens de menu |
+| Chinês e japonês | Um título grande de até 3 letras ("第一章") era descartado como desenho | O filtro de desenhos só vale para texto ASCII |
+
+Português, espanhol, alemão e russo já funcionavam. O que sobrou é um limite geral, que
+acontece igual em inglês: num menu em que o primeiro item é o mais largo, os dois
+primeiros itens se juntam. E os casos são simulados: falta medir com prints reais em
+outras línguas.
+
+## 8. De onde vem o erro que sobrou
+
+- **Poucas telas concentram o erro.** Os 10 piores prints somam 58% de todo o erro de
+  letras. Sem eles, o acerto médio seria de 95%, e a mediana dos 90 prints já é de 96,4%.
+- **Metade do erro de palavras é de ordem.** Contando as palavras sem olhar a ordem, o
+  erro cai de 22% para cerca de 12%. São telas com painéis, grades e tabelas, em que as
+  palavras saem certas, mas numa ordem diferente da do gabarito. Parte disso nem é erro
+  de verdade: no resumo do Caves of Qud, as duas ordens fazem sentido.
+- **O resto é leitura, e aí o EasyOCR está no limite.** Ficam de fora palavras que o
+  detector nem acha (5,9% das palavras; metade delas são números e palavras de uma letra),
+  fontes muito estilizadas e letreiros miúdos. Nenhum ajuste de imagem ou de parâmetro
+  resolveu.
+
+**Próximos passos:**
+1. **Testar outro motor de OCR**, como o PaddleOCR ou o OCR que já vem no Windows, no
+   mesmo benchmark. É o caminho para as palavras que o EasyOCR nem lê.
+2. **Dicionário do jogo:** guardar as palavras que o OCR lê com confiança alta durante o
+   jogo, para a correção por contexto nunca mexer nelas.
+3. **Pôr a correção por contexto na tela de configurações**, para quem aceita esperar o
+   BERT carregar.
+4. **Separar os itens de um menu em que o primeiro item é o mais largo**, que ainda saem
+   juntos.
+5. **Coletar prints reais em outras línguas**, começando por japonês e árabe.
+
+## 9. O que aprendi
 
 1. **Uma imagem de teste é um exemplo, não um dataset.** *Overfitting* não é
    exclusividade de quem treina modelos: qualquer ajuste feito olhando sempre para os
@@ -275,11 +495,31 @@ variados.
    parecia perfeita e trocou um 1 por um 7.
 7. **Confira os erros silenciosos.** Metade da força bruta virou `ERRO` dentro do CSV,
    e só percebi muito depois.
+8. **Uma ideia boa num jogo pode ser ruim em dez.** Inverter as cores ajudava o Immortal
+   Clan e piorava outros cinco. Só entrou na produção o que melhorou a média sem
+   piorar a maioria dos prints.
+9. **Uma métrica não vê tudo.** A CER ignora quebras de linha, e uma frase cortada ao
+   meio estraga a tradução. Por isso o benchmark ganhou a métrica de quebras.
+10. **Isole o que é aleatório.** O OCR variava de uma execução para outra. Guardar a
+    leitura e testar as regras sobre ela deixou a comparação justa, e cada teste passou
+    de minutos para segundos.
+11. **Corrija só quando duas evidências concordam.** Sozinhos, o dicionário e o modelo
+    de linguagem trocavam termos de jogo por palavras comuns. Juntos, exigindo acordo,
+    pararam de errar.
+12. **Saiba quanto dá para ganhar antes de atacar.** Antes de mexer na correção de
+    palavras, contei: só 3,6% das palavras estavam lidas erradas e tinham conserto. Isso
+    explicou por que nenhum corretor fazia muita diferença.
+13. **Regra feita numa língua precisa ser testada nas outras.** As regras de parágrafo
+    nasceram olhando inglês e liam árabe ao contrário. Bastaram casos simulados para
+    achar o problema.
 
 ## Como reproduzir
 
 O benchmark e as instruções para montar o dataset estão em
-[`benchmark/README.md`](../benchmark/README.md). Na pasta do projeto:
+[`benchmark/README.md`](../benchmark/README.md). Os prints dos jogos não estão no
+repositório (só os 3 exemplos da pasta `base`), então o resultado completo só sai com o
+dataset local; os números de cada print estão no [anexo](resultados-benchmark.md). Na
+pasta do projeto:
 
 ```
 env\Scripts\python.exe benchmark\benchmark.py --detalhes

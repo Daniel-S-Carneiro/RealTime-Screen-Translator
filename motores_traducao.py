@@ -4,6 +4,9 @@ Cada motor recebe (texto, origem, destino, credenciais) e devolve a tradução, 
 levanta ErroMotor com uma mensagem em português pronta para mostrar ao usuário.
 Os motores pagos somam no uso_motores os caracteres que o serviço vai cobrar.
 
+O texto chega com um parágrafo por linha (paragrafos.py). As APIs oficiais recebem
+um item por parágrafo no mesmo pedido, e a tradução volta com as mesmas quebras.
+
 As APIs oficiais (Azure, DeepL e Google Cloud) são chamadas direto pela REST, com
 tempo limite: as classes do deep-translator para elas fazem pedidos extras, usam
 um formato de autenticação antigo do DeepL e não tratam os erros de cota.
@@ -31,6 +34,11 @@ TEMPO_LIMITE = 15  # segundos por pedido às APIs
 PAUSA_BLOQUEIO = 10 * 60  # Google web pediu CAPTCHA
 PAUSA_COTA = 60 * 60  # cota grátis do mês esgotada
 PAUSA_RAJADA = 60  # pedidos demais em pouco tempo
+
+# Quantos textos cada API aceita num pedido só
+MAXIMO_TEXTOS_AZURE = 1000
+MAXIMO_TEXTOS_DEEPL = 50
+MAXIMO_TEXTOS_GOOGLE_CLOUD = 128
 
 # Códigos do app (vindos do EasyOCR) que cada serviço escreve de outro jeito
 _CODIGOS_GOOGLE = {"ch_sim": "zh-CN", "ch_tra": "zh-TW", "rs_cyrillic": "sr", "rs_latin": "sr"}
@@ -67,6 +75,14 @@ def _postar(url: str, **kwargs) -> requests.Response:
         return requests.post(url, timeout=TEMPO_LIMITE, **kwargs)
     except requests.RequestException as e:
         raise ErroMotor("sem conexão com o servidor de tradução") from e
+
+
+def _paragrafos(texto: str, maximo: int) -> list:
+    """Um item por parágrafo. Se passar do máximo da API, o excesso vai junto no último."""
+    paragrafos = [linha.strip() for linha in texto.split("\n") if linha.strip()] or [texto]
+    if len(paragrafos) > maximo:
+        paragrafos = paragrafos[: maximo - 1] + [" ".join(paragrafos[maximo - 1 :])]
+    return paragrafos
 
 
 def _mensagem_da_api(resposta: requests.Response) -> str:
@@ -113,11 +129,12 @@ def traduzir_azure(texto: str, _origem: str, destino: str, credenciais: dict) ->
     if regiao and regiao != "global":
         cabecalhos["Ocp-Apim-Subscription-Region"] = regiao
 
+    paragrafos = _paragrafos(texto, MAXIMO_TEXTOS_AZURE)
     resposta = _postar(
         "https://api.cognitive.microsofttranslator.com/translate",
         params={"api-version": "3.0", "to": _CODIGOS_AZURE.get(destino, destino)},
         headers=cabecalhos,
-        json=[{"Text": texto}],
+        json=[{"Text": paragrafo} for paragrafo in paragrafos],
     )
     if resposta.status_code == 401:
         raise ErroMotor("chave da Azure inválida ou região errada")
@@ -128,12 +145,13 @@ def traduzir_azure(texto: str, _origem: str, destino: str, credenciais: dict) ->
         raise ErroMotor("pedidos demais para a Azure em pouco tempo", PAUSA_RAJADA)
     if not resposta.ok:
         raise ErroMotor(f"a Azure respondeu {resposta.status_code}: {_mensagem_da_api(resposta)}")
-    traducao = resposta.json()[0]["translations"][0]["text"]
+    traducao = "\n".join(item["translations"][0]["text"] for item in resposta.json())
     # A Azure diz no cabeçalho quantos caracteres vai cobrar por este pedido
+    enviados = sum(len(paragrafo) for paragrafo in paragrafos)
     try:
-        cobrados = int(resposta.headers.get("X-Metered-Usage", len(texto)))
+        cobrados = int(resposta.headers.get("X-Metered-Usage", enviados))
     except ValueError:
-        cobrados = len(texto)
+        cobrados = enviados
     uso_motores.registrar("azure", cobrados)
     return traducao
 
@@ -146,10 +164,11 @@ def _servidor_deepl(chave: str) -> str:
 def traduzir_deepl(texto: str, _origem: str, destino: str, credenciais: dict) -> str:
     """DeepL API (v2)."""
     chave = _chave(credenciais, "do DeepL")
+    paragrafos = _paragrafos(texto, MAXIMO_TEXTOS_DEEPL)
     resposta = _postar(
         f"https://{_servidor_deepl(chave)}/v2/translate",
         headers={"Authorization": f"DeepL-Auth-Key {chave}"},
-        json={"text": [texto], "target_lang": _CODIGOS_DEEPL.get(destino, destino.upper())},
+        json={"text": paragrafos, "target_lang": _CODIGOS_DEEPL.get(destino, destino.upper())},
     )
     if resposta.status_code == 403:
         raise ErroMotor("chave do DeepL inválida")
@@ -159,8 +178,9 @@ def traduzir_deepl(texto: str, _origem: str, destino: str, credenciais: dict) ->
         raise ErroMotor("pedidos demais para o DeepL em pouco tempo", PAUSA_RAJADA)
     if not resposta.ok:
         raise ErroMotor(f"o DeepL respondeu {resposta.status_code}: {_mensagem_da_api(resposta)}")
-    traducao = resposta.json()["translations"][0]["text"]
-    uso_motores.registrar("deepl", len(texto))  # o DeepL cobra pelo texto de origem
+    traducao = "\n".join(item["text"] for item in resposta.json()["translations"])
+    # O DeepL cobra pelo texto de origem
+    uso_motores.registrar("deepl", sum(len(paragrafo) for paragrafo in paragrafos))
     return traducao
 
 
@@ -188,10 +208,15 @@ def consultar_uso_deepl(credenciais: dict) -> tuple:
 
 def traduzir_google_cloud(texto: str, _origem: str, destino: str, credenciais: dict) -> str:
     """Google Cloud Translation (API Basic v2, a oficial e paga)."""
+    paragrafos = _paragrafos(texto, MAXIMO_TEXTOS_GOOGLE_CLOUD)
     resposta = _postar(
         "https://translation.googleapis.com/language/translate/v2",
         headers={"X-goog-api-key": _chave(credenciais, "do Google Cloud")},
-        json={"q": texto, "target": _CODIGOS_GOOGLE.get(destino, destino), "format": "text"},
+        json={
+            "q": paragrafos,
+            "target": _CODIGOS_GOOGLE.get(destino, destino),
+            "format": "text",
+        },
     )
     mensagem = _mensagem_da_api(resposta) if not resposta.ok else ""
     if resposta.status_code == 400 and "api key" in mensagem.lower():
@@ -205,8 +230,11 @@ def traduzir_google_cloud(texto: str, _origem: str, destino: str, credenciais: d
         raise ErroMotor("cota do Google Cloud atingida", PAUSA_COTA)
     if not resposta.ok:
         raise ErroMotor(f"o Google Cloud respondeu {resposta.status_code}: {mensagem}")
-    traducao = resposta.json()["data"]["translations"][0]["translatedText"]
-    uso_motores.registrar("google_cloud", len(texto))  # conta tudo, até os espaços
+    traducao = "\n".join(
+        item["translatedText"] for item in resposta.json()["data"]["translations"]
+    )
+    # Conta tudo, até os espaços
+    uso_motores.registrar("google_cloud", sum(len(paragrafo) for paragrafo in paragrafos))
     return traducao
 
 

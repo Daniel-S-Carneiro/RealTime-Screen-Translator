@@ -6,21 +6,34 @@ que copiavam o pipeline e usavam uma imagem só.
 
 ## Como coletar prints
 
-1. Rode o app pelo código (`env\Scripts\python.exe main.py`) com
-   `DEBUG_MODE = True`.
+1. Rode o app pelo código (`env\Scripts\python.exe main.py`). O modo de
+   depuração liga sozinho quando o app não é o instalado.
 2. No ícone da bandeja, marque **Salvar prints para o benchmark**.
-3. Use o "Traduzir Área" normalmente. Cada captura gera em `dataset/`:
+3. Use o "Traduzir Área" normalmente. Cada captura vai para a pasta do dia,
+   `dataset/AAAA-MM-DD/`:
    - `coleta_AAAAMMDD_HHMMSS.png`: o print bruto;
-   - `coleta_AAAAMMDD_HHMMSS.rascunho.txt`: o que o OCR leu.
+   - `coleta_AAAAMMDD_HHMMSS.rascunho.txt`: o que o OCR leu, um parágrafo por linha.
 4. Abra o print, **corrija o rascunho olhando a imagem** e salve como
    `coleta_AAAAMMDD_HHMMSS.txt` (sem o `.rascunho`). Pode renomear o par para
    algo descritivo, como `rpg_menu_fundo_claro.png` + `rpg_menu_fundo_claro.txt`.
 
 Imagens sem `.txt` aparecem como `[PENDENTE]` e ficam fora da conta.
 
-Os prints coletados ficam só no seu PC: a pasta `dataset/` está no `.gitignore`,
-menos os 3 exemplos que vêm com o repositório (`sintetico_labs`,
-`jogo_tooltip_habilidade` e `documento_tooltip_habilidade`).
+### Como a pasta é organizada
+
+```
+dataset/
+├── base/          os 3 exemplos que vêm com o repositório
+├── 2026-11-02/    uma pasta por dia de coleta
+├── 2026-11-14/
+└── _fora/         prints guardados que não entram no teste
+```
+
+Os prints coletados ficam só no seu PC: tudo em `dataset/` está no `.gitignore`,
+menos a pasta `base/`. Você também pode criar pastas com outros nomes (por
+exemplo, `undertale/`); o `--periodo` filtra pelo nome da pasta. Pastas que
+começam com `_` ficam fora do teste: servem para guardar um print que ajudou a
+olhar as quebras de linha, mas que não vai ter gabarito.
 
 ### O que vale coletar (15 a 30 prints)
 
@@ -29,13 +42,21 @@ menos os 3 exemplos que vêm com o repositório (`sintetico_labs`,
 - fontes estilizadas, pixel art e letras pequenas;
 - números e porcentagens (dano, HP, preço), que não podem errar;
 - menus curtos ("New Game", "Settings") e diálogos longos;
-- nomes próprios de personagens e lugares.
+- nomes próprios de personagens e lugares;
+- texto centralizado, fonte manuscrita e efeitos de glitch.
+
+Não vale ter gabarito para letra de música ou texto completo de terceiros (um
+poema ou uma carta inteira): o `.txt` seria uma cópia da obra. Se o print foi útil
+para ver as quebras, guarde em `_fora/`.
 
 ### Como escrever o gabarito
 
 - Copie o texto **exatamente como aparece** na imagem, com a mesma pontuação.
-- Quebras de linha e espaços repetidos não importam: o benchmark os ignora,
-  assim como maiúsculas e minúsculas.
+- **Uma linha por parágrafo ou item**: título, parágrafo, opção de menu, efeito.
+  Quando a frase só continua na linha de baixo porque não coube na caixa, junte
+  numa linha só.
+- O CER e o WER ignoram as quebras de linha, os espaços repetidos e as maiúsculas;
+  as quebras são medidas à parte.
 - A ordem é a de leitura: de cima para baixo, da esquerda para a direita.
 
 ## Como rodar
@@ -45,12 +66,15 @@ Na pasta do projeto:
 ```
 env\Scripts\python.exe benchmark\benchmark.py
 env\Scripts\python.exe benchmark\benchmark.py --detalhes
+env\Scripts\python.exe benchmark\benchmark.py --periodo 2026-11-14
+env\Scripts\python.exe benchmark\benchmark.py --periodo base,2026-11-01..2026-11-10
 env\Scripts\python.exe benchmark\benchmark.py --configs producao,imagem_binarizado --repeticoes 3
 ```
 
 | Opção | O que faz |
 |---|---|
 | `--configs` | Quais configurações rodar (padrão: todas) |
+| `--periodo` | Quais pastas de `dataset/` testar, separadas por vírgula (padrão: todas). Aceita o nome da pasta (`base`, `2026-11-14`), o começo dele (`2026-11` pega o mês todo) ou um intervalo com as duas pontas incluídas (`2026-11-01..2026-11-10`) |
 | `--repeticoes N` | Roda N vezes e usa a mediana do tempo |
 | `--detalhes` | Mostra as palavras erradas: `[-esperado-]{+lido+}` |
 | `--idioma` | Idioma do texto, para o pós-processamento (padrão `en`) |
@@ -64,8 +88,9 @@ O relatório vai para `relatorios/benchmark/benchmark_<data>.csv`.
 | `producao` | Nada: padrões atuais do app |
 | `imagem_original` | Manda a imagem colorida sem tratamento |
 | `imagem_cinza` / `imagem_binarizado` | Outro modo de imagem (aparece o que não for o padrão) |
+| `contexto_bert` | Liga a correção por contexto: troca a palavra só quando o dicionário e o BERT concordam |
 | `pontuacao_agressiva` | Liga as regras de regex ajustadas no `teste.png` |
-| `pontuacao_agressiva+bert` | Regex agressivo + correção com SpellChecker e BERT |
+| `pontuacao_agressiva+bert` | Regex agressivo + correção por contexto |
 
 ## Como ler o resultado
 
@@ -73,7 +98,14 @@ O relatório vai para `relatorios/benchmark/benchmark_<data>.csv`.
   corrigidas, dividido pelo tamanho do gabarito. 2% = 2 letras erradas a cada 100.
   Quanto menor, melhor.
 - **WER** (taxa de erro de palavras): o mesmo, contando palavras.
+- **quebras**: o app manda ao tradutor um parágrafo por linha (`paragrafos.py`).
+  Em cada imagem, `quebras 7/8 (1 a mais)` quer dizer que ele achou 7 das 8
+  quebras do gabarito e pôs 1 onde não havia. No resumo, **achadas** é a parte das
+  quebras do gabarito que ele encontrou e **certas** é a parte das quebras que ele
+  pôs que estão no gabarito.
 - **tempo**: imagem + OCR + pós-processamento (a tradução não entra).
+- **POR PASTA**: quando o teste pega mais de uma pasta, o resumo repete as médias
+  de cada uma, para ver se um período ou um jogo foi pior que os outros.
 
 Só troque um padrão da produção quando a diferença aparecer **na média e na
 maioria das imagens**, não numa imagem só.

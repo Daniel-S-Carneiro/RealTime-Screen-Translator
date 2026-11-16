@@ -1,8 +1,10 @@
 """Módulo responsável pela unificação e limpeza de texto bruto extraído pelo OCR."""
 
+import itertools
 import re
-from difflib import SequenceMatcher
 from spellchecker import SpellChecker
+
+from paragrafos import montar_paragrafos
 
 # O BERT só é carregado na primeira vez que a correção por IA for usada.
 # Ele deixava a abertura do app lenta mesmo com a correção desligada.
@@ -18,6 +20,31 @@ PALAVRAS_DE_LIGACAO = frozenset(
 # No fim da palavra só valem estas: com "in", "on" e "at", "admin" virava "adm in"
 LIGACAO_NO_FIM = frozenset("a an the of to and is for with all".split())
 ARTIGOS = frozenset({"a", "an", "the"})
+
+# "1 was" -> "I was": verbos que vêm depois de "I" e quase nunca depois de um número
+# ("only 1 can trigger" é número, então "can" ficou de fora)
+_PRONOME_I = re.compile(
+    r"(?<![\w.+\-/\[(])1(?= (?:am|was|wasn't|have|haven't|don't|didn't|think|know|want|"
+    r"guess|mean|feel|hope|wonder|believe|never|really|need)\b|'(?:m|ve|ll|d)\b)"
+)
+# Letras que fontes de jogo fazem o OCR confundir (Morrowind: "chc" = "the", "durics"
+# = "duties"; DDLC: "whac" = "what"; Fallout: "Riflc" = "Rifle")
+LETRAS_CONFUNDIDAS = {"c": ("e", "t"), "r": ("t",), "l": ("i",)}
+# A troca só vale se der palavra comum: palavra curta precisa ser bem comum ("Misc"
+# não pode virar "Mist", nem "taur" virar "taut")
+FREQUENCIA_MINIMA_CURTA = 1e-5
+FREQUENCIA_MINIMA = 5e-7
+
+# Apóstrofo que a fonte apagou ("dont", "Ive", "IM"): só contrações destas palavras,
+# para "DPS" não virar "DP'S" nem "Sanas" virar "Sana's"
+BASES_CONTRACAO = frozenset(
+    "i you we they he she it that there what who here where let don can won isn aren "
+    "wasn weren didn doesn haven hasn hadn couldn wouldn shouldn".split()
+)
+FINS_CONTRACAO = frozenset({"t", "s", "m", "d", "ve", "ll", "re"})
+
+# Quantas palavras o BERT sugere para cada lacuna na correção por contexto
+SUGESTOES_BERT = 50
 
 
 def obter_mask_filler():
@@ -60,31 +87,6 @@ class ProcessadorInteligente:
         if self._spell is None:
             self._spell = SpellChecker(language="en")
         return self._spell
-
-    def analisar_confianca(self, resultados_ocr):
-        """Extrai o texto bruto e calcula a confiança média do OCR."""
-        if not resultados_ocr:
-            return "", 0.0
-
-        texto_limpo = []
-        confianca_total = 0.0
-
-        for item in resultados_ocr:
-            if len(item) >= 3:
-                texto = item[1]
-                confianca = item[2]
-            elif len(item) == 2:
-                texto = item[1]
-                confianca = 1.0
-            else:
-                continue
-
-            texto = " ".join(str(texto).split())
-            texto_limpo.append(texto)
-            confianca_total += float(confianca)
-
-        media_confianca = confianca_total / len(resultados_ocr)
-        return " ".join(texto_limpo), media_confianca
 
     def aplicar_regex_limpeza(self, texto: str) -> str:
         """Aplica regex para limpar e padronizar o texto OCR com pontuação inteligente."""
@@ -204,84 +206,135 @@ class ProcessadorInteligente:
             return len(direita) >= 3 and not artigo_errado
         return False
 
-    def _escolher_correcao(self, erro: str, palavras_bert: list):
-        """Escolhe a sugestão do BERT mais parecida com o erro, ou cai no SpellChecker."""
-        melhor_palavra_bert = None
-        maior_similaridade = 0.0
+    @staticmethod
+    def corrigir_numeros_trocados(texto: str) -> str:
+        """Letra que o OCR leu como número (só inglês): "1 was" -> "I was", "g0" -> "go",
+        e o contrário dentro de número: "1Omm" -> "10mm", "3Oth" -> "30th"."""
+        texto = _PRONOME_I.sub("I", texto)
+        texto = re.sub(r"(?<=[A-Za-z])0(?=[a-z]|\b)", "o", texto)
+        return re.sub(r"(?<=\b\d)[Oo](?=\d|mm\b|th\b)", "0", texto)
 
-        # Verifica qual palavra do BERT se parece mais com o erro ortográfico
-        for p_bert in palavras_bert:
-            sim = SequenceMatcher(None, erro, p_bert).ratio()
-            if sim > maior_similaridade:
-                maior_similaridade = sim
-                melhor_palavra_bert = p_bert
+    def corrigir_letras_confundidas(self, texto: str) -> str:
+        """Desfaz trocas de letra que fontes de jogo provocam (c/e, c/t, r/t, l/i).
 
-        # Se o BERT sugeriu algo coerente E com similaridade aceitável (>60%)
-        if maior_similaridade >= 0.60 and melhor_palavra_bert:
-            return melhor_palavra_bert
+        Só mexe em palavra que o dicionário não conhece, e só aceita a troca que der
+        palavra comum. Palavras com apóstrofo e siglas (tudo maiúsculo) ficam de fora.
+        """
+        return re.sub(r"[A-Za-z]+(?:'[A-Za-z]+)*", self._trocar_letras_confundidas, texto)
 
-        # Fallback robusto via SpellChecker
-        candidatos = set(self.spell.candidates(erro) or [])
-        match_perfeito = candidatos.intersection(set(palavras_bert))
-        if match_perfeito:
-            return match_perfeito.pop()
-        return self.spell.correction(erro)
+    def _trocar_letras_confundidas(self, match) -> str:
+        palavra = match.group(0)
+        minuscula = palavra.lower()
+        if "'" in palavra or len(minuscula) < 3 or minuscula in self.spell:
+            return palavra
+        if not (palavra.islower() or palavra.istitle()):
+            return palavra
+        posicoes = [i for i, letra in enumerate(minuscula) if letra in LETRAS_CONFUNDIDAS]
+        if not posicoes or len(posicoes) > 6:
+            return palavra
+        opcoes = [(minuscula[i],) + LETRAS_CONFUNDIDAS[minuscula[i]] for i in posicoes]
+        candidatas = set()
+        for escolha in itertools.product(*opcoes):
+            letras = list(minuscula)
+            for i, nova in zip(posicoes, escolha):
+                letras[i] = nova
+            candidatas.add("".join(letras))
+        candidatas = [c for c in candidatas if c != minuscula and c in self.spell]
+        if not candidatas:
+            return palavra
+        nova = max(candidatas, key=self.spell.word_usage_frequency)
+        minima = FREQUENCIA_MINIMA_CURTA if len(nova) <= 4 else FREQUENCIA_MINIMA
+        if self.spell.word_usage_frequency(nova) < minima:
+            return palavra
+        return nova.capitalize() if palavra.istitle() else nova
 
-    def analisar_e_corrigir_ia(self, texto_limpo: str) -> str:
-        """Usa SpellChecker e BERT combinados com análise de similaridade."""
+    def corrigir_apostrofo(self, texto: str) -> str:
+        """Devolve o apóstrofo que a fonte apagou: "dont" -> "don't", "Ive" -> "I've".
+
+        Só em palavra fora do dicionário que vira uma contração conhecida, então
+        "cant" e "wont" (que existem) ficam como estão, e siglas como "DPS" também.
+        """
+        return re.sub(r"(?<!['\w])[A-Za-z]+(?![\w'])", self._trocar_apostrofo, texto)
+
+    def _trocar_apostrofo(self, match) -> str:
+        palavra = match.group(0)
+        minuscula = palavra.lower()
+        if len(minuscula) < 2 or minuscula in self.spell:
+            return palavra
+        for corte in (1, 2):
+            base, fim = minuscula[:-corte], minuscula[-corte:]
+            if base in BASES_CONTRACAO and fim in FINS_CONTRACAO and f"{base}'{fim}" in self.spell:
+                return f"{palavra[:-corte]}'{palavra[-corte:]}"
+        return palavra
+
+    def analisar_e_corrigir_ia(self, texto: str) -> str:
+        """Corrige pelo contexto só quando o dicionário e o BERT concordam.
+
+        Para cada palavra minúscula fora do dicionário, as candidatas são as palavras
+        do dicionário a 1 ou 2 letras de distância e as trocas de letra das fontes. O
+        BERT lista as palavras que cabem naquele lugar da frase, e a troca só acontece
+        se uma candidata estiver entre elas. Sem acordo, a palavra fica como está.
+
+        A versão anterior aceitava a sugestão do dicionário mesmo sem o BERT concordar
+        e trocava termos de jogo ("swarmer" -> "warmer", "melee" -> "pelee"). Nos 90
+        prints do benchmark (2026-11-15) esta versão melhorou 4 prints e não estragou
+        nenhum termo de jogo.
+        """
         mask_filler = obter_mask_filler()
         if mask_filler is None:
-            return texto_limpo
+            return texto
 
-        # Só corrige palavras minúsculas com 3+ letras. Ficam de fora siglas (DMG),
-        # abreviações (Lv.5 virava La.5) e nomes próprios (Geralt virava Gerald).
-        palavras = [
-            p for p in re.findall(r"\b[a-zA-Z]+\b", texto_limpo) if len(p) >= 3 and p.islower()
-        ]
-        erros = self.spell.unknown(palavras)
-
-        if not erros:
-            return texto_limpo
-
-        texto_final = texto_limpo
-        for erro in erros:
-            padrao = r"\b" + re.escape(erro) + r"\b"
-            # TROCA PROTETORA: colchetes viram parênteses só no texto enviado ao BERT,
-            # para ele ler com naturalidade. O texto devolvido mantém os originais.
-            texto_bert = texto_final.replace("[", "(").replace("]", ")")
-            texto_mascarado = re.sub(padrao, "[MASK]", texto_bert, count=1)
-
-            try:
-                # Previsão do BERT para a lacuna
-                predicoes_bert = mask_filler(texto_mascarado)
-
-                # FILTRO ANTI-SUBWORDS: Descarta tokens de subpalavras do BERT
-                palavras_bert = [
-                    pred["token_str"].lower()
-                    for pred in predicoes_bert
-                    if "##" not in pred["token_str"]
-                ]
-                palavra_escolhida = self._escolher_correcao(erro, palavras_bert)
-
-                if palavra_escolhida and palavra_escolhida != erro:
-                    texto_final = re.sub(
-                        padrao, palavra_escolhida, texto_final, count=1
-                    )
-            except Exception:  # pylint: disable=broad-exception-caught
+        # Nomes próprios (Geralt virava Gerald), siglas (DMG) e palavras com apóstrofo
+        # ficam de fora: só palavras minúsculas com 3+ letras
+        for palavra in sorted(set(re.findall(r"(?<!['\w])[a-z]{3,}(?![\w'])", texto))):
+            if palavra in self.spell:
+                continue
+            candidatas = set(self.spell.candidates(palavra) or []) - {palavra}
+            trocada = self.corrigir_letras_confundidas(palavra)
+            if trocada != palavra:
+                candidatas.add(trocada)
+            if not candidatas:
                 continue
 
-        return texto_final
+            padrao = r"(?<!['\w])" + re.escape(palavra) + r"(?![\w'])"
+            # Colchetes viram parênteses só no texto enviado ao BERT, para ele ler com
+            # naturalidade e não confundir com o [MASK]. O texto devolvido mantém os originais.
+            mascarado = re.sub(padrao, "[MASK]", texto.replace("[", "(").replace("]", ")"), count=1)
+            try:
+                sugestoes = mask_filler(mascarado, top_k=SUGESTOES_BERT)
+            except Exception:  # pylint: disable=broad-exception-caught
+                continue
+            escolhida = next(
+                (s["token_str"].strip().lower() for s in sugestoes
+                 if s["token_str"].strip().lower() in candidatas),
+                None,
+            )
+            if escolhida:
+                texto = re.sub(padrao, escolhida, texto, count=1)
+        return texto
 
     def corrigir_texto(self, texto: str, idioma: str) -> str:
-        """Pipeline mestre de correção: Regex -> IA (opcional, só para inglês)."""
+        """Pipeline mestre de correção: Regex -> trocas do OCR -> IA (opcional).
+
+        As trocas do OCR e a IA usam dicionário e regras do inglês, então só rodam nele.
+        """
         try:
             # 1. Limpeza Bruta
             texto_regex = self.aplicar_regex_limpeza(texto)
             texto_regex = self.separar_palavras_grudadas(texto_regex, idioma)
+            if (idioma or "").lower() != "en":
+                return texto_regex
 
-            # 2. Refinamento de Contexto. O modelo carregado (bert-base-uncased)
-            # só conhece inglês, então em outros idiomas ele só atrapalharia.
-            if not self.usar_ia or (idioma or "").lower() != "en":
+            # 2. Trocas de letra que o OCR faz (benchmark de 2026-11-15: CER de 29% para
+            # 23% no Morrowind, sem piorar nenhum dos 90 prints)
+            texto_regex = self.corrigir_numeros_trocados(texto_regex)
+            texto_regex = self.corrigir_letras_confundidas(texto_regex)
+            texto_regex = self.corrigir_apostrofo(texto_regex)
+
+            # 3. Refinamento de Contexto (opcional: carregar o BERT leva ~5 s e cada
+            # parágrafo com palavra desconhecida custa ~0,4 s). O modelo carregado
+            # (bert-base-uncased) só conhece inglês.
+            if not self.usar_ia:
                 return texto_regex
             return self.analisar_e_corrigir_ia(texto_regex)
 
@@ -300,10 +353,17 @@ def pipeline_processamento(
     usar_ia: bool = False,
     pontuacao_agressiva: bool = False,
 ) -> str:
-    """Pipeline unificado consumido pelo main.py."""
+    """Pipeline unificado consumido pelo main.py: um parágrafo corrigido por linha.
+
+    idioma_alvo é a língua do texto lido na tela (a de origem da tradução): ela decide
+    a direção da leitura e se as correções do inglês rodam.
+    """
     chave = (usar_ia, pontuacao_agressiva)
     if chave not in _PROCESSADORES:
         _PROCESSADORES[chave] = ProcessadorInteligente(usar_ia, pontuacao_agressiva)
     processador = _PROCESSADORES[chave]
-    texto_bruto, _ = processador.analisar_confianca(resultados_ocr)
-    return processador.corrigir_texto(texto_bruto, idioma_alvo)
+    corrigidos = (
+        processador.corrigir_texto(paragrafo, idioma_alvo)
+        for paragrafo in montar_paragrafos(resultados_ocr, idioma_alvo)
+    )
+    return "\n".join(paragrafo.strip() for paragrafo in corrigidos if paragrafo.strip())
