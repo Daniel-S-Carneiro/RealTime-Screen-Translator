@@ -315,14 +315,16 @@ num print e piorou em dois.
 | + corrigir letras que a fonte confunde | 11,73% | 23,74% | 69% | 78% |
 | + descartar desenhos lidos como texto e endireitar texto inclinado | 11,29% | 23,29% | 68% | 78% |
 | + ler painéis lado a lado separadamente | 10,31% | 22,67% | 74% | 80% |
-| + regras de quebra novas | **10,31%** | **22,67%** | **74%** | **86%** |
+| + regras de quebra novas | 10,31% | 22,67% | 74% | 86% |
+| + devolver o apóstrofo que a fonte apagou | **10,24%** | **22,30%** | **74%** | **86%** |
 
 **Letras confundidas.** A fonte medieval do Morrowind faz o OCR trocar *e* por *c* e *t*
 por *r*: sai "chc" no lugar de "the" e "durics" no lugar de "duties". Agora, quando uma
 palavra não existe no dicionário, o app testa essas trocas e aceita a que formar uma
 palavra comum. Palavra curta só vira palavra muito comum, para "Misc" não virar "Mist".
-O app também troca "1 was" por "I was" e "g0" por "go". Nenhum dos 90 prints piorou, e o
-Morrowind caiu de 29% para 23% de erro.
+O app também troca "1 was" por "I was" e "g0" por "go", e devolve o apóstrofo que a
+fonte do Fallout apaga: "dont" vira "don't". Nenhum dos 90 prints piorou, e o Morrowind
+caiu de 29% para 23% de erro.
 
 **Painéis lado a lado.** Era o maior problema. O EasyOCR devolve caixas soltas, e o app
 as lia linha a linha da tela inteira. Numa tela com a lista de traços à esquerda e a
@@ -344,6 +346,35 @@ A tela de traços do Fallout foi de 35% para 4,5% de erro, e a do baú, de 43% p
 Uma quarta regra, separar itens da mesma linha com vão grande, achava mais quebras, mas
 errava mais do que acertava, e ficou de fora.
 
+### Corrigir pelo contexto: só quando o dicionário e o BERT concordam
+
+Voltei à ideia dos laboratórios: um corretor ortográfico acha a palavra errada e o BERT
+diz qual palavra cabe na frase. Antes, porém, medi quanto uma correção poderia ganhar.
+Das 4.548 palavras dos gabaritos, faltavam 498 no texto lido:
+- 270 nem foram lidas, e não há o que corrigir;
+- só 163 (3,6% do total) foram lidas erradas mas parecidas, que é o que um corretor
+  poderia consertar.
+
+| Correção por contexto | CER | WER | Prints melhores / piores |
+|---|---|---|---|
+| Nenhuma (padrão do app) | 10,24% | 22,30% | — |
+| **Dicionário e BERT precisam concordar** | **10,17%** | **21,95%** | **4 / 0** |
+
+A versão antiga da correção aceitava a sugestão do dicionário mesmo quando o BERT não
+concordava, e acabou empatada: 7 prints melhores e 7 piores. Ela trocava termos de jogo
+por palavras comuns, como "swarmer" por "warmer", "melee" por "pelee" e "dromad" por
+"road". Somar o regex agressivo foi pior ainda: 56 prints pioraram, porque ele põe ponto
+no meio de títulos ("Fire. Technique.").
+
+Na versão nova, o dicionário propõe as palavras parecidas e o BERT lista as que cabem
+naquele lugar. A troca só acontece se uma palavra estiver nas duas listas. Ela consertou
+"hever seeh" (*never seen*), "dleared" (*cleared*) e "knouledge" (*knowledge*), e não
+tocou em nenhum termo de jogo.
+
+Mesmo assim, ela continua desligada por padrão. Carregar o BERT leva uns 5 segundos, e
+cada parágrafo com palavra desconhecida custa mais 0,4 s, um preço alto para um ganho
+pequeno.
+
 Erro por jogo (CER), antes e depois:
 
 | Jogo | Antes | Depois |
@@ -354,9 +385,9 @@ Erro por jogo (CER), antes e depois:
 | Persona 4 Golden | 9,60% | 6,39% |
 | Doki Doki Literature Club | 8,85% | 8,40% |
 | Undertale | 9,84% | 9,84% |
-| Fallout: New Vegas | 22,92% | 14,37% |
+| Fallout: New Vegas | 22,92% | 13,90% |
 | EVE Online | 16,26% | 14,64% |
-| Night in the Woods | 15,79% | 15,24% |
+| Night in the Woods | 15,79% | 15,04% |
 | Caves of Qud | 14,28% | 16,31% |
 | Morrowind | 29,03% | 22,72% |
 
@@ -373,9 +404,12 @@ antes. As duas ordens fazem sentido, mas contei como erro mesmo assim.
   pixel do Night in the Woods.
 
 Com o app como está, o benchmark completo dos 90 prints deu:
-- CER de 10,31% e WER de 22,66%;
+- CER de 10,24% e WER de 22,30%;
 - 74% das quebras achadas e 86% certas;
-- 2,9 s por print, o mesmo tempo de antes.
+- 3,0 s por print, praticamente o mesmo tempo de antes.
+
+Com a correção por contexto ligada, o CER cai para 10,17% e o WER para 21,95%, a 3,1 s
+por print, sem contar os 5 s de carga do BERT.
 
 ## 8. O que aprendi
 
@@ -403,6 +437,9 @@ Com o app como está, o benchmark completo dos 90 prints deu:
 10. **Isole o que é aleatório.** O OCR variava de uma execução para outra. Guardar a
     leitura e testar as regras sobre ela deixou a comparação justa, e cada teste passou
     de minutos para segundos.
+11. **Corrija só quando duas evidências concordam.** Sozinhos, o dicionário e o modelo
+    de linguagem trocavam termos de jogo por palavras comuns. Juntos, exigindo acordo,
+    pararam de errar.
 
 ## Como reproduzir
 

@@ -88,8 +88,9 @@ O relatório vai para `relatorios/benchmark/benchmark_<data>.csv`.
 | `producao` | Nada: padrões atuais do app |
 | `imagem_original` | Manda a imagem colorida sem tratamento |
 | `imagem_cinza` / `imagem_binarizado` | Outro modo de imagem (aparece o que não for o padrão) |
+| `contexto_bert` | Liga a correção por contexto: troca a palavra só quando o dicionário e o BERT concordam |
 | `pontuacao_agressiva` | Liga as regras de regex ajustadas no `teste.png` |
-| `pontuacao_agressiva+bert` | Regex agressivo + correção com SpellChecker e BERT |
+| `pontuacao_agressiva+bert` | Regex agressivo + correção por contexto |
 
 ## Como ler o resultado
 

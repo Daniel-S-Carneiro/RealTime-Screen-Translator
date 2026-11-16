@@ -49,6 +49,7 @@ CONFIGURACOES = {"producao": {}}
 for _modo in MODOS_IMAGEM:
     if _modo != MODO_IMAGEM_PADRAO:
         CONFIGURACOES[f"imagem_{_modo}"] = {"modo_imagem": _modo}
+CONFIGURACOES["contexto_bert"] = {"usar_ia": True}
 CONFIGURACOES["pontuacao_agressiva"] = {"pontuacao_agressiva": True}
 CONFIGURACOES["pontuacao_agressiva+bert"] = {"pontuacao_agressiva": True, "usar_ia": True}
 
