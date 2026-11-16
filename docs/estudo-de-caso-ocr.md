@@ -8,7 +8,9 @@
 > Usei força bruta, busca binária, quartis e até um modelo de linguagem (BERT) para
 > corrigir o texto. Cheguei a 100% de acerto. Quando testei num print real de jogo,
 > o pipeline "campeão" perdeu para a imagem sem tratamento nenhum, que foi mais
-> precisa e três vezes mais rápida. Este texto conta o que fiz, onde errei e o que mudou.
+> precisa e três vezes mais rápida. Depois, juntei 90 prints de 11 jogos e passei a
+> mudar o app só com o que melhorava a maioria deles. Hoje ele acerta 89,8% das letras
+> e 86% das quebras de linha que põe. Este texto conta o que fiz, onde errei e o que mudou.
 
 ---
 
@@ -24,8 +26,9 @@ transparente fica por cima do jogo. Ao clicar em **Traduzir Área**, o programa:
 5. traduz e mostra o resultado na própria janela.
 
 **Tecnologias:** Python, PySide6 (interface), mss (captura de tela), OpenCV e
-Pillow (imagem), EasyOCR rodando na GPU (OCR) e deep-translator (Google Tradutor).
-Todos os testes rodaram num notebook com uma GeForce MX350.
+Pillow (imagem) e EasyOCR rodando na GPU (OCR). A tradução sai do Google Tradutor, das
+APIs oficiais da Azure, do DeepL e do Google Cloud, ou do Argos Translate, que roda
+offline. Todos os testes rodaram num notebook com uma GeForce MX350.
 
 A etapa difícil é o OCR. Texto de jogo é o pior caso: fontes estilizadas, cores
 fortes, fundos com textura, letras pequenas e números que não podem sair errados
@@ -253,8 +256,9 @@ variados.
 
 ## 7. Resultados no dataset real
 
-Juntei **90 prints com gabarito, de 11 jogos**: o RPG de cultivo do primeiro teste e
-mais dez escolhidos para variar o máximo possível.
+Juntei **90 prints com gabarito**: 87 de 11 jogos e os 3 exemplos públicos do
+repositório. Os jogos são o RPG de cultivo do primeiro teste e mais dez, escolhidos para
+variar o máximo possível:
 
 | Jogo | O que ele testa |
 |---|---|
@@ -269,9 +273,21 @@ mais dez escolhidos para variar o máximo possível.
 | EVE Online | menus de letra miúda |
 | Caves of Qud | fonte monoespaçada e tabelas |
 
-Prints com letra de música ou texto completo de terceiros ficaram sem gabarito. Nas
-telas com painéis, o gabarito segue a ordem de leitura de uma pessoa: um painel de cada
-vez.
+**Como montei o dataset.** Joguei cada jogo com o app no modo de coleta: cada captura
+salva o print e o texto que o OCR leu. Depois corrigi esse rascunho olhando a imagem, e
+ele virou o gabarito. Algumas regras deixaram a comparação justa:
+- **ordem de leitura de uma pessoa:** numa tela com painéis, um painel de cada vez;
+- **uma linha por parágrafo ou item:** título, opção de menu e fala ficam em linhas
+  próprias, e a frase que só continuou embaixo fica numa linha só;
+- **texto cortado:** o que a borda do print cortou fica fora; o que o próprio jogo
+  cortou ("Manufacture & Researc") entra como aparece;
+- **desenhos ficam fora:** ícones, botões do controle e o cursor de seleção. Marcadores
+  escritos, como o "*" do Undertale, entram;
+- **letra de música e texto completo de terceiros** (um poema, uma carta inteira) ficam
+  sem gabarito, porque o gabarito seria uma cópia da obra.
+
+O resultado de cada print está no anexo
+[Resultados do benchmark, print a print](resultados-benchmark.md).
 
 Além de CER e WER, o benchmark passou a medir as **quebras de linha**:
 - **achadas:** das quebras do gabarito, quantas o app pôs;
@@ -411,7 +427,55 @@ Com o app como está, o benchmark completo dos 90 prints deu:
 Com a correção por contexto ligada, o CER cai para 10,17% e o WER para 21,95%, a 3,1 s
 por print, sem contar os 5 s de carga do BERT.
 
-## 8. O que aprendi
+Em acerto, isso dá **89,8% das letras e 77,7% das palavras**, de 77,3% no Morrowind a
+99,4% no Mass Effect. O anexo traz o resultado de [cada jogo e cada
+print](resultados-benchmark.md).
+
+### Outras línguas
+
+O app lê 83 línguas, mas o benchmark só tem prints em inglês. As correções por palavra e
+por contexto só rodam quando a língua do jogo é o inglês, porque usam um dicionário e um
+modelo de linguagem do inglês. Já as regras de parágrafo rodam em qualquer língua.
+
+Para conferi-las, montei 15 casos com caixas de OCR simuladas em português, espanhol,
+alemão, russo, japonês, chinês e árabe. Os casos acharam três problemas:
+
+| Língua | Problema | Correção |
+|---|---|---|
+| Árabe, persa, urdu e uigur, escritos da direita para a esquerda | As palavras da linha saíam invertidas, a frase alinhada à direita quebrava no meio e os painéis vinham na ordem errada | As caixas são espelhadas antes das regras, e a leitura vai da direita para a esquerda |
+| Chinês, japonês e tailandês, que não usam espaço | Os pedaços ganhavam espaço no meio, e o nome de quem fala e as opções de menu grudavam no texto | Junção sem espaço; basta caber uma letra, não uma palavra, para a linha de cima ter acabado; linhas curtas seguidas viram itens de menu |
+| Chinês e japonês | Um título grande de até 3 letras ("第一章") era descartado como desenho | O filtro de desenhos só vale para texto ASCII |
+
+Português, espanhol, alemão e russo já funcionavam. O que sobrou é um limite geral, que
+acontece igual em inglês: num menu em que o primeiro item é o mais largo, os dois
+primeiros itens se juntam. E os casos são simulados: falta medir com prints reais em
+outras línguas.
+
+## 8. De onde vem o erro que sobrou
+
+- **Poucas telas concentram o erro.** Os 10 piores prints somam 58% de todo o erro de
+  letras. Sem eles, o acerto médio seria de 95%, e a mediana dos 90 prints já é de 96,4%.
+- **Metade do erro de palavras é de ordem.** Contando as palavras sem olhar a ordem, o
+  erro cai de 22% para cerca de 12%. São telas com painéis, grades e tabelas, em que as
+  palavras saem certas, mas numa ordem diferente da do gabarito. Parte disso nem é erro
+  de verdade: no resumo do Caves of Qud, as duas ordens fazem sentido.
+- **O resto é leitura, e aí o EasyOCR está no limite.** Ficam de fora palavras que o
+  detector nem acha (5,9% das palavras; metade delas são números e palavras de uma letra),
+  fontes muito estilizadas e letreiros miúdos. Nenhum ajuste de imagem ou de parâmetro
+  resolveu.
+
+**Próximos passos:**
+1. **Testar outro motor de OCR**, como o PaddleOCR ou o OCR que já vem no Windows, no
+   mesmo benchmark. É o caminho para as palavras que o EasyOCR nem lê.
+2. **Dicionário do jogo:** guardar as palavras que o OCR lê com confiança alta durante o
+   jogo, para a correção por contexto nunca mexer nelas.
+3. **Pôr a correção por contexto na tela de configurações**, para quem aceita esperar o
+   BERT carregar.
+4. **Separar os itens de um menu em que o primeiro item é o mais largo**, que ainda saem
+   juntos.
+5. **Coletar prints reais em outras línguas**, começando por japonês e árabe.
+
+## 9. O que aprendi
 
 1. **Uma imagem de teste é um exemplo, não um dataset.** *Overfitting* não é
    exclusividade de quem treina modelos: qualquer ajuste feito olhando sempre para os
@@ -440,11 +504,20 @@ por print, sem contar os 5 s de carga do BERT.
 11. **Corrija só quando duas evidências concordam.** Sozinhos, o dicionário e o modelo
     de linguagem trocavam termos de jogo por palavras comuns. Juntos, exigindo acordo,
     pararam de errar.
+12. **Saiba quanto dá para ganhar antes de atacar.** Antes de mexer na correção de
+    palavras, contei: só 3,6% das palavras estavam lidas erradas e tinham conserto. Isso
+    explicou por que nenhum corretor fazia muita diferença.
+13. **Regra feita numa língua precisa ser testada nas outras.** As regras de parágrafo
+    nasceram olhando inglês e liam árabe ao contrário. Bastaram casos simulados para
+    achar o problema.
 
 ## Como reproduzir
 
 O benchmark e as instruções para montar o dataset estão em
-[`benchmark/README.md`](../benchmark/README.md). Na pasta do projeto:
+[`benchmark/README.md`](../benchmark/README.md). Os prints dos jogos não estão no
+repositório (só os 3 exemplos da pasta `base`), então o resultado completo só sai com o
+dataset local; os números de cada print estão no [anexo](resultados-benchmark.md). Na
+pasta do projeto:
 
 ```
 env\Scripts\python.exe benchmark\benchmark.py --detalhes
