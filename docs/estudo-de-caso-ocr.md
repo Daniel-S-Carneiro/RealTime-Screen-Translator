@@ -59,7 +59,24 @@ várias execuções e tempo medido etapa por etapa.
 
 ## 4. Os experimentos
 
-Entre 13 de julho e 9 de agosto de 2026, escrevi 18 scripts de laboratório.
+Entre 13 de julho e 9 de agosto de 2026, escrevi 18 scripts de laboratório. Antes
+deles, porém, houve uma fase de testes manuais.
+
+### 4.0 Antes dos laboratórios: a fase de junho
+
+O primeiro commit do projeto (28 de junho) já usava EasyOCR, PySide6 e
+deep-translator, e capturava a tela com `PIL.ImageGrab`, escondendo a janela antes
+do print para ela não aparecer na imagem. O `capturador.py` dessa versão fazia
+**cinza → ampliar 2x → limiar adaptativo**.
+
+Entre junho e o começo de julho, eu testava filtros à mão (limiar adaptativo, Otsu,
+CLAHE, filtro bilateral) com um script chamado `testar_ocr.py`, comparando o texto
+lido com um gabarito. A melhor combinação chegou a **97,62%** de acerto. Nessa fase
+também tirei o LanguageTool do projeto, porque ele dependia de Java.
+
+O detalhe que só ficou claro depois: o limiar adaptativo, base do capturador de
+junho, foi justamente o método que os laboratórios mostraram ser o pior (52% a 58%,
+contra 97,9% do Otsu, como mostra a seção 4.1).
 
 ### 4.1 Força bruta
 
@@ -142,6 +159,12 @@ corretas podem usar palavras diferentes. Conclusão: o tradutor não era o garga
 de qualidade.
 
 ## 5. A virada: o primeiro print real
+
+No fim dos laboratórios, cheguei a escrever um artigo no formato científico dizendo
+que tinha resolvido o OCR de jogos: a combinação OpenCV + Pillow "sempre vencia", o
+pré-processamento acelerava a inferência e o pipeline final era uma base para
+qualquer jogo. Os meus próprios dados desmentiam quase tudo isso, como mostram os
+sinais abaixo e o print real logo depois. O artigo nunca foi publicado.
 
 Alguns sinais já estavam nos relatórios, e eu não tinha dado atenção a eles.
 
@@ -253,9 +276,51 @@ variados.
 
 ## 7. Resultados no dataset real
 
-> **[A COMPLETAR]** Depois de juntar os prints: número de imagens e de jogos,
-> tabela de CER/WER por configuração, a imagem em que cada uma errou mais e se
-> algum padrão da produção mudou por causa disso.
+Em 2 de novembro, o dataset chegou a **18 prints**. **15 deles são do mesmo jogo**
+<!-- PENDENTE: nome do jogo dos 15 prints e de onde vêm os outros 3 -->,
+o que é o mesmo risco de *overfitting* da seção 5, em escala menor. Por isso, os
+números abaixo são um ponto de partida, não um resultado final.
+
+**Rodada completa, todas as configurações** (18 imagens; CER e WER menores são
+melhores):
+
+| Configuração | CER | WER | Tempo médio |
+|---|---|---|---|
+| **Produção** (cinza + greedy) | **2,21%** | **12,30%** | 2,3 s |
+| Imagem original colorida | 2,53% | 12,91% | 2,3 s |
+| Pipeline binarizado dos labs | 5,07% | 17,65% | 6,7 s |
+| Regex agressivo | 4,11% | 22,90% | 2,3 s |
+| Regex agressivo + BERT | 4,30% | 22,70% | 3,1 s |
+
+**O que mudou em relação às 3 imagens.** Com só 3 prints, o regex agressivo parecia
+um pouco melhor que a produção (CER 0,72% contra 0,78%), e o BERT tinha a menor WER
+(4,01%). Com 18 prints, os dois viraram os **piores em WER**, perto de 23%. É a mesma
+lição da seção 5, agora medida pelo próprio benchmark: o que vence em poucos
+exemplos pode só estar decorando esses exemplos.
+
+**Um padrão da produção que mudou por causa do dataset.** A saída com `--detalhes`
+mostrava muitas palavras grudadas, como `"MartialArt"`, que contam como uma palavra
+errada inteira na WER. Entrou na produção uma regra que separa palavras nesse
+formato (`"MartialArt"` vira `"Martial Art"`, PR #2). Na rodada seguinte, com as
+mesmas 18 imagens:
+
+| Produção | CER | WER |
+|---|---|---|
+| Antes de separar palavras grudadas | 2,21% | 12,30% |
+| **Depois** | **1,74%** | **7,71%** |
+
+A WER caiu de 12,3% para 7,7% só com essa mudança.
+
+**Sobre o tempo.** Na rodada depois da correção, a produção levou **0,93 s** por
+captura em média (mediana de 0,76 s). Na rodada anterior, a mesma configuração
+levou 2,3 s. A separação de palavras roda depois do OCR e custa quase nada, então
+essa diferença deve vir do estado da máquina (GPU disputada, notebook na bateria ou
+aquecido), que o CSV não registra. Até repetir o benchmark com `--repeticoes 3` e o
+notebook na tomada, o número seguro é **de 1 a 2 s por captura**.
+
+**O que ainda falta.** Mais prints de jogos diferentes e uma comparação com o
+Tesseract medida neste mesmo benchmark. Hoje, a escolha do EasyOCR se apoia em ele
+rodar na GPU e lidar com fontes estilizadas, não numa comparação registrada.
 
 ## 8. O que aprendi
 
