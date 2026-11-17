@@ -9,8 +9,10 @@
 > corrigir o texto. Cheguei a 100% de acerto. Quando testei num print real de jogo,
 > o pipeline "campeão" perdeu para a imagem sem tratamento nenhum, que foi mais
 > precisa e três vezes mais rápida. Depois, juntei 90 prints de 11 jogos e passei a
-> mudar o app só com o que melhorava a maioria deles. Hoje ele acerta 89,8% das letras
-> e 86% das quebras de linha que põe. Este texto conta o que fiz, onde errei e o que mudou.
+> mudar o app só com o que melhorava a maioria deles. As regras levaram o acerto de
+> 87,7% para 89,8% das letras. Trocar o EasyOCR pelo RapidOCR, que roda os modelos do
+> PaddleOCR, levou a 92,2% das letras e 88% das palavras, em 1,2 s por print. Este
+> texto conta o que fiz, onde errei e o que mudou.
 
 ---
 
@@ -26,7 +28,8 @@ transparente fica por cima do jogo. Ao clicar em **Traduzir Área**, o programa:
 5. traduz e mostra o resultado na própria janela.
 
 **Tecnologias:** Python, PySide6 (interface), mss (captura de tela), OpenCV e
-Pillow (imagem) e EasyOCR rodando na GPU (OCR). A tradução sai do Google Tradutor, das
+Pillow (imagem) e RapidOCR, que roda os modelos do PaddleOCR na CPU (OCR). Até a seção 7,
+o OCR era o EasyOCR, rodando na GPU. A tradução sai do Google Tradutor, das
 APIs oficiais da Azure, do DeepL e do Google Cloud, ou do Argos Translate, que roda
 offline. Todos os testes rodaram num notebook com uma GeForce MX350.
 
@@ -288,8 +291,8 @@ ele virou o gabarito. Algumas regras deixaram a comparação justa:
 - **letra de música e texto completo de terceiros** (um poema, uma carta inteira) ficam
   sem gabarito, porque o gabarito seria uma cópia da obra.
 
-O resultado de cada print está no anexo
-[Resultados do benchmark, print a print](resultados-benchmark.md).
+O resultado de cada print está em dois anexos: [com o RapidOCR](resultados-benchmark.md),
+o motor atual, e [com o EasyOCR](resultados-benchmark-easyocr.md), o motor até 16/11/2026.
 
 Além de CER e WER, o benchmark passou a medir as **quebras de linha**:
 - **achadas:** das quebras do gabarito, quantas o app pôs;
@@ -421,7 +424,7 @@ antes. As duas ordens fazem sentido, mas contei como erro mesmo assim.
 - Fontes muito estilizadas: a de faroeste da tela SPECIAL do Fallout e a gótica de
   pixel do Night in the Woods.
 
-Com o app como está, o benchmark completo dos 90 prints deu:
+Com o EasyOCR e as regras novas, o benchmark completo dos 90 prints deu:
 - CER de 10,24% e WER de 22,30%;
 - 74% das quebras achadas e 86% certas;
 - 3,0 s por print, praticamente o mesmo tempo de antes.
@@ -430,8 +433,8 @@ Com a correção por contexto ligada, o CER cai para 10,17% e o WER para 21,95%,
 por print, sem contar os 5 s de carga do BERT.
 
 Em acerto, isso dá **89,8% das letras e 77,7% das palavras**, de 77,3% no Morrowind a
-99,4% no Mass Effect. O anexo traz o resultado de [cada jogo e cada
-print](resultados-benchmark.md).
+99,4% no Mass Effect. O resultado de cada jogo e cada print com o EasyOCR está no anexo
+[resultados-benchmark-easyocr.md](resultados-benchmark-easyocr.md).
 
 ### Outras línguas
 
@@ -453,29 +456,119 @@ acontece igual em inglês: num menu em que o primeiro item é o mais largo, os d
 primeiros itens se juntam. E os casos são simulados: falta medir com prints reais em
 outras línguas.
 
+### Trocar o motor: do EasyOCR para o RapidOCR
+
+Depois das regras, boa parte do erro que sobrava era de leitura: palavras que o EasyOCR
+nem lia, como números e palavras de uma letra em fonte pequena. Nenhum ajuste de imagem
+ou de parâmetro resolvia isso. Então testei outros motores no mesmo benchmark, com as
+mesmas regras de parágrafo e de correção:
+
+| Motor | CER | WER | Palavras do gabarito lidas | Tempo por print |
+|---|---|---|---|---|
+| EasyOCR (GPU MX350) | 10,24% | 22,30% | 89% | 2,9 s |
+| **RapidOCR, modelos PP-OCRv6 small (CPU)** | **7,87%** | **12,13%** | **98%** | **1,1 s** |
+| RapidOCR, PP-OCRv6 medium (CPU) | 8,45% | 13,12% | 98% | 10,1 s |
+| RapidOCR, PP-OCRv5 mobile, só inglês (CPU) | 8,77% | 13,77% | 97% | 0,9 s |
+| RapidOCR, PP-OCRv5 server (CPU) | 12,53% | 24,32% | 85% | 23,7 s |
+| OCR do Windows, pacote pt-BR | 15,79% | 27,76% | 82% | 0,05 s |
+
+O RapidOCR roda os modelos do PaddleOCR, convertidos para ONNX, no ONNX Runtime. O
+modelo pequeno ganhou de tudo: errou menos e, rodando no processador, foi quase três
+vezes mais rápido que o EasyOCR na placa de vídeo. A diferença maior está no que o
+EasyOCR nem via: ele leu 91% das palavras de uma letra, contra 53%, e 97% dos números,
+contra 72%. Ele melhorou 58 prints e piorou 7.
+
+Três ajustes fizeram diferença:
+- **ler o print no tamanho original.** Por padrão, o RapidOCR amplia a imagem até o
+  lado menor ter 736 px: uma legenda de 1249×193 virava 4763×736. Assim ele ficava mais
+  lento e lia pior (CER de 9,30%);
+- **descartar as caixas com confiança abaixo de 0,7**, quase sempre ícones e texto
+  borrado de fundo. Escolhi o corte antes de olhar os prints. Com 0,8, o CER cairia
+  mais um pouco, mas escolher o corte pelo melhor resultado seria ajustá-lo ao próprio
+  dataset;
+- **apagar os caracteres chineses quando o jogo é de língua latina.** O modelo é
+  multilíngue e lê ícones como caracteres chineses ("口").
+
+Também testei combinar os dois motores, e não compensa. Escolhendo o melhor dos dois em
+cada print, com o gabarito na mão, o CER só cairia 0,5 ponto. Uma votação palavra a
+palavra teria ainda menos a ganhar: só 40 das 4.548 palavras faltam no RapidOCR e
+aparecem no EasyOCR. Já o OCR do Windows é muito rápido, mas depende do pacote de língua
+instalado em cada PC e não dá a confiança de cada palavra.
+
+As regras de parágrafo foram feitas sobre as caixas do EasyOCR, e as do RapidOCR têm
+outro formato. Ajustar as constantes das regras ao formato novo não mudou nada (no
+máximo 0,2 ponto). A queda nas quebras achadas, de 74% para 70%, vem quase toda de um
+print: na grade de skills do EVE, o RapidOCR lê as contagens pequenas entre as colunas,
+e elas tapam o vão que separava os blocos. Entrou uma regra nova: na fonte em pixel, o
+apóstrofo sai como ponto do meio ("IT·S"), e ele volta a ser apóstrofo nas contrações
+conhecidas.
+
+Com o RapidOCR, o benchmark completo dos 90 prints deu:
+- CER de 7,82% e WER de 12,00%;
+- 70% das quebras achadas e 86% certas;
+- 1,2 s por print, contando todo o caminho, da imagem ao texto corrigido.
+
+Em acerto, isso dá **92,2% das letras e 88,0% das palavras**. Mais da metade dos prints
+não erra nenhuma letra, e 72 dos 90 acertam 95% ou mais. A correção por contexto quase
+não muda mais nada (CER de 7,81%), porque sobraram poucas palavras lidas erradas.
+
+| Jogo | Acerto de letras com o EasyOCR | Com o RapidOCR |
+|---|---|---|
+| Danganronpa | 98,5% | 100,0% |
+| Doki Doki Literature Club | 91,6% | 100,0% |
+| Immortal Clan | 98,1% | 99,9% |
+| Mass Effect | 99,4% | 99,3% |
+| Persona 4 Golden | 93,6% | 96,7% |
+| Undertale | 90,2% | 95,0% |
+| Night in the Woods | 85,0% | 87,5% |
+| EVE Online | 85,4% | 87,1% |
+| Fallout: New Vegas | 86,1% | 87,1% |
+| Caves of Qud | 83,7% | 86,9% |
+| Morrowind | 77,3% | 82,0% |
+| **Todos os 90 prints** | **89,8%** | **92,2%** |
+
+O único jogo que piorou foi o Mass Effect, por pouco: o RapidOCR come o espaço entre
+algumas palavras ("resteasy", "Pressto"). O anexo traz o resultado de [cada jogo e cada
+print](resultados-benchmark.md), com o acerto do EasyOCR ao lado. A medição dos motores,
+com todos os modelos testados, licenças e tamanhos, está no anexo [Comparação de motores
+de OCR](comparacao-motores-ocr.md).
+
+A troca teve outros efeitos no app:
+- **línguas:** o modelo lê inglês, chinês, japonês e 40 das línguas de alfabeto latino
+  do app. As outras 40 (cirílico, árabe, coreano, devanágari, tailandês...) continuam
+  no EasyOCR;
+- **instalação:** os modelos (31 MB) vêm dentro do pacote do RapidOCR. O instalador
+  cresce cerca de 27 MB, e o app não baixa mais os 100 MB do EasyOCR na primeira
+  abertura;
+- **abertura:** lendo inglês, o app nem carrega o PyTorch.
+
 ## 8. De onde vem o erro que sobrou
 
-- **Poucas telas concentram o erro.** Os 10 piores prints somam 58% de todo o erro de
-  letras. Sem eles, o acerto médio seria de 95%, e a mediana dos 90 prints já é de 96,4%.
-- **Metade do erro de palavras é de ordem.** Contando as palavras sem olhar a ordem, o
-  erro cai de 22% para cerca de 12%. São telas com painéis, grades e tabelas, em que as
-  palavras saem certas, mas numa ordem diferente da do gabarito. Parte disso nem é erro
-  de verdade: no resumo do Caves of Qud, as duas ordens fazem sentido.
-- **O resto é leitura, e aí o EasyOCR está no limite.** Ficam de fora palavras que o
-  detector nem acha (5,9% das palavras; metade delas são números e palavras de uma letra),
-  fontes muito estilizadas e letreiros miúdos. Nenhum ajuste de imagem ou de parâmetro
-  resolveu.
+Com o EasyOCR, o erro se dividia entre a ordem de leitura e as palavras que o detector
+nem achava. Com o RapidOCR, quase só sobrou a ordem:
+- **Poucas telas concentram o erro.** Os 10 piores prints somam 78% de todo o erro de
+  letras. Sem eles, o acerto médio seria de 98,1%.
+- **Quase todo o erro que sobrou é de ordem.** O RapidOCR lê 98% das palavras do
+  gabarito; só 105 das 4.548 faltam no texto. O resto do erro está em telas com painéis,
+  grades e tabelas: a ficha do Morrowind, a grade de skills do EVE, a tela SPECIAL do
+  Fallout e o resumo do Caves of Qud. As palavras saem certas, mas numa ordem diferente
+  da do gabarito. Parte disso nem é erro de verdade: no resumo do Caves of Qud, as duas
+  ordens fazem sentido.
+- **O que falta de leitura** são letreiros miúdos e borrados, que viram lixo, e alguns
+  espaços comidos entre palavras ("resteasy").
 
 **Próximos passos:**
-1. **Testar outro motor de OCR**, como o PaddleOCR ou o OCR que já vem no Windows, no
-   mesmo benchmark. É o caminho para as palavras que o EasyOCR nem lê.
-2. **Dicionário do jogo:** guardar as palavras que o OCR lê com confiança alta durante o
-   jogo, para a correção por contexto nunca mexer nelas.
-3. **Pôr a correção por contexto na tela de configurações**, para quem aceita esperar o
-   BERT carregar.
-4. **Separar os itens de um menu em que o primeiro item é o mais largo**, que ainda saem
+1. **Ordem de leitura em grades e fichas de duas colunas**, hoje o maior pedaço do erro.
+2. **Devolver o espaço comido** ("willexploithim" → "will exploit him"), separando pelo
+   dicionário as palavras grudadas.
+3. **Medir o RapidOCR nas outras escritas:** ele tem modelos de cerca de 8 MB para
+   cirílico, árabe, coreano, devanágari e tailandês, que poderiam substituir o EasyOCR
+   nessas línguas, se lerem melhor.
+4. **Repensar o pacote de GPU:** com o RapidOCR, a placa só acelera as línguas que ficaram
+   no EasyOCR.
+5. **Separar os itens de um menu em que o primeiro item é o mais largo**, que ainda saem
    juntos.
-5. **Coletar prints reais em outras línguas**, começando por japonês e árabe.
+6. **Coletar prints reais em outras línguas**, começando por japonês e árabe.
 
 ## 9. O que aprendi
 
@@ -512,13 +605,22 @@ outras línguas.
 13. **Regra feita numa língua precisa ser testada nas outras.** As regras de parágrafo
     nasceram olhando inglês e liam árabe ao contrário. Bastaram casos simulados para
     achar o problema.
+14. **Antes de polir as bordas, teste trocar a peça do meio.** As regras levaram o erro
+    de letras de 12,27% para 10,24%. Trocar o motor de OCR levou a 7,82% e quase cortou
+    pela metade o erro de palavras. E só deu para confiar na troca porque o benchmark e
+    as regras já estavam prontos para medi-la.
+15. **O padrão de uma biblioteca não foi feito para o seu caso.** Por padrão, o
+    RapidOCR amplia o print antes de ler, o que serve para fotos de documento. Em print
+    de jogo, ler no tamanho original foi mais rápido e mais certo.
 
 ## Como reproduzir
 
 O benchmark e as instruções para montar o dataset estão em
 [`benchmark/README.md`](../benchmark/README.md). Os prints dos jogos não estão no
 repositório (só os 3 exemplos da pasta `base`), então o resultado completo só sai com o
-dataset local; os números de cada print estão no [anexo](resultados-benchmark.md). Na
+dataset local. Os números de cada print estão nos anexos [com o
+RapidOCR](resultados-benchmark.md) e [com o EasyOCR](resultados-benchmark-easyocr.md), e a
+comparação dos motores, em [comparacao-motores-ocr.md](comparacao-motores-ocr.md). Na
 pasta do projeto:
 
 ```
