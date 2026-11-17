@@ -22,7 +22,7 @@ It captures the part of the screen under a transparent window, reads the text wi
 - **Translate any part of the screen:** a transparent window stays on top of the game; drag it over the text and click once.
 - **OCR tested on 90 game screenshots:** [RapidOCR](https://github.com/RapidAI/RapidOCR), running PaddleOCR's PP-OCRv6 models on the CPU, reads English, Chinese, Japanese and 40 Latin-script languages. EasyOCR reads the other scripts, with GPU acceleration (NVIDIA CUDA) when available.
 - **Cleans up the OCR output:** separates words that the OCR glued together (`DMGto` → `DMG to`, `ofincoming` → `of incoming`) before translating.
-- **Keeps the layout of the text:** titles, paragraphs, menu options and effect lines stay on their own lines in the translation, while sentences that only wrapped to fit the box are translated as a whole. Side-by-side panels, character sheets and grids are read one column at a time.
+- **Keeps the layout of the text:** titles, paragraphs, menu options and effect lines stay on their own lines in the translation, while sentences that only wrapped to fit the box are translated as a whole. Side-by-side panels, character sheets and grids are read one column at a time, and menu buttons and tabs on the same line become separate items.
 - **80+ languages** for translation.
 - **Choose your translation engine:** free Google Translate, the official Azure, DeepL and Google Cloud APIs with your own key, or a fully offline mode.
 - **Automatic fallback:** if the chosen engine fails or hits its limit, the app tries the next one.
@@ -116,7 +116,7 @@ The OCR pipeline is measured by a benchmark that runs the same code the app uses
 | :----------------------------------------- | :------------- |
 | Character error rate (CER)                 | **4.87%**      |
 | Word error rate (WER)                      | **8.92%**      |
-| Line breaks found / correct                | **81% / 89%**  |
+| Line breaks found / correct                | **85% / 89%**  |
 | Time per screenshot (CPU only)             | **about 1 s**  |
 
 These numbers come from 90 screenshots: 87 from 11 games (Undertale, Persona 4 Golden, Fallout: New Vegas, Morrowind, Mass Effect, EVE Online and others) and 3 public examples. Before the switch from EasyOCR to RapidOCR, the same benchmark gave a CER of 10.24% and a WER of 22.30%, at 3.0 s per screenshot on an NVIDIA MX350. Reading character sheets and grids column by column took RapidOCR from a CER of 7.81% to 4.87%. The results for each game and screenshot are in [docs/resultados-benchmark.md](docs/resultados-benchmark.md) (with EasyOCR: [docs/resultados-benchmark-easyocr.md](docs/resultados-benchmark-easyocr.md)), and the comparison between OCR engines is in [docs/comparacao-motores-ocr.md](docs/comparacao-motores-ocr.md), all in Portuguese. See [benchmark/README.md](benchmark/README.md) to run it and to add your own screenshots.

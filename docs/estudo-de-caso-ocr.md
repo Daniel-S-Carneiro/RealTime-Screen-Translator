@@ -12,7 +12,8 @@
 > mudar o app só com o que melhorava a maioria deles. As regras levaram o acerto de
 > 87,7% para 89,8% das letras. Trocar o EasyOCR pelo RapidOCR, que roda os modelos do
 > PaddleOCR, levou a 92,2% das letras e 88% das palavras, em cerca de 1 s por print.
-> Ler fichas e grades coluna por coluna levou a 95,1% das letras e 91,1% das palavras.
+> Ler fichas e grades coluna por coluna levou a 95,1% das letras e 91,1% das palavras,
+> e separar os itens de menu lado a lado levou o app a achar 85% das quebras de linha.
 > Este texto conta o que fiz, onde errei e o que mudou.
 
 ---
@@ -617,6 +618,65 @@ palavras**, com 81% das quebras achadas e 89% certas. A regra não pesou no temp
 benchmark deu 0,8 s por print, e essa medida varia com a carga do PC. O resultado de cada
 print está no [anexo](resultados-benchmark.md), ao lado dos dois benchmarks anteriores.
 
+### Separar itens lado a lado na mesma linha
+
+Com as colunas resolvidas, o maior grupo de quebras perdidas passou a ser o de itens lado a
+lado na mesma linha: menus horizontais ("FIGHT ACT ITEM MERCY"), barras de abas e botões.
+A ideia óbvia, que também era a das sugestões que recebi, era quebrar quando o vão entre
+as caixas fosse grande. Antes de escrever a regra, medi. Nas linhas que o app monta,
+comparei com o gabarito cada par de caixas vizinhas: 52 pares deveriam quebrar e 236
+devem ficar juntos.
+
+| Sinal | Quebra (52) | Junto (236) |
+|---|---|---|
+| Vão entre as caixas (mediana) | 2,4 alturas | 2,8 alturas |
+| Altura das caixas parecida (razão mediana) | 1,06 | 1,10 |
+| Direita começa com número | 0 | 138 |
+| Direita começa com minúscula, ou a esquerda termina com pontuação | 0 | 22 |
+| Duas caixas em maiúsculas | 13 | 1 |
+
+O vão não separa nada. O maior vão é o de rótulo e valor ("Memory ...... 28 points" tem
+38 alturas), e abas como "Details | Groups" ficam a 0,17 altura uma da outra. O que
+separa é o conteúdo. A regra nova separa:
+- **uma fila de itens:** 3 caixas ou mais em que todas são itens, isto é, têm até 3
+  palavras, não começam com número, têm a primeira letra maiúscula e não terminam com
+  pontuação de frase;
+- **maiúsculas:** duas caixas vizinhas em maiúsculas ("FIGHT" | "ACT");
+- **abas:** duas abas com a mesma primeira palavra ("Skill Plans" | "Skill Catalogue").
+
+Algumas ideias ficaram de fora:
+- o contraste entre um nome e uma etiqueta em maiúsculas ("Sakura Ogami" | "SPEAKING")
+  pôs 5 quebras certas e 8 erradas;
+- uma regra para valores de HUD ("Wg 111/180 HP 140/140") pegaria 5 quebras e erraria
+  15, todas na tabela de registros do overview do EVE ("12 km | Jita");
+- reconhecer botões por uma lista de palavras ("Save", "Cancel") nem foi testado, porque
+  só funcionaria em inglês.
+
+De novo, a leitura do EasyOCR mostrou o risco. Com uma caixa por palavra, a fala do
+Undertale em maiúsculas virava uma palavra por linha. Por isso as três regras só valem com
+vão de pelo menos 0,8 altura entre as caixas, maior que um espaço entre palavras. E o item
+precisa ter a primeira letra maiúscula, o que deixa de fora escritas sem maiúscula, como o
+chinês e o japonês. Três casos simulados conferem isso: o menu "FIGHT ACT ITEM MERCY" se
+separa, e uma fala japonesa e uma russa em maiúsculas, cada uma dividida em 3 caixas,
+ficam inteiras.
+
+No primeiro teste, as quebras a mais pareciam o dobro do que eram. O defeito era do
+próprio teste: ele marcava as linhas separadas pelo endereço do objeto na memória, e o
+Python reaproveita esse endereço quando o objeto é descartado. Linhas sem nada a ver
+herdavam a marca.
+
+| Leitura | Quebras achadas (de 744) | Quebras a mais | Quebras certas |
+|---|---|---|---|
+| RapidOCR | 602 → **630** | 74 → 81 | 89,1% → 88,6% |
+| EasyOCR (leitura guardada) | 596 → 608 | 81 → 100 | 88,0% → 85,9% |
+
+O erro de letras e o de palavras não mudam, porque a regra só troca espaços por quebras de
+linha. Com o RapidOCR, as quebras achadas foram a 85%, com 89% certas. As quebras a mais
+são quase todas cabeçalhos de tabela separados em palavras ("Attributes | Base Points |
+Implants"), que se traduzem bem um por um. Na leitura do EasyOCR, entram também as da
+grade de skills do EVE, que ali continua fora de ordem: cada skill numa linha é o certo
+para a tradução, mas a ordem não bate com a do gabarito.
+
 ## 8. De onde vem o erro que sobrou
 
 Medindo de novo do mesmo jeito, com as palavras em ordem alfabética:
@@ -629,16 +689,17 @@ Medindo de novo do mesmo jeito, com as palavras em ordem alfabética:
   não lê no inventário do Persona e alguns espaços comidos ("resteasy"). Separar as
   palavras grudadas pelo dicionário do SymSpell quebrou nomes de jogo ("Dragonbind",
   "Garrus") e ficou de fora.
-- **Quebras:** o app acha 602 das 744 quebras dos gabaritos. Das 142 que perde, 76 são
-  itens lado a lado na mesma linha que saem juntos: menus horizontais ("FIGHT ACT ITEM
-  MERCY"), barras de abas e valores de HUD ("Wg 111/180 HP 140/140").
+- **Quebras:** o app acha 630 das 744 quebras dos gabaritos. Das 114 que perde, 51 ainda
+  são itens lado a lado que saem juntos, quase todos em pares de dois: abas e botões
+  ("Save Changes | Cancel"), nome e etiqueta ("Sakura Ogami | SPEAKING") e valores de HUD
+  ("Wg 111/180 HP 140/140").
 - **Ordem ambígua:** o resumo do Caves of Qud ainda erra 65% só por ordem, mas ali as duas
   ordens fazem sentido.
 
 **Próximos passos:**
-1. **Separar itens lado a lado na mesma linha** (menus, abas, HUD), hoje o maior grupo de
-   quebras perdidas. A regra testada com o EasyOCR errava muito; vale testar de novo, com
-   o alinhamento e as proteções novas.
+1. **Pares de dois itens na mesma linha** (abas, botões, HUD). Com só dois itens, eles se
+   confundem com rótulos de ficha ("Race | Dark elf") e com as linhas de uma tabela de
+   registros, então precisam de um sinal mais forte que os de hoje.
 2. **Medir o RapidOCR nas outras escritas:** ele tem modelos de cerca de 8 MB para
    cirílico, árabe, coreano, devanágari e tailandês, que poderiam substituir o EasyOCR
    nessas línguas, se lerem melhor.
@@ -695,6 +756,9 @@ Medindo de novo do mesmo jeito, com as palavras em ordem alfabética:
 17. **Teste a regra numa leitura diferente.** Com as caixas do RapidOCR, a regra das
     colunas parecia não ter risco. A leitura guardada do EasyOCR mostrou dois erros que
     ela podia cometer, e as proteções entraram antes de a regra chegar ao app.
+18. **Meça o sinal antes de escolher a regra.** Para separar itens lado a lado, todo mundo
+    apostava no vão grande, eu inclusive. Medido, o vão dos pares que deviam ficar juntos
+    era maior que o dos que deviam quebrar. O que separava os dois era o conteúdo.
 
 ## Como reproduzir
 
