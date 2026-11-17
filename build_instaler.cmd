@@ -46,7 +46,10 @@ echo [INFO] Executando PyInstaller...
 :: --exclude-module nltk: o app nao usa o nltk (so um tokenizador opcional do transformers
 :: o importa), mas com ele no pacote o PyInstaller o carrega a cada abertura, antes ate
 :: da tela de carregamento: cerca de 3 s a mais
-"%PYINSTALLER%" --clean --noconfirm --noconsole --onedir --name="%APP_NAME%" --icon="assets\icone.ico" --add-data="assets\icone.ico;assets" --runtime-hook="pyi_gancho_gpu.py" --exclude-module nltk --workpath="%PASTA_TRABALHO%" "%PY_SCRIPT%"
+:: --collect-data rapidocr leva os arquivos de configuracao e os modelos PP-OCRv6 small
+:: (31 MB) que vem dentro do pacote; --hidden-import rapidocr.main porque o pacote so
+:: importa a classe RapidOCR na hora de usar, e o PyInstaller nao enxerga esse import
+"%PYINSTALLER%" --clean --noconfirm --noconsole --onedir --name="%APP_NAME%" --icon="assets\icone.ico" --add-data="assets\icone.ico;assets" --collect-data rapidocr --hidden-import rapidocr.main --runtime-hook="pyi_gancho_gpu.py" --exclude-module nltk --workpath="%PASTA_TRABALHO%" "%PY_SCRIPT%"
 IF %ERRORLEVEL% NEQ 0 (
     echo [ERRO] Falha no PyInstaller!
     EXIT /b 1

@@ -249,9 +249,9 @@ def _medias(medidas: list) -> str:
     )
 
 
-def imprimir_resumo(linhas: list, args, total_imagens: int, use_gpu: bool) -> None:
+def imprimir_resumo(linhas: list, args, total_imagens: int, motor_ocr: str) -> None:
     """Média de cada configuração e a imagem em que ela mais errou; depois, por pasta."""
-    print(f"\nRESUMO ({total_imagens} imagens, idioma {args.idioma}, GPU: {use_gpu})")
+    print(f"\nRESUMO ({total_imagens} imagens, idioma {args.idioma}, OCR: {motor_ocr})")
     cabecalho = (
         f"{'CER médio':>9} {'WER médio':>9} {'quebras achadas':>15} {'certas':>6}"
         f" {'tempo médio':>11}"
@@ -311,8 +311,8 @@ def main() -> None:
     if not apresentar_dataset(amostras, pendentes, args.periodo):
         return
 
-    motor = MotorOCR(idiomas=["en", "pt"])
-    # Aquecimento: a primeira chamada na GPU (e a carga do BERT) é bem mais lenta que as outras
+    motor = MotorOCR(idiomas=[args.idioma])
+    # Aquecimento: a primeira chamada do OCR (e a carga do BERT) é bem mais lenta que as outras
     imagem_aquecimento = amostras[0][1]
     for nome in args.configs:
         reconhecer_texto(imagem_aquecimento, motor, idioma=args.idioma, **CONFIGURACOES[nome])
@@ -325,7 +325,7 @@ def main() -> None:
             linha = medir(imagem, gabarito, motor, nome, args)
             linhas.append({"imagem": imagem_relativa, "pasta": pasta_da_imagem(caminho), **linha})
 
-    imprimir_resumo(linhas, args, len(amostras), motor.use_gpu)
+    imprimir_resumo(linhas, args, len(amostras), motor.nome)
     salvar_csv(linhas)
 
 

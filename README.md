@@ -20,7 +20,7 @@ It captures the part of the screen under a transparent window, reads the text wi
 ## 🌟 Features
 
 - **Translate any part of the screen:** a transparent window stays on top of the game; drag it over the text and click once.
-- **OCR tested on game screenshots:** EasyOCR with GPU acceleration (NVIDIA CUDA) when available, and automatic fallback to the CPU.
+- **OCR tested on 90 game screenshots:** [RapidOCR](https://github.com/RapidAI/RapidOCR), running PaddleOCR's PP-OCRv6 models on the CPU, reads English, Chinese, Japanese and 40 Latin-script languages. EasyOCR reads the other scripts, with GPU acceleration (NVIDIA CUDA) when available.
 - **Cleans up the OCR output:** separates words that the OCR glued together (`DMGto` → `DMG to`, `ofincoming` → `of incoming`) before translating.
 - **Keeps the layout of the text:** titles, paragraphs, menu options and effect lines stay on their own lines in the translation, while sentences that only wrapped to fit the box are translated as a whole.
 - **80+ languages** for translation.
@@ -62,7 +62,7 @@ The settings screen has the sign-up link for each service, a field for the key a
 ### Prerequisites
 
 - Windows 10 or 11 (64-bit)
-- Optional: an NVIDIA GPU for faster OCR
+- Optional: an NVIDIA GPU, which speeds up the languages read by EasyOCR (Cyrillic, Arabic, Korean, Devanagari, Thai...)
 
 ### Installer
 
@@ -75,6 +75,7 @@ The installer includes the CPU version of PyTorch, which works on any PC and kee
 - You can skip it and download it later from the tray icon (**Ativar aceleração por GPU**).
 - An interrupted download resumes where it stopped, and the file is checked against the SHA-256 published by PyTorch.
 - Without it, the app works normally on the CPU.
+- English, Chinese, Japanese and the Latin-script languages don't use the GPU: RapidOCR on the CPU is already faster than EasyOCR on an entry-level GPU.
 
 ### Run from source
 
@@ -89,8 +90,8 @@ pip install -r requirements.txt
 python main.py
 ```
 
-- The first run downloads the OCR models, so it takes longer.
-- For GPU acceleration, replace PyTorch with its CUDA build. Without it, the OCR runs on the CPU:
+- The RapidOCR models come inside the `rapidocr` package. Languages read by EasyOCR download their model the first time they are used.
+- For GPU acceleration of the EasyOCR languages, replace PyTorch with its CUDA build:
 
   ```bash
   pip install torch==2.6.0 torchvision==0.21.0 --index-url https://download.pytorch.org/whl/cu124
@@ -113,11 +114,12 @@ The OCR pipeline is measured by a benchmark that runs the same code the app uses
 
 | Measure                                    | Result         |
 | :----------------------------------------- | :------------- |
-| Character error rate (CER)                 | **1.74%**      |
-| Word error rate (WER)                      | **7.71%**      |
-| Time per screenshot (entry-level NVIDIA MX350) | **1 to 2 s** |
+| Character error rate (CER)                 | **7.82%**      |
+| Word error rate (WER)                      | **12.00%**     |
+| Line breaks found / correct                | **70% / 86%**  |
+| Time per screenshot (CPU only)             | **1.2 s**      |
 
-These numbers come from 18 screenshots, 15 of them from the same game, so they are a starting point, not a final result. See [benchmark/README.md](benchmark/README.md) to run it and to add your own screenshots.
+These numbers come from 90 screenshots: 87 from 11 games (Undertale, Persona 4 Golden, Fallout: New Vegas, Morrowind, Mass Effect, EVE Online and others) and 3 public examples. Before the switch from EasyOCR to RapidOCR, the same benchmark gave a CER of 10.24% and a WER of 22.30%, at 3.0 s per screenshot on an NVIDIA MX350. The results for each game and screenshot are in [docs/resultados-benchmark.md](docs/resultados-benchmark.md) (with EasyOCR: [docs/resultados-benchmark-easyocr.md](docs/resultados-benchmark-easyocr.md)), and the comparison between OCR engines is in [docs/comparacao-motores-ocr.md](docs/comparacao-motores-ocr.md), all in Portuguese. See [benchmark/README.md](benchmark/README.md) to run it and to add your own screenshots.
 
 The case study [docs/estudo-de-caso-ocr.md](docs/estudo-de-caso-ocr.md) (in Portuguese) tells how the pipeline got here, including the mistakes along the way.
 
@@ -129,7 +131,7 @@ The project is written in **Python** and uses these libraries for image processi
 | :-------------------- | :---------------------------------------------------------------------------------------------------------- |
 | **Interface (GUI)**   | [PySide6](https://pypi.org/project/PySide6/) (Qt)                                                           |
 | **Screen capture**    | [MSS](https://pypi.org/project/mss/)                                                                        |
-| **OCR**               | [EasyOCR](https://pypi.org/project/easyocr/), [PyTorch](https://pytorch.org/) & [OpenCV](https://pypi.org/project/opencv-python-headless/) |
+| **OCR**               | [RapidOCR](https://pypi.org/project/rapidocr/) ([PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR) models on [ONNX Runtime](https://onnxruntime.ai/)), [EasyOCR](https://pypi.org/project/easyocr/) & [PyTorch](https://pytorch.org/) for the other scripts, [OpenCV](https://pypi.org/project/opencv-python-headless/) |
 | **Text cleanup**      | [pyspellchecker](https://pypi.org/project/pyspellchecker/)                                                  |
 | **Translation**       | [Deep-Translator](https://pypi.org/project/deep-translator/), official REST APIs via [Requests](https://pypi.org/project/requests/) |
 | **Offline translation** | [Argos Translate](https://pypi.org/project/argostranslate/)                                               |

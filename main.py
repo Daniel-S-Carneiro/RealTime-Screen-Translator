@@ -1,6 +1,6 @@
 """Ponto de entrada: mostra a tela de carregamento e abre o overlay quando tudo estiver pronto.
 
-Fica leve de propósito (só o Qt). O PyTorch, o EasyOCR e os modelos carregam numa
+Fica leve de propósito (só o Qt). O OCR, o tradutor e os modelos carregam numa
 thread, e a tela de carregamento continua respondendo e animada enquanto isso.
 """
 
@@ -39,9 +39,9 @@ class Carregador(QObject):
 
     def _carregar(self) -> None:
         try:
-            self.etapa.emit(1, "Carregando as bibliotecas de IA (PyTorch e EasyOCR)...")
+            self.etapa.emit(1, "Carregando as bibliotecas de leitura e tradução...")
             from config_usuario import carregar_config
-            from ocr_engine import MotorOCR, modelos_baixados
+            from ocr_engine import MotorOCR
             from tradutor_engine import MotorTradutor
 
             # O overlay também é importado aqui, fora da thread da interface
@@ -56,14 +56,8 @@ class Carregador(QObject):
                 credenciais=config["credenciais"],
             )
 
-            if modelos_baixados():
-                self.etapa.emit(2, "Preparando a leitura de texto...")
-            else:
-                self.etapa.emit(
-                    2,
-                    "Baixando os modelos de leitura de texto "
-                    "(cerca de 100 MB, só na primeira vez)...",
-                )
+            # Os modelos do RapidOCR vêm dentro do app: não há download na 1ª abertura
+            self.etapa.emit(2, "Preparando a leitura de texto...")
             log_debug("[INÍCIO] Criando instância do MotorOCR...")
             ocr = MotorOCR(idiomas=["en", "pt"])
         except Exception:  # pylint: disable=broad-exception-caught

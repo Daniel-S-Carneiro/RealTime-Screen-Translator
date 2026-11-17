@@ -107,21 +107,27 @@ def abrir_instalador() -> None:
 
 def descrever_situacao() -> str:
     """Frase para a tela de configurações dizendo se o app está usando a placa."""
-    # Fica aqui para o gancho de inicialização não carregar o torch antes da hora;
-    # quando esta função roda, o OCR já carregou o torch e o import é imediato
-    import torch  # pylint: disable=import-outside-toplevel
+    # Inglês e as línguas latinas são lidos pelo RapidOCR, no processador, e o PyTorch
+    # nem é carregado. Importá-lo só para esta frase travaria a tela uns 2 s.
+    torch = sys.modules.get("torch")
+    if EMPACOTADO and not tem_placa_nvidia():
+        return "Nenhuma placa NVIDIA encontrada: o app usa o processador."
+    if torch is None:
+        return (
+            "A língua escolhida é lida pelo RapidOCR, no processador, que já é mais "
+            "rápido que a placa. A placa só acelera as línguas lidas pelo EasyOCR "
+            "(cirílico, árabe, coreano, devanágari, tailandês...)."
+        )
 
     placa_respondeu = torch.cuda.is_available()
     if not EMPACOTADO:
         uso = "usa" if placa_respondeu else "não usa"
         return f"Rodando pelo código: o PyTorch do env {uso} a placa NVIDIA."
-    if not tem_placa_nvidia():
-        return "Nenhuma placa NVIDIA encontrada: o app usa o processador."
     if str(PASTA_GPU) in sys.path:  # o gancho ativou a pasta gpu nesta abertura
-        if placa_respondeu:
-            return "Ativa: o app está usando a placa NVIDIA."
         return (
-            "Instalada, mas a placa não respondeu. Atualize o driver da NVIDIA; "
+            "Ativa: o app está usando a placa NVIDIA."
+            if placa_respondeu
+            else "Instalada, mas a placa não respondeu. Atualize o driver da NVIDIA; "
             "enquanto isso, o app usa o processador."
         )
     if pacote_instalado():

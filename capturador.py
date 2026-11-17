@@ -10,6 +10,8 @@ import numpy as np
 # "binarizado" é o pipeline campeão dos laboratórios, mantido para comparação.
 # Em 2026-11-15, nos 90 prints de 11 jogos, o cinza (CER 12,27%) também ganhou de
 # inverter as cores com fundo escuro (12,42%) e de suavizar as letras (13,32% a 33,63%).
+# Essas medidas são do EasyOCR; o RapidOCR, que o substituiu em 2026-11-16, foi
+# comparado com ele recebendo a mesma imagem em cinza.
 MODOS_IMAGEM = ("original", "cinza", "binarizado")
 MODO_IMAGEM_PADRAO = "cinza"
 

@@ -20,7 +20,10 @@ from PySide6.QtWidgets import (
 import aceleracao_gpu
 
 TEXTO_CONVITE = (
-    "Encontramos uma placa de vídeo NVIDIA neste PC. Com ela, o app lê a tela mais rápido.\n\n"
+    "Encontramos uma placa de vídeo NVIDIA neste PC. Com ela, o app lê mais rápido as "
+    "línguas de escrita cirílica, árabe, coreana, devanágari e tailandesa, entre outras. "
+    "Inglês, chinês, japonês e as línguas de alfabeto latino já são lidos pelo processador, "
+    "que é mais rápido que a placa.\n\n"
     "Para usar a placa, o app precisa baixar o PyTorch com suporte a CUDA (cerca de 2,5 GB) "
     "direto do site oficial do PyTorch. Sem ele, o app funciona normalmente usando só o "
     "processador.\n\n"
