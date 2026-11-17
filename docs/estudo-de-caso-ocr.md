@@ -14,7 +14,7 @@
 > PaddleOCR, levou a 92,2% das letras e 88% das palavras, em cerca de 1 s por print.
 > Ler fichas e grades coluna por coluna levou a 95,1% das letras e 91,1% das palavras,
 > e separar os itens de menu lado a lado e as linhas de aviso e título levou o app a
-> achar 88% das quebras de linha.
+> achar 89% das quebras de linha.
 > Este texto conta o que fiz, onde errei e o que mudou.
 
 ---
@@ -736,6 +736,65 @@ tirou 8. Ficou de fora.
 
 Com o RapidOCR, o app passou a achar 88% das quebras, com 89% certas.
 
+### Os itens lado a lado que pareciam sem solução
+
+Sobraram 30 quebras perdidas entre itens lado a lado, em quatro grupos. Olhei cada um de
+perto, inclusive os que pareciam impossíveis.
+
+**A barra do Doki Doki numa caixa só (11 casos, 10 dessa barra).** O RapidOCR lê "History
+Skip Auto Save Load Settings" como uma frase. Pedi a ele as caixas de cada palavra e medi
+o espaço entre elas também nos pixels da imagem:
+
+| Texto | Espaço entre palavras (em alturas de letra) |
+|---|---|
+| Fala do Doki Doki | 0,12 a 0,20 |
+| Barra do Doki Doki | cerca de 0,4, com um buraco de 1,8 a 3,7 no meio |
+| Fala do Mass Effect | até 0,35 |
+
+O espaço da barra é maior que o da fala do mesmo jogo, mas parecido com o espaço comum de
+outra fonte. Não existe um limite que valha para todas as fontes. E as caixas do RapidOCR
+juntam a barra porque o detector expande cada palavra antes de agrupar: para separar vãos
+de 0,4 altura, as caixas teriam de ser tão justas que cortariam letras. Esse grupo ficou
+como está.
+
+**Abas encostadas (8 casos).** Na imagem, as abas do EVE não têm divisória; só a aba
+selecionada tem fundo mais claro, e um cabeçalho de tabela tem o mesmo visual. Mas há um
+sinal nas caixas. Quando o OCR agrupa as palavras de uma aba numa caixa só ("Home
+Station", "Expert Systems"), as caixas separadas são itens separados, mesmo encostadas.
+Foi a regra que entrou: numa fila de 3 itens ou mais em que alguma caixa tem 2 palavras ou
+mais, o vão mínimo deixa de valer.
+
+O risco era o cabeçalho de tabela ("Attributes | Base Points | Implants"), que tem o mesmo
+formato. A proteção é a linha de baixo: num cabeçalho, as caixas ficam alinhadas com as
+da primeira linha da tabela. Ela só funcionou depois de procurar a linha de baixo no
+print inteiro. O corte XY punha o cabeçalho num bloco e a tabela em outro, e dentro do
+bloco do cabeçalho não havia linha de baixo. Nos pares em maiúsculas, o vão mínimo
+continua valendo, porque é onde uma fala em maiúsculas lida palavra a palavra quebraria.
+
+**Valores de HUD (5 casos).** Uma linha inteira alternando rótulo e valor ("HP | 140/140
+| DT | 0.0 | Caps | 27") vira um par por linha. A tabela de registros do overview do EVE
+("12 km | Jita | Stargate") não alterna e fica de fora. No Pip-Boy, a métrica contou 2
+quebras a mais, mas o texto que sai é igual ao do gabarito. As quebras não se alinham só
+porque o gabarito põe esses valores logo depois do peso, e o app, depois da lista de itens.
+
+**Pares de dois itens (6 casos).** A regra sugerida, de duas caixas curtas com maiúscula
+e vão entre 0,8 e 2,5 alturas, pôs 8 quebras erradas e nenhuma certa na leitura do EasyOCR.
+O que funcionou foi olhar a vizinhança: separar dois itens só quando nenhuma das caixas se
+alinha com as linhas de cima e de baixo. "Sakura Ogami | SPEAKING" e "Save Changes |
+Cancel" estão sozinhos e se separam. As linhas da tabela do overview e os pares "Race |
+Dark elf" da ficha do Morrowind se alinham com as vizinhas e ficam como estão. Uma caixa
+de uma letra só ("X" da quantidade no inventário do Persona) não conta como item.
+
+| Leitura | Quebras achadas (de 744) | Quebras a mais | Quebras certas |
+|---|---|---|---|
+| RapidOCR | 652 → **662** | 83 → 85 | 88,7% → 88,6% |
+| EasyOCR (leitura guardada) | 614 → 627 | 105 → 114 | 85,4% → 84,6% |
+
+No RapidOCR, todas as mudanças foram ganhos; as 2 quebras a mais são as do Pip-Boy. Na
+leitura do EasyOCR entraram também algumas quebras erradas em letreiros e no overview do
+EVE. Dois casos simulados novos conferem as regras em outra língua: o HUD se separa em
+pares, e dois botões sozinhos em português ("Salvar tudo" | "Cancelar") se separam.
+
 ## 8. De onde vem o erro que sobrou
 
 Medindo de novo do mesmo jeito, com as palavras em ordem alfabética:
@@ -748,22 +807,23 @@ Medindo de novo do mesmo jeito, com as palavras em ordem alfabética:
   não lê no inventário do Persona e alguns espaços comidos ("resteasy"). Separar as
   palavras grudadas pelo dicionário do SymSpell quebrou nomes de jogo ("Dragonbind",
   "Garrus") e ficou de fora.
-- **Quebras:** o app acha 652 das 744 quebras dos gabaritos. Das 92 que perde, 30 são
+- **Quebras:** o app acha 662 das 744 quebras dos gabaritos. Das 82 que perde, 17 são
   itens lado a lado que saem juntos:
   - 11 vêm numa caixa só do OCR, e 10 deles são a barra do Doki Doki;
-  - 8 são abas com vão de menos de um espaço;
-  - 6 são pares de dois itens ("Save Changes | Cancel", "Sakura Ogami | SPEAKING");
-  - 5 são valores de HUD ("Wg 111/180 HP 140/140").
+  - 6 são abas de uma palavra só e encostadas, sem uma caixa de duas palavras que mostre
+    como o OCR agrupa ("Browse | Quickbar", "General | Mining | WarpTo").
 
-  Outras 10 são linhas de cima e de baixo que ainda saem juntas. As demais quebras
-  perdidas estão nas telas em que a ordem não bate com o gabarito.
+  Outras 11 são linhas de cima e de baixo que ainda saem juntas, como títulos inclinados
+  e frases curtas de descrição sem pontuação. As demais quebras perdidas estão nas telas
+  em que a ordem não bate com o gabarito.
 - **Ordem ambígua:** o resumo do Caves of Qud ainda erra 65% só por ordem, mas ali as duas
   ordens fazem sentido.
 
 **Próximos passos:**
-1. **Pares de dois itens na mesma linha** (abas, botões, HUD). Com só dois itens, eles se
-   confundem com rótulos de ficha ("Race | Dark elf") e com as linhas de uma tabela de
-   registros, então precisam de um sinal mais forte que os de hoje.
+1. **Abas de uma palavra encostadas e a barra do Doki Doki.** Sem uma caixa de duas
+   palavras na linha, nem um espaço que valha para todas as fontes, não há sinal de
+   posição que as separe. Talvez dê com o desenho da tela, como o fundo da aba
+   selecionada ou o sublinhado da barra.
 2. **Medir o RapidOCR nas outras escritas:** ele tem modelos de cerca de 8 MB para
    cirílico, árabe, coreano, devanágari e tailandês, que poderiam substituir o EasyOCR
    nessas línguas, se lerem melhor.
@@ -827,6 +887,9 @@ Medindo de novo do mesmo jeito, com as palavras em ordem alfabética:
     os prints, que são em inglês. Um caso simulado em alemão, que escreve todo substantivo
     com maiúscula, mostrou que ela cortaria frases comuns. O ajuste não custou nada nos
     prints e evitou o erro.
+20. **Leia o texto antes de confiar no número.** No Pip-Boy, a regra do HUD parecia pôr
+    2 quebras erradas. O texto que saiu era igual ao do gabarito; a métrica só não
+    alinhava as quebras porque a ordem das telas era diferente.
 
 ## Como reproduzir
 
