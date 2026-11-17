@@ -512,6 +512,11 @@ Em acerto, isso dá **92,2% das letras e 88,0% das palavras**. Mais da metade do
 não erra nenhuma letra, e 72 dos 90 acertam 95% ou mais. A correção por contexto quase
 não muda mais nada (CER de 7,81%), porque sobraram poucas palavras lidas erradas.
 
+Depois desse benchmark, entrou mais um par na regra de letras confundidas. Com o
+RapidOCR, a fonte do Morrowind troca *p* por *d*: sai "Dursue" no lugar de "Pursue" e
+"Doisonous" no lugar de "Poisonous". O par d/p consertou 5 palavras em 3 prints, sem
+piorar nenhum, e levou o CER a 7,81% e o WER a 11,97%, sobre a mesma leitura do OCR.
+
 | Jogo | Acerto de letras com o EasyOCR | Com o RapidOCR |
 |---|---|---|
 | Danganronpa | 98,5% | 100,0% |

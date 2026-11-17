@@ -28,8 +28,10 @@ _PRONOME_I = re.compile(
     r"guess|mean|feel|hope|wonder|believe|never|really|need)\b|'(?:m|ve|ll|d)\b)"
 )
 # Letras que fontes de jogo fazem o OCR confundir (Morrowind: "chc" = "the", "durics"
-# = "duties"; DDLC: "whac" = "what"; Fallout: "Riflc" = "Rifle")
-LETRAS_CONFUNDIDAS = {"c": ("e", "t"), "r": ("t",), "l": ("i",)}
+# = "duties"; DDLC: "whac" = "what"; Fallout: "Riflc" = "Rifle"). O d/p apareceu com o
+# RapidOCR na fonte do Morrowind ("Dursue" = "Pursue", "Doisonous" = "Poisonous"): nos
+# 90 prints consertou 5 palavras e não piorou nenhum print.
+LETRAS_CONFUNDIDAS = {"c": ("e", "t"), "r": ("t",), "l": ("i",), "d": ("p",)}
 # A troca só vale se der palavra comum: palavra curta precisa ser bem comum ("Misc"
 # não pode virar "Mist", nem "taur" virar "taut")
 FREQUENCIA_MINIMA_CURTA = 1e-5
@@ -220,7 +222,7 @@ class ProcessadorInteligente:
         return re.sub(r"(?<=\b\d)[Oo](?=\d|mm\b|th\b)", "0", texto)
 
     def corrigir_letras_confundidas(self, texto: str) -> str:
-        """Desfaz trocas de letra que fontes de jogo provocam (c/e, c/t, r/t, l/i).
+        """Desfaz trocas de letra que fontes de jogo provocam (c/e, c/t, r/t, l/i, d/p).
 
         Só mexe em palavra que o dicionário não conhece, e só aceita a troca que der
         palavra comum. Palavras com apóstrofo e siglas (tudo maiúsculo) ficam de fora.
