@@ -819,6 +819,41 @@ Medindo de novo do mesmo jeito, com as palavras em ordem alfabética:
 - **Ordem ambígua:** o resumo do Caves of Qud ainda erra 65% só por ordem, mas ali as duas
   ordens fazem sentido.
 
+Para olhar esse erro mais de perto, o benchmark ganhou duas medidas:
+
+- **Linhas inteiras.** Cada linha do gabarito com duas palavras ou mais é uma unidade que
+  o tradutor deveria receber inteira. Das 661, 519 (78,5%) saem inteiras e sozinhas.
+  Das que não saem:
+  - 47 (7,1%) saem junto de outra linha, numa quebra perdida;
+  - 30 (4,5%) saem cortadas ou com outra região no meio;
+  - 65 (9,8%) têm alguma palavra que o OCR não leu.
+
+  Montagem e leitura pesam quase o mesmo no que ainda chega errado ao tradutor.
+- **Tipo de tela.** Cada print ganhou um tipo, em
+  [`benchmark/categorias.json`](../benchmark/categorias.json), e a média geral escondia
+  diferenças grandes entre eles:
+
+  | Tipo | Prints | Acerto de letras | Linhas inteiras |
+  |---|---|---|---|
+  | Texto (descrições, tomos, diário, tutorial) | 28 | 99,5% | 92% |
+  | Legenda (falas e avisos) | 21 | 99,4% | 81% |
+  | Menu (opções, abas, diálogos com escolhas) | 9 | 98,8% | 80% |
+  | Ficha (tabelas, inventários, grades, painéis) | 24 | 90,3% | 72% |
+  | Letreiro (placas, cartazes, títulos de cena) | 8 | 79,4% | 74% |
+
+  As fichas concentram o erro de montagem: 69 das 85 quebras a mais. Os letreiros
+  concentram o erro de leitura.
+
+As regras também passaram a ter **testes automáticos**, em `tests/`. São os 22 casos
+simulados em várias línguas e as métricas do benchmark. Rodam em menos de um segundo, sem
+prints e sem OCR. Cada regra nova seguiu os mesmos passos:
+1. achar um caso reproduzível;
+2. medir o sinal em todos os prints antes de escrever a regra;
+3. comparar com a versão anterior sobre as caixas guardadas, print a print, nas leituras
+   dos dois motores;
+4. rodar os testes;
+5. rodar o benchmark completo.
+
 **Próximos passos:**
 1. **Abas de uma palavra encostadas e a barra do Doki Doki.** Sem uma caixa de duas
    palavras na linha, nem um espaço que valha para todas as fontes, não há sinal de
@@ -890,6 +925,10 @@ Medindo de novo do mesmo jeito, com as palavras em ordem alfabética:
 20. **Leia o texto antes de confiar no número.** No Pip-Boy, a regra do HUD parecia pôr
     2 quebras erradas. O texto que saiu era igual ao do gabarito; a métrica só não
     alinhava as quebras porque a ordem das telas era diferente.
+21. **Caso resolvido vira teste.** Cada caso simulado que pegou um erro (árabe ao
+    contrário, alemão cortado, fala em maiúsculas lida palavra a palavra) virou um teste
+    automático. Assim, uma regra nova não pode trazer de volta um erro já resolvido sem
+    alguém perceber.
 
 ## Como reproduzir
 
@@ -903,4 +942,10 @@ pasta do projeto:
 
 ```
 env\Scripts\python.exe benchmark\benchmark.py --detalhes
+```
+
+Os testes automáticos não precisam dos prints:
+
+```
+env\Scripts\python.exe -m unittest -v
 ```

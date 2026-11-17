@@ -15,6 +15,7 @@ teste. Cada imagem precisa de um gabarito com o mesmo nome e extensão .txt
 import argparse
 import csv
 import difflib
+import json
 import statistics
 import sys
 import warnings
@@ -90,6 +91,45 @@ def acerto_quebras(gabarito: str, lido: str) -> tuple:
     blocos = difflib.SequenceMatcher(None, esperado, obtido, autojunk=False).get_matching_blocks()
     certas = sum(esperado[b.a : b.a + b.size].count(QUEBRA) for b in blocos)
     return certas, obtido.count(QUEBRA), esperado.count(QUEBRA)
+
+
+def linhas_inteiras(gabarito: str, lido: str) -> dict:
+    """Como cada linha do gabarito com 2 palavras ou mais sai no texto lido.
+
+    Cada linha do gabarito é uma unidade que o tradutor deveria receber inteira:
+    - inteira: as palavras dela saem seguidas e sozinhas numa linha;
+    - com_sobra: saem seguidas, mas junto de texto de outra linha (quebra perdida);
+    - partida: estão em linhas diferentes (quebra a mais, ou outra região no meio);
+    - faltando: alguma palavra nem aparece no texto (erro de leitura).
+    """
+    saida = [normalizar(linha).split() for linha in lido.splitlines() if linha.strip()]
+    presentes = Counter(palavra for linha in saida for palavra in linha)
+    contagem = Counter({"inteira": 0, "com_sobra": 0, "partida": 0, "faltando": 0})
+    for linha in gabarito.splitlines():
+        palavras = normalizar(linha).split()
+        if len(palavras) < 2:
+            continue
+        if any(presentes[palavra] == 0 for palavra in palavras):
+            contagem["faltando"] += 1
+            continue
+        tipo = "partida"
+        for linha_lida in saida:
+            for i in range(len(linha_lida) - len(palavras) + 1):
+                if linha_lida[i : i + len(palavras)] == palavras:
+                    tipo = "inteira" if len(linha_lida) == len(palavras) else "com_sobra"
+                    break
+            if tipo != "partida":
+                break
+        contagem[tipo] += 1
+    return dict(contagem)
+
+
+def carregar_categorias() -> dict:
+    """Categoria de cada print (benchmark/categorias.json), pelo nome sem extensão."""
+    caminho = PASTA_BENCHMARK / "categorias.json"
+    if not caminho.exists():
+        return {}
+    return json.loads(caminho.read_text(encoding="utf-8"))["prints"]
 
 
 def diferencas(gabarito: str, lido: str) -> str:
@@ -208,11 +248,13 @@ def medir(imagem, gabarito: str, motor: MotorOCR, nome: str, args) -> dict:
     cer = taxa_erro_caracteres(normalizar(gabarito), lido)
     wer = taxa_erro_palavras(normalizar(gabarito), lido)
     certas, postas, esperadas = acerto_quebras(gabarito, execucoes[-1].texto)
+    linhas = linhas_inteiras(gabarito, execucoes[-1].texto)
     tempo_total = sum(tempos.values())
 
     print(
         f"  {nome:<26} CER {cer:6.2%}  WER {wer:6.2%}  quebras {certas:2}/{esperadas:<2}"
-        f" ({postas - certas} a mais)  {tempo_total:5.2f}s"
+        f" ({postas - certas} a mais)  linhas inteiras {linhas['inteira']}/{sum(linhas.values())}"
+        f"  {tempo_total:5.2f}s"
     )
     if args.detalhes:
         print(f"    {diferencas(normalizar(gabarito), lido)}")
@@ -224,6 +266,11 @@ def medir(imagem, gabarito: str, motor: MotorOCR, nome: str, args) -> dict:
         "quebras_certas": certas,
         "quebras_postas": postas,
         "quebras_gabarito": esperadas,
+        "linhas_gabarito": sum(linhas.values()),
+        "linhas_inteiras": linhas["inteira"],
+        "linhas_com_sobra": linhas["com_sobra"],
+        "linhas_partidas": linhas["partida"],
+        "linhas_faltando": linhas["faltando"],
         "tempo_imagem": round(tempos["imagem"], 3),
         "tempo_ocr": round(tempos["ocr"], 3),
         "tempo_texto": round(tempos["texto"], 3),
@@ -233,18 +280,23 @@ def medir(imagem, gabarito: str, motor: MotorOCR, nome: str, args) -> dict:
 
 
 def _medias(medidas: list) -> str:
-    """CER, WER, quebras e tempo de um grupo de medições, já formatados para o resumo.
+    """CER, WER, quebras, linhas inteiras e tempo de um grupo de medições, já formatados.
 
     Quebras achadas: das quebras dos gabaritos, quantas o pipeline pôs.
     Quebras certas: das quebras que o pipeline pôs, quantas estão nos gabaritos.
+    Linhas inteiras: das linhas dos gabaritos (2+ palavras), quantas saem inteiras e
+    sozinhas numa linha, prontas para o tradutor.
     """
     certas = sum(m["quebras_certas"] for m in medidas)
     achadas = certas / max(sum(m["quebras_gabarito"] for m in medidas), 1)
     acertadas = certas / max(sum(m["quebras_postas"] for m in medidas), 1)
+    inteiras = sum(m["linhas_inteiras"] for m in medidas) / max(
+        sum(m["linhas_gabarito"] for m in medidas), 1
+    )
     return (
         f"{statistics.mean(m['cer'] for m in medidas):8.2f}%"
         f" {statistics.mean(m['wer'] for m in medidas):8.2f}%"
-        f" {achadas:15.0%} {acertadas:6.0%}"
+        f" {achadas:15.0%} {acertadas:6.0%} {inteiras:15.0%}"
         f" {statistics.mean(m['tempo_total'] for m in medidas):10.2f}s"
     )
 
@@ -254,7 +306,7 @@ def imprimir_resumo(linhas: list, args, total_imagens: int, motor_ocr: str) -> N
     print(f"\nRESUMO ({total_imagens} imagens, idioma {args.idioma}, OCR: {motor_ocr})")
     cabecalho = (
         f"{'CER médio':>9} {'WER médio':>9} {'quebras achadas':>15} {'certas':>6}"
-        f" {'tempo médio':>11}"
+        f" {'linhas inteiras':>15} {'tempo médio':>11}"
     )
     print(f"  {'configuração':<26} {cabecalho}  pior imagem")
     for nome in args.configs:
@@ -262,17 +314,19 @@ def imprimir_resumo(linhas: list, args, total_imagens: int, motor_ocr: str) -> N
         pior = max(medidas, key=lambda linha: linha["cer"])
         print(f"  {nome:<26} {_medias(medidas)}  {pior['imagem']} ({pior['cer']:.2f}%)")
 
-    # Uma pasta por dia de coleta: dá para ver se um período (ou um jogo) foi pior
-    pastas = sorted({linha["pasta"] for linha in linhas})
-    if len(pastas) < 2:
-        return
-    print(f"\nPOR PASTA\n  {'pasta':<26} {cabecalho}  imagens")
-    for nome in args.configs:
-        if len(args.configs) > 1:
-            print(f"  [{nome}]")
-        for pasta in pastas:
-            medidas = [l for l in linhas if l["configuracao"] == nome and l["pasta"] == pasta]
-            print(f"  {pasta:<26} {_medias(medidas)}  {len(medidas):7}")
+    # Uma pasta por dia de coleta: dá para ver se um período (ou um jogo) foi pior. As
+    # categorias (benchmark/categorias.json) mostram em que tipo de tela uma mudança mexe.
+    for titulo, campo in (("POR PASTA", "pasta"), ("POR CATEGORIA", "categoria")):
+        grupos = sorted({linha[campo] for linha in linhas if linha[campo]})
+        if len(grupos) < 2:
+            continue
+        print(f"\n{titulo}\n  {campo:<26} {cabecalho}  imagens")
+        for nome in args.configs:
+            if len(args.configs) > 1:
+                print(f"  [{nome}]")
+            for grupo in grupos:
+                medidas = [l for l in linhas if l["configuracao"] == nome and l[campo] == grupo]
+                print(f"  {grupo:<26} {_medias(medidas)}  {len(medidas):7}")
 
 
 def salvar_csv(linhas: list) -> None:
@@ -317,13 +371,19 @@ def main() -> None:
     for nome in args.configs:
         reconhecer_texto(imagem_aquecimento, motor, idioma=args.idioma, **CONFIGURACOES[nome])
 
+    categorias = carregar_categorias()
     linhas = []
     for caminho, imagem, gabarito in amostras:
         imagem_relativa = caminho.relative_to(PASTA_DATASET).as_posix()
         print(f"\n{imagem_relativa}  ({imagem.shape[1]}x{imagem.shape[0]})")
         for nome in args.configs:
             linha = medir(imagem, gabarito, motor, nome, args)
-            linhas.append({"imagem": imagem_relativa, "pasta": pasta_da_imagem(caminho), **linha})
+            linhas.append({
+                "imagem": imagem_relativa,
+                "pasta": pasta_da_imagem(caminho),
+                "categoria": categorias.get(caminho.stem, ""),
+                **linha,
+            })
 
     imprimir_resumo(linhas, args, len(amostras), motor.nome)
     salvar_csv(linhas)
