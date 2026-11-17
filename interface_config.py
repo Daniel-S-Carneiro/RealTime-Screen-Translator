@@ -125,7 +125,8 @@ class SecaoUso(QWidget):
         if motor == self._motor:  # a pessoa pode ter trocado de motor durante a consulta
             self.texto.setText(texto)
 
-# Dicionário com as 80 línguas suportadas pelo EasyOCR
+# Línguas que o app lê (códigos do EasyOCR). O RapidOCR cobre as de ocr_engine.LINGUAS_RAPID;
+# as outras escritas são lidas pelo EasyOCR
 TODOS_IDIOMAS = {
     "Abaza": "abq",
     "Adyghe": "ady",

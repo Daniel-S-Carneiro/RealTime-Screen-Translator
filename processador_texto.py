@@ -43,6 +43,11 @@ BASES_CONTRACAO = frozenset(
 )
 FINS_CONTRACAO = frozenset({"t", "s", "m", "d", "ve", "ll", "re"})
 
+# Na fonte em pixel, o RapidOCR lê o apóstrofo como ponto do meio ("IT·S", "HAVEN·T").
+# Nos letreiros o ponto separa palavras ("CLIK·CLAK"), então só vira apóstrofo numa
+# contração conhecida.
+_PONTO_NO_APOSTROFO = re.compile(r"(?<![\w'])([A-Za-z]+)·([A-Za-z]{1,2})(?![\w'])")
+
 # Quantas palavras o BERT sugere para cada lacuna na correção por contexto
 SUGESTOES_BERT = 50
 
@@ -254,7 +259,16 @@ class ProcessadorInteligente:
         Só em palavra fora do dicionário que vira uma contração conhecida, então
         "cant" e "wont" (que existem) ficam como estão, e siglas como "DPS" também.
         """
+        texto = _PONTO_NO_APOSTROFO.sub(self._trocar_ponto, texto)
         return re.sub(r"(?<!['\w])[A-Za-z]+(?![\w'])", self._trocar_apostrofo, texto)
+
+    def _trocar_ponto(self, match) -> str:
+        base, fim = match.groups()
+        contracao = f"{base}'{fim}"
+        if (base.lower() in BASES_CONTRACAO and fim.lower() in FINS_CONTRACAO
+                and contracao.lower() in self.spell):
+            return contracao
+        return match.group(0)
 
     def _trocar_apostrofo(self, match) -> str:
         palavra = match.group(0)

@@ -1,8 +1,9 @@
 """Tela que aparece logo ao abrir o app, enquanto as bibliotecas pesadas carregam.
 
-O PyTorch, o EasyOCR e os modelos de leitura levam uns 8 s numa abertura repetida e
-bem mais na primeira depois de ligar o PC, quando o Windows ainda não tem os arquivos
-em cache. Antes desta tela, nada aparecia nesse tempo.
+O OCR, o tradutor e os modelos de leitura levam uns 3 s numa abertura repetida (eram
+8 s quando o EasyOCR e o PyTorch carregavam na abertura) e bem mais na primeira depois
+de ligar o PC, quando o Windows ainda não tem os arquivos em cache. Antes desta tela,
+nada aparecia nesse tempo.
 
 Só usa o Qt: precisa abrir antes de qualquer biblioteca pesada ser importada.
 """

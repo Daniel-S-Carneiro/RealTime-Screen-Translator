@@ -1,6 +1,6 @@
 """Overlay arrastável: captura a área, roda o OCR, traduz e mostra o resultado.
 
-Importa as bibliotecas pesadas (PyTorch, EasyOCR, OpenCV). O main.py carrega este
+Importa as bibliotecas pesadas (OpenCV, captura de tela, OCR). O main.py carrega este
 módulo numa thread, enquanto a tela de carregamento já está aparecendo.
 """
 
@@ -386,7 +386,7 @@ class OverlayTradutor(QWidget):
 
         log_debug("[AÇÃO] Botão 'Traduzir Área' clicado! Ocultando overlay...")
 
-        # Impede um segundo OCR enquanto o primeiro ainda roda (o EasyOCR não é thread-safe)
+        # Impede um segundo OCR enquanto o primeiro ainda roda (o motor não é thread-safe)
         self.processando = True
         if self.btn_traduzir is not None:
             self.btn_traduzir.setEnabled(False)
