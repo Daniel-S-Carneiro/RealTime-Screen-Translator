@@ -11,8 +11,9 @@
 > precisa e três vezes mais rápida. Depois, juntei 90 prints de 11 jogos e passei a
 > mudar o app só com o que melhorava a maioria deles. As regras levaram o acerto de
 > 87,7% para 89,8% das letras. Trocar o EasyOCR pelo RapidOCR, que roda os modelos do
-> PaddleOCR, levou a 92,2% das letras e 88% das palavras, em 1,2 s por print. Este
-> texto conta o que fiz, onde errei e o que mudou.
+> PaddleOCR, levou a 92,2% das letras e 88% das palavras, em cerca de 1 s por print.
+> Ler fichas e grades coluna por coluna levou a 95,1% das letras e 91,1% das palavras.
+> Este texto conta o que fiz, onde errei e o que mudou.
 
 ---
 
@@ -547,33 +548,105 @@ A troca teve outros efeitos no app:
   abertura;
 - **abertura:** lendo inglês, o app nem carrega o PyTorch.
 
+### Ler fichas e grades coluna por coluna
+
+Com o RapidOCR lendo quase todas as palavras, medi quanto do erro era só ordem de
+leitura. Para isso, comparei o texto do app com o gabarito depois de pôr as palavras dos
+dois em ordem alfabética. A ordem respondia por metade do erro de letras: 3,9 dos 7,8
+pontos. Na ficha do Morrowind, o erro caía de 69,9% para 0,8% sem contar a ordem. O OCR
+lia tudo certo, mas o app juntava as duas colunas em cada linha ("Magicka 32/42
+Destruction 41"), e o tradutor recebia isso como uma frase só.
+
+O corte XY só separava painéis com uma faixa vazia de 3 alturas de letra entre eles. Nas
+fichas e grades, a faixa é estreita. Na ficha do Morrowind, os números da coluna da
+esquerda são alinhados à direita e chegam a 5 px da coluna da direita, ou 0,2 altura. Na
+tela SPECIAL do Fallout, a faixa tem cerca de 1 altura. Sozinha, uma faixa tão estreita
+não quer dizer nada. Mas ali ela se repete em 15 linhas seguidas, o que não acontece num
+parágrafo.
+
+A regra nova tem três partes:
+- **faixa estreita com apoio:** uma faixa vazia a partir de 0,2 altura separa colunas
+  quando pelo menos 3 linhas têm texto dos dois lados dela;
+- **título atravessando:** quando só linhas de uma caixa atravessam a faixa, como o nome
+  do personagem em cima da ficha do Morrowind, cada uma vira um bloco à parte, e o resto
+  é cortado;
+- **as proteções de antes continuam:** rótulo e valor ("Strength 65") não se separam, e
+  uma coluna de valores ao lado dos rótulos é tabela, não painel.
+
+Testei a regra também na leitura guardada do EasyOCR, que tem caixas de outro formato. Ela
+mostrou dois erros que o RapidOCR não mostrava:
+- **texto corrido lido palavra a palavra.** No diálogo do Caves of Qud, o EasyOCR devolve
+  uma caixa por palavra, e o vão entre duas palavras se repetiu na mesma posição em 3
+  linhas. A regra cortou a frase ao meio. Agora, se na maioria das linhas a direita
+  continua a frase da esquerda (começa com minúscula, e a esquerda não terminou com
+  pontuação), não é coluna;
+- **tabela de registros.** No overview do EVE, cada linha é um objeto, com distância,
+  nome e tipo, e a leitura certa é linha por linha. Agora, quando um lado tem número em
+  quase todas as linhas e o outro em quase nenhuma, os dois lados são campos do mesmo
+  registro, e a linha é lida inteira.
+
+Uma proteção mais simples, que barrava a regra quando havia em cima uma linha de
+cabeçalho com 3 títulos ou mais, também salvava o overview. Mas ela barrava a tela de
+mercado do EVE, um dos maiores ganhos, e ficou de fora. Das sugestões que recebi para o
+problema, agrupar as bordas esquerdas das caixas não pegaria a lista centralizada do
+Fallout. Partir uma caixa larga do OCR em itens resolveria no máximo 11 das 74 quebras
+perdidas entre itens lado a lado, porque as outras 63 vinham de caixas separadas.
+
+| Leitura | Erro de letras | Erro de palavras | Quebras achadas / certas | Prints melhores / piores |
+|---|---|---|---|---|
+| RapidOCR | 7,81% → **4,87%** | 11,97% → **8,92%** | 70% / 86% → **81% / 89%** | 9 / 1 |
+| EasyOCR (leitura guardada) | 10,22% → 8,08% | 22,22% → 20,36% | 74% / 86% → 80% / 88% | 8 / 1 |
+
+| Print (RapidOCR) | Erro de letras antes | Depois |
+|---|---|---|
+| Ficha do Morrowind | 69,9% | 0,8% |
+| Tela SPECIAL do Fallout | 49,4% | 4,1% |
+| Mercado do EVE | 36,9% | 2,4% |
+| Menu de contexto do EVE | 26,6% | 1,0% |
+| Subida de nível do Morrowind | 20,2% | 2,1% |
+| Diálogo do Morrowind | 17,4% | 0,1% |
+| Pip-Boy do Fallout | 49,3% | 23,1% |
+| Grade de skills do EVE | 67,9% | 39,4% |
+| Reputação do Caves of Qud | 32,1% | 35,1% |
+
+O único print que piorou foi a reputação do Caves of Qud: as três colunas de texto de cada
+facção agora saem separadas, mas o texto de várias facções se mistura.
+
+Com a regra, o benchmark completo deu **95,1% de acerto nas letras e 91,1% nas
+palavras**, com 81% das quebras achadas e 89% certas. A regra não pesou no tempo: o
+benchmark deu 0,8 s por print, e essa medida varia com a carga do PC. O resultado de cada
+print está no [anexo](resultados-benchmark.md), ao lado dos dois benchmarks anteriores.
+
 ## 8. De onde vem o erro que sobrou
 
-Com o EasyOCR, o erro se dividia entre a ordem de leitura e as palavras que o detector
-nem achava. Com o RapidOCR, quase só sobrou a ordem:
-- **Poucas telas concentram o erro.** Os 10 piores prints somam 78% de todo o erro de
-  letras. Sem eles, o acerto médio seria de 98,1%.
-- **Quase todo o erro que sobrou é de ordem.** O RapidOCR lê 98% das palavras do
-  gabarito; só 105 das 4.548 faltam no texto. O resto do erro está em telas com painéis,
-  grades e tabelas: a ficha do Morrowind, a grade de skills do EVE, a tela SPECIAL do
-  Fallout e o resumo do Caves of Qud. As palavras saem certas, mas numa ordem diferente
-  da do gabarito. Parte disso nem é erro de verdade: no resumo do Caves of Qud, as duas
+Medindo de novo do mesmo jeito, com as palavras em ordem alfabética:
+- **A ordem quase saiu da conta.** Ela respondia por 3,9 pontos do erro de letras e
+  agora responde por 0,9. Sem contar a ordem, o erro de letras continua em 3,9%.
+- **Poucas telas concentram o erro.** Os 10 piores prints somam 84% de todo o erro de
+  letras. Sem eles, o acerto médio seria de 99,1%.
+- **O que sobra de leitura** é o lixo dos letreiros miúdos e borrados (só o letreiro da
+  banca do Night in the Woods pesa mais de 1 ponto na média), as quantidades que o OCR
+  não lê no inventário do Persona e alguns espaços comidos ("resteasy"). Separar as
+  palavras grudadas pelo dicionário do SymSpell quebrou nomes de jogo ("Dragonbind",
+  "Garrus") e ficou de fora.
+- **Quebras:** o app acha 602 das 744 quebras dos gabaritos. Das 142 que perde, 76 são
+  itens lado a lado na mesma linha que saem juntos: menus horizontais ("FIGHT ACT ITEM
+  MERCY"), barras de abas e valores de HUD ("Wg 111/180 HP 140/140").
+- **Ordem ambígua:** o resumo do Caves of Qud ainda erra 65% só por ordem, mas ali as duas
   ordens fazem sentido.
-- **O que falta de leitura** são letreiros miúdos e borrados, que viram lixo, e alguns
-  espaços comidos entre palavras ("resteasy").
 
 **Próximos passos:**
-1. **Ordem de leitura em grades e fichas de duas colunas**, hoje o maior pedaço do erro.
-2. **Devolver o espaço comido** ("willexploithim" → "will exploit him"), separando pelo
-   dicionário as palavras grudadas.
-3. **Medir o RapidOCR nas outras escritas:** ele tem modelos de cerca de 8 MB para
+1. **Separar itens lado a lado na mesma linha** (menus, abas, HUD), hoje o maior grupo de
+   quebras perdidas. A regra testada com o EasyOCR errava muito; vale testar de novo, com
+   o alinhamento e as proteções novas.
+2. **Medir o RapidOCR nas outras escritas:** ele tem modelos de cerca de 8 MB para
    cirílico, árabe, coreano, devanágari e tailandês, que poderiam substituir o EasyOCR
    nessas línguas, se lerem melhor.
-4. **Repensar o pacote de GPU:** com o RapidOCR, a placa só acelera as línguas que ficaram
+3. **Repensar o pacote de GPU:** com o RapidOCR, a placa só acelera as línguas que ficaram
    no EasyOCR.
-5. **Separar os itens de um menu em que o primeiro item é o mais largo**, que ainda saem
+4. **Separar os itens de um menu em que o primeiro item é o mais largo**, que ainda saem
    juntos.
-6. **Coletar prints reais em outras línguas**, começando por japonês e árabe.
+5. **Coletar prints reais em outras línguas**, começando por japonês e árabe.
 
 ## 9. O que aprendi
 
@@ -617,6 +690,11 @@ nem achava. Com o RapidOCR, quase só sobrou a ordem:
 15. **O padrão de uma biblioteca não foi feito para o seu caso.** Por padrão, o
     RapidOCR amplia o print antes de ler, o que serve para fotos de documento. Em print
     de jogo, ler no tamanho original foi mais rápido e mais certo.
+16. **Procure o sinal que se repete.** Uma faixa vazia de 5 px entre duas caixas não diz
+    nada. A mesma faixa em 15 linhas seguidas é uma coluna.
+17. **Teste a regra numa leitura diferente.** Com as caixas do RapidOCR, a regra das
+    colunas parecia não ter risco. A leitura guardada do EasyOCR mostrou dois erros que
+    ela podia cometer, e as proteções entraram antes de a regra chegar ao app.
 
 ## Como reproduzir
 

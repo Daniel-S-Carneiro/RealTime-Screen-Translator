@@ -6,21 +6,24 @@ Texto na tela tem dois tipos de quebra de linha:
 
 Só a primeira deve chegar ao tradutor: cortar uma frase no meio estraga a tradução,
 e o texto traduzido tem outro tamanho, então a quebra visual não serviria de qualquer
-jeito. As regras usam só a posição das caixas do EasyOCR, sempre em proporção ao
-tamanho das letras, para valer em qualquer resolução.
+jeito. As regras usam só a posição das caixas do OCR (RapidOCR ou EasyOCR), sempre em
+proporção ao tamanho das letras, para valer em qualquer resolução.
 
 Antes das linhas, o print é dividido em blocos (corte XY): painéis lado a lado, como
 uma lista à esquerda e a descrição à direita, são lidos um de cada vez. Sem isso, o
-EasyOCR lia linha a linha da tela inteira e picava a descrição entre os itens.
+app lia linha a linha da tela inteira e picava a descrição entre os itens. As colunas
+de ficha, grade e tabela também viram blocos: a faixa vazia entre elas pode ser
+estreita, mas se repete em várias linhas seguidas.
 
 As regras valem para qualquer língua de origem. Em árabe, persa, urdu e uigur as
 caixas são espelhadas, para a leitura ir da direita para a esquerda. Em chinês,
 japonês e tailandês, que não usam espaço, os pedaços são juntados sem espaço e uma
 linha "cabe" mais uma letra, não mais uma palavra.
 
-Nos 90 prints do benchmark (10 jogos, em 2026-11-15), as regras acharam 74% das
-quebras dos gabaritos, e 86% das quebras que puseram estavam certas (antes dos
-blocos e das regras de 2026-11-15: 69% e 78%).
+Nos 90 prints do benchmark (11 jogos), com o RapidOCR e as colunas estreitas
+(2026-11-17), as regras acharam 81% das quebras dos gabaritos, e 89% das quebras que
+puseram estavam certas (com o EasyOCR, antes dos blocos e das regras de 2026-11-15:
+69% e 78%).
 """
 
 import math
@@ -43,6 +46,15 @@ VAO_BLOCO_HORIZONTAL = 1.0  # faixa vazia que separa blocos de cima e de baixo
 VAO_BLOCO_VERTICAL = 3.0  # faixa vazia que separa painéis lado a lado
 MINIMO_LINHAS_BLOCO = 2  # rótulos soltos (opções de uma roda de diálogo) não viram painel
 FRACAO_VALORES = 0.7  # coluna da direita com tantos valores é tabela, não painel
+
+# Colunas de ficha, grade e tabela: a faixa vazia entre elas pode ser estreita (na ficha
+# do Morrowind, os números da esquerda encostam na coluna da direita: 0,2 altura), mas
+# se repete em várias linhas seguidas, o que não acontece num parágrafo.
+VAO_COLUNA_ESTREITA = 0.2  # faixa mínima, em alturas de letra
+APOIO_COLUNA = 3  # linhas com texto dos dois lados da faixa
+# Campos de um mesmo registro têm tipos diferentes ("12 km | Jita | Stargate"): quando um
+# lado tem número em quase todas as linhas e o outro em quase nenhuma, a linha é lida inteira
+DIFERENCA_TIPOS = 0.8
 
 # Caixas de desenho: barra de vida, coluna de ícones, logotipo
 LIXO_ALTURA = 3.0  # muito mais alta que o texto típico...
@@ -301,8 +313,95 @@ def _pode_separar(esquerda: list, direita: list, altura: float, pares: set) -> b
     return separados < 2
 
 
+def _parece_coluna(itens: list, corte: float) -> bool:
+    """Uma faixa estreita no x = corte separa colunas de verdade?
+
+    Precisa de APOIO_COLUNA linhas com texto dos dois lados. Não é coluna quando, na
+    maioria dessas linhas, a direita continua a frase da esquerda (um parágrafo lido
+    palavra a palavra, com os vãos alinhados por acaso), nem quando os dois lados têm
+    tipos diferentes, como os campos de uma tabela de registros.
+    """
+    lados = []
+    for linha in agrupar_em_linhas(itens):
+        esquerda = [item for item in linha if _limites(item)[1] <= corte]
+        direita = [item for item in linha if _limites(item)[0] >= corte]
+        if esquerda and direita:
+            lados.append((_texto(esquerda[-1]), _texto(direita[0]), esquerda, direita))
+    if len(lados) < APOIO_COLUNA:
+        return False
+
+    continua = sum(
+        inicio[:1].islower() and not FIM_DE_FRASE.search(fim) for fim, inicio, _, _ in lados
+    )
+    if continua > len(lados) / 2:
+        return False
+
+    def com_numero(caixas: list) -> float:
+        return any(re.search(r"\d", _texto(item)) for item in caixas)
+
+    numeros_esquerda = sum(com_numero(esquerda) for _, _, esquerda, _ in lados) / len(lados)
+    numeros_direita = sum(com_numero(direita) for _, _, _, direita in lados) / len(lados)
+    return abs(numeros_esquerda - numeros_direita) <= DIFERENCA_TIPOS
+
+
+def _separar_por_titulo(itens: list, altura: float, pares: set) -> list:
+    """Colunas que um título ou uma linha cheia atravessa.
+
+    Na ficha do Morrowind, o nome do personagem em cima ("OHM") cruza a faixa entre as
+    colunas. A faixa é procurada só nas linhas de duas caixas ou mais; se apenas linhas
+    de uma caixa a atravessam, cada uma vira um bloco à parte, e o resto é cortado de novo.
+    """
+    linhas = agrupar_em_linhas(itens)
+    com_colunas = [item for linha in linhas if len(linha) >= 2 for item in linha]
+    if len(com_colunas) < 2:
+        return [itens]
+    vaos = _vaos([_limites(item)[:2] for item in com_colunas])
+    for inicio, fim in sorted(vaos, key=lambda vao: vao[0] - vao[1]):
+        if fim - inicio < VAO_COLUNA_ESTREITA * altura:
+            break
+        corte = (inicio + fim) / 2
+        cruzam = {
+            k for k, linha in enumerate(linhas)
+            if any(_limites(item)[0] < corte < _limites(item)[1] for item in linha)
+        }
+        if not cruzam or any(len(linhas[k]) > 1 for k in cruzam):
+            continue
+        if not _parece_coluna(itens, corte):
+            continue
+        resto = [item for k, linha in enumerate(linhas) if k not in cruzam for item in linha]
+        if not _pode_separar(*_lados(resto, corte), altura, pares):
+            continue
+        partes = _cortar_nas_linhas(linhas, cruzam)
+        return [bloco for parte in partes for bloco in _blocos(parte, altura, pares)]
+    return [itens]
+
+
+def _lados(itens: list, corte: float) -> tuple:
+    """As caixas inteiras à esquerda e as inteiras à direita do x = corte."""
+    return (
+        [item for item in itens if _limites(item)[1] <= corte],
+        [item for item in itens if _limites(item)[0] >= corte],
+    )
+
+
+def _cortar_nas_linhas(linhas: list, separadoras: set) -> list:
+    """Divide as linhas em partes; cada linha separadora vira uma parte sozinha."""
+    partes, atual = [], []
+    for k, linha in enumerate(linhas):
+        if k in separadoras:
+            partes += [atual, list(linha)] if atual else [list(linha)]
+            atual = []
+        else:
+            atual += linha
+    return partes + [atual] if atual else partes
+
+
 def _blocos(itens: list, altura: float, pares: set) -> list:
-    """Corte XY: faixas horizontais vazias e, dentro delas, colunas vazias."""
+    """Corte XY: faixas horizontais vazias e, dentro delas, colunas vazias.
+
+    Painéis separados por uma faixa larga (VAO_BLOCO_VERTICAL) são cortados direto.
+    Faixas estreitas só cortam colunas de ficha, grade ou tabela (_parece_coluna).
+    """
     if len(itens) < 2:
         return [itens]
 
@@ -324,14 +423,15 @@ def _blocos(itens: list, altura: float, pares: set) -> list:
     # Painéis lado a lado: tenta do maior vão vertical para o menor
     vaos = _vaos([_limites(item)[:2] for item in itens])
     for inicio, fim in sorted(vaos, key=lambda vao: vao[0] - vao[1]):
-        if fim - inicio < VAO_BLOCO_VERTICAL * altura:
+        if fim - inicio < VAO_COLUNA_ESTREITA * altura:
             break
         corte = (inicio + fim) / 2
-        esquerda = [item for item in itens if _limites(item)[1] <= corte]
-        direita = [item for item in itens if _limites(item)[0] >= corte]
+        if fim - inicio < VAO_BLOCO_VERTICAL * altura and not _parece_coluna(itens, corte):
+            continue
+        esquerda, direita = _lados(itens, corte)
         if _pode_separar(esquerda, direita, altura, pares):
             return _blocos(esquerda, altura, pares) + _blocos(direita, altura, pares)
-    return [itens]
+    return _separar_por_titulo(itens, altura, pares)
 
 
 # ---------------------------------------------------------------- parágrafos
