@@ -13,16 +13,17 @@ Antes das linhas, o print é dividido em blocos (corte XY): painéis lado a lado
 uma lista à esquerda e a descrição à direita, são lidos um de cada vez. Sem isso, o
 app lia linha a linha da tela inteira e picava a descrição entre os itens. As colunas
 de ficha, grade e tabela também viram blocos: a faixa vazia entre elas pode ser
-estreita, mas se repete em várias linhas seguidas.
+estreita, mas se repete em várias linhas seguidas. Dentro de uma linha, itens lado a
+lado (menu, abas, botões) viram linhas separadas.
 
 As regras valem para qualquer língua de origem. Em árabe, persa, urdu e uigur as
 caixas são espelhadas, para a leitura ir da direita para a esquerda. Em chinês,
 japonês e tailandês, que não usam espaço, os pedaços são juntados sem espaço e uma
 linha "cabe" mais uma letra, não mais uma palavra.
 
-Nos 90 prints do benchmark (11 jogos), com o RapidOCR e as colunas estreitas
-(2026-11-17), as regras acharam 81% das quebras dos gabaritos, e 89% das quebras que
-puseram estavam certas (com o EasyOCR, antes dos blocos e das regras de 2026-11-15:
+Nos 90 prints do benchmark (11 jogos), com o RapidOCR, as colunas estreitas e os itens
+lado a lado (2026-11-17), as regras acharam 85% das quebras dos gabaritos, e 89% das
+quebras que puseram estavam certas (com o EasyOCR, antes dos blocos e das regras de 2026-11-15:
 69% e 78%).
 """
 
@@ -55,6 +56,14 @@ APOIO_COLUNA = 3  # linhas com texto dos dois lados da faixa
 # Campos de um mesmo registro têm tipos diferentes ("12 km | Jita | Stargate"): quando um
 # lado tem número em quase todas as linhas e o outro em quase nenhuma, a linha é lida inteira
 DIFERENCA_TIPOS = 0.8
+
+# Itens lado a lado na mesma linha: menus ("FIGHT ACT ITEM MERCY"), abas, botões. O vão
+# não serve para achá-los (rótulo e valor têm vãos ainda maiores); o conteúdo serve.
+# Mas o vão precisa ser maior que um espaço entre palavras: com uma caixa por palavra,
+# uma fala em maiúsculas viraria uma palavra por linha.
+VAO_ITENS = 0.8  # em alturas de letra
+MINIMO_ITENS = 3  # caixas curtas numa linha para ela ser uma fila de itens
+PALAVRAS_ITEM = 3  # um item de menu, aba ou botão tem até 3 palavras
 
 # Caixas de desenho: barra de vida, coluna de ícones, logotipo
 LIXO_ALTURA = 3.0  # muito mais alta que o texto típico...
@@ -190,9 +199,14 @@ def agrupar_em_linhas(resultados) -> list:
 
 @dataclass
 class Linha:
-    """Uma linha de texto na tela: caixas do OCR lado a lado, da esquerda para a direita."""
+    """Uma linha de texto na tela: caixas do OCR lado a lado, da esquerda para a direita.
+
+    item_novo marca um item de menu, aba ou botão separado do item à esquerda: ele
+    sempre começa um parágrafo.
+    """
 
     itens: list
+    item_novo: bool = False
     esq: float = field(init=False)
     dir: float = field(init=False)
     topo: float = field(init=False)
@@ -221,7 +235,63 @@ class Linha:
 
 
 def _linhas(itens: list) -> list:
-    return _separar_colunas([Linha(grupo) for grupo in agrupar_em_linhas(itens)])
+    linhas = _separar_colunas([Linha(grupo) for grupo in agrupar_em_linhas(itens)])
+    return [parte for linha in linhas for parte in _separar_itens(linha)]
+
+
+def _e_item(texto: str) -> bool:
+    """Texto de item de menu, aba ou botão: curto, sem número no começo, primeira letra
+    maiúscula e sem pontuação de frase no fim. Escritas sem maiúscula ficam de fora."""
+    letra = next((c for c in texto if c.isalpha()), "")
+    return (
+        len(texto.split()) <= PALAVRAS_ITEM
+        and not _e_valor(texto)
+        and letra.isupper()
+        and texto[-1:] not in ",;:—-"
+    )
+
+
+def _em_maiusculas(texto: str) -> bool:
+    return texto.isupper() and not _e_valor(texto)
+
+
+def _mesma_aba(esquerda: str, direita: str, total: int) -> bool:
+    """Duas abas com a mesma primeira palavra: "Skill Plans" | "Skill Catalogue"."""
+    palavras_esq, palavras_dir = esquerda.split(), direita.split()
+    return (
+        total == 2
+        and _e_item(esquerda) and _e_item(direita)
+        and not esquerda.isupper() and not direita.isupper()
+        and min(len(palavras_esq), len(palavras_dir)) >= 2
+        and palavras_esq[0].lower() == palavras_dir[0].lower()
+    )
+
+
+def _separar_itens(linha: Linha) -> list:
+    """Separa itens lado a lado da mesma linha: cada item vira uma linha.
+
+    Uma fila de MINIMO_ITENS caixas que são todas itens (menu, abas) é separada inteira.
+    Fora isso, separa duas caixas vizinhas em maiúsculas ("FIGHT" | "ACT") ou duas abas
+    com a mesma primeira palavra. Nos dois casos, só com vão maior que um espaço.
+    """
+    textos = [_texto(item) for item in linha.itens]
+    vaos_ok = [vao >= VAO_ITENS * linha.altura for vao in linha.vaos_internos()]
+    if len(textos) >= MINIMO_ITENS and all(vaos_ok) and all(_e_item(t) for t in textos):
+        grupos = [[item] for item in linha.itens]
+    else:
+        grupos = [[linha.itens[0]]]
+        for k, item in enumerate(linha.itens[1:]):
+            esquerda, direita = textos[k], textos[k + 1]
+            if vaos_ok[k] and (
+                (_em_maiusculas(esquerda) and _em_maiusculas(direita))
+                or _mesma_aba(esquerda, direita, len(textos))
+            ):
+                grupos.append([item])
+            else:
+                grupos[-1].append(item)
+    if len(grupos) == 1:
+        return [linha]
+    return [Linha(grupo, item_novo=k > 0) for k, grupo in enumerate(grupos)]
 
 
 def _separar_colunas(linhas: list) -> list:
@@ -490,6 +560,8 @@ def _menu_de_palavras(anterior: Linha, seguinte: Linha) -> bool:
 def _comeca_paragrafo(
     anterior: Linha, seguinte: Linha, margem_dir: float, altura: float, letra: float
 ) -> bool:
+    if seguinte.item_novo:
+        return True
     vao = seguinte.topo - anterior.base > VAO_PARAGRAFO * altura
     razao_fonte = seguinte.altura / max(anterior.altura, 1.0)
     outra_fonte = not 1 / FONTE <= razao_fonte <= FONTE
