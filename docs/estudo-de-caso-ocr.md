@@ -13,7 +13,8 @@
 > 87,7% para 89,8% das letras. Trocar o EasyOCR pelo RapidOCR, que roda os modelos do
 > PaddleOCR, levou a 92,2% das letras e 88% das palavras, em cerca de 1 s por print.
 > Ler fichas e grades coluna por coluna levou a 95,1% das letras e 91,1% das palavras,
-> e separar os itens de menu lado a lado levou o app a achar 85% das quebras de linha.
+> e separar os itens de menu lado a lado e as linhas de aviso e título levou o app a
+> achar 88% das quebras de linha.
 > Este texto conta o que fiz, onde errei e o que mudou.
 
 ---
@@ -677,6 +678,64 @@ Implants"), que se traduzem bem um por um. Na leitura do EasyOCR, entram também
 grade de skills do EVE, que ali continua fora de ordem: cada skill numa linha é o certo
 para a tradução, mas a ordem não bate com a do gabarito.
 
+Mais uma regra de abas entrou depois: duas abas com a mesma última palavra ("Certified
+Plans" | "Personal Plans") também se separam. Ela pôs 2 quebras certas e nenhuma errada,
+nos dois motores. Outras três ideias para os itens que sobraram ganharam quase o mesmo
+que perderam e ficaram de fora:
+- aceitar vão pequeno quando o OCR agrupa palavras numa caixa;
+- separar o HUD quando a linha alterna rótulo e valor;
+- proteger cabeçalhos de tabela pelo alinhamento com a linha de baixo.
+
+O que resta de itens lado a lado precisa saber o que o texto significa: "Details | Groups"
+é um par de abas ou um rótulo e um valor? A barra do Doki Doki ("History Skip Auto Save
+Load Settings") vem numa caixa só, com um espaço comum entre os itens.
+
+### Quebras entre a linha de cima e a de baixo
+
+Dos casos em que duas linhas do gabarito saíam juntas, 19 não eram itens lado a lado, e
+sim uma linha embaixo da outra. Medi do mesmo jeito: cada par de linhas seguidas que o app
+monta, comparado com o gabarito. Nessa direção o app já acertava quase tudo: de 462 pares
+que deviam quebrar, juntava só 23, e de 229 que deviam ficar juntos, quebrava só 17.
+
+| Regra | Conserta (de 23) | Estraga (de 212) |
+|---|---|---|
+| A de cima termina com . ! ? e a de baixo não começa com minúscula | 8 | 2 |
+| A de baixo começa com ":" (o "::" do registro do Caves of Qud) | 5 | 0 |
+| A de cima é título e a de baixo começa com minúscula | 4 | 1 |
+| A de cima é título, qualquer que seja a de baixo | 7 | 16 |
+
+Entraram as três primeiras:
+- **sentença terminada:** a linha de cima termina com ponto, exclamação ou interrogação,
+  e a de baixo não começa com minúscula. Pega avisos seguidos ("…increased to 66." /
+  "Item does not have enough charge."). Os 2 pares que ela estraga são frases do mesmo
+  parágrafo, que se traduzem bem separadas;
+- **marcador ":":** linha que começa com ":" é uma entrada nova;
+- **título:** linha curta, de até 5 palavras, sem pontuação no fim e com todas as palavras
+  começando com maiúscula, seguida de texto que começa com minúscula ("Wood Technique
+  Chant" / "swept by the wind…"). Antes, a regra "linha que começa com minúscula continua
+  a frase" juntava os dois.
+
+A última, "qualquer linha de título quebra", estragava as falas em maiúsculas do Night in
+the Woods, porque toda linha delas parece título.
+
+O alemão quase passou despercebido. Na primeira versão, só as palavras de 4 letras ou mais
+precisavam de maiúscula, e o título funcionava em todos os prints. Mas o alemão escreve
+todo substantivo com maiúscula, e um caso simulado mostrou o erro: "Der Kapitän der
+Flotte" / "sah das brennende Schiff…" virava título e texto. Exigindo maiúscula em todas
+as palavras, "der" impede o erro, e o ganho nos prints não mudou.
+
+Também testei de novo a margem por bloco no "cabia", porque a maioria das 17 quebras a mais
+vinha de parágrafos em colunas estreitas, onde sempre "cabe" mais uma palavra até a margem
+do print. Mas ela perdeu 38 quebras de menus curtos; usada só em texto corrido, perdeu 6 e
+tirou 8. Ficou de fora.
+
+| Leitura | Quebras achadas (de 744) | Quebras a mais | Quebras certas |
+|---|---|---|---|
+| RapidOCR | 630 → **652** | 81 → 83 | 88,6% → 88,7% |
+| EasyOCR (leitura guardada) | 608 → 614 | 100 → 105 | 85,9% → 85,4% |
+
+Com o RapidOCR, o app passou a achar 88% das quebras, com 89% certas.
+
 ## 8. De onde vem o erro que sobrou
 
 Medindo de novo do mesmo jeito, com as palavras em ordem alfabética:
@@ -689,10 +748,15 @@ Medindo de novo do mesmo jeito, com as palavras em ordem alfabética:
   não lê no inventário do Persona e alguns espaços comidos ("resteasy"). Separar as
   palavras grudadas pelo dicionário do SymSpell quebrou nomes de jogo ("Dragonbind",
   "Garrus") e ficou de fora.
-- **Quebras:** o app acha 630 das 744 quebras dos gabaritos. Das 114 que perde, 51 ainda
-  são itens lado a lado que saem juntos, quase todos em pares de dois: abas e botões
-  ("Save Changes | Cancel"), nome e etiqueta ("Sakura Ogami | SPEAKING") e valores de HUD
-  ("Wg 111/180 HP 140/140").
+- **Quebras:** o app acha 652 das 744 quebras dos gabaritos. Das 92 que perde, 30 são
+  itens lado a lado que saem juntos:
+  - 11 vêm numa caixa só do OCR, e 10 deles são a barra do Doki Doki;
+  - 8 são abas com vão de menos de um espaço;
+  - 6 são pares de dois itens ("Save Changes | Cancel", "Sakura Ogami | SPEAKING");
+  - 5 são valores de HUD ("Wg 111/180 HP 140/140").
+
+  Outras 10 são linhas de cima e de baixo que ainda saem juntas. As demais quebras
+  perdidas estão nas telas em que a ordem não bate com o gabarito.
 - **Ordem ambígua:** o resumo do Caves of Qud ainda erra 65% só por ordem, mas ali as duas
   ordens fazem sentido.
 
@@ -759,6 +823,10 @@ Medindo de novo do mesmo jeito, com as palavras em ordem alfabética:
 18. **Meça o sinal antes de escolher a regra.** Para separar itens lado a lado, todo mundo
     apostava no vão grande, eu inclusive. Medido, o vão dos pares que deviam ficar juntos
     era maior que o dos que deviam quebrar. O que separava os dois era o conteúdo.
+19. **Pense nas línguas que não estão nos dados.** A regra do título funcionava em todos
+    os prints, que são em inglês. Um caso simulado em alemão, que escreve todo substantivo
+    com maiúscula, mostrou que ela cortaria frases comuns. O ajuste não custou nada nos
+    prints e evitou o erro.
 
 ## Como reproduzir
 
