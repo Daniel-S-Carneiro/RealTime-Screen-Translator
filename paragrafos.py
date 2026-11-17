@@ -22,7 +22,7 @@ japonês e tailandês, que não usam espaço, os pedaços são juntados sem espa
 linha "cabe" mais uma letra, não mais uma palavra.
 
 Nos 90 prints do benchmark (11 jogos), com o RapidOCR, as colunas estreitas, os itens
-lado a lado e as regras de aviso e título (2026-11-17), as regras acharam 88% das quebras
+lado a lado e as regras de aviso e título (2026-11-17), as regras acharam 89% das quebras
 dos gabaritos, e 89% das quebras que puseram estavam certas (com o EasyOCR, antes dos
 blocos e das regras de 2026-11-15: 69% e 78%).
 """
@@ -64,6 +64,8 @@ DIFERENCA_TIPOS = 0.8
 VAO_ITENS = 0.8  # em alturas de letra
 MINIMO_ITENS = 3  # caixas curtas numa linha para ela ser uma fila de itens
 PALAVRAS_ITEM = 3  # um item de menu, aba ou botão tem até 3 palavras
+ALINHAMENTO = 0.5  # bordas ou centros mais perto que isso (em alturas): caixas alinhadas
+DISTANCIA_CABECALHO = 1.5  # cabeçalho de tabela fica até 1,5 altura acima da 1ª linha
 
 # Caixas de desenho: barra de vida, coluna de ícones, logotipo
 LIXO_ALTURA = 3.0  # muito mais alta que o texto típico...
@@ -238,9 +240,51 @@ class Linha:
         return [depois[0] - antes[1] for antes, depois in zip(limites, limites[1:])]
 
 
-def _linhas(itens: list) -> list:
+@dataclass(frozen=True)
+class Vizinhanca:
+    """O que as linhas de cima e de baixo dizem das caixas, olhando o print inteiro (o
+    corte XY pode pôr um cabeçalho num bloco e a tabela dele em outro).
+
+    cabecalho: caixas de uma linha de cabeçalho de tabela, alinhada com a de baixo.
+    alinhada: caixas alinhadas com alguma caixa da linha de cima ou da de baixo.
+    """
+
+    cabecalho: frozenset = frozenset()
+    alinhada: frozenset = frozenset()
+
+
+def _alinhadas(item, linha: Linha, altura: float) -> bool:
+    """A caixa se alinha (borda esquerda, direita ou centro) com alguma caixa da linha."""
+    esq, dir_, _, _ = _limites(item)
+    for outro in linha.itens:
+        esq2, dir2, _, _ = _limites(outro)
+        distancia = min(abs(esq - esq2), abs(dir_ - dir2), abs(esq + dir_ - esq2 - dir2) / 2)
+        if distancia < ALINHAMENTO * altura:
+            return True
+    return False
+
+
+def _vizinhanca(itens: list) -> Vizinhanca:
     linhas = _separar_colunas([Linha(grupo) for grupo in agrupar_em_linhas(itens)])
-    return [parte for linha in linhas for parte in _separar_itens(linha)]
+    cabecalho, alinhada = set(), set()
+    for k, linha in enumerate(linhas):
+        vizinhas = [linhas[j] for j in (k - 1, k + 1) if 0 <= j < len(linhas)]
+        for item in linha.itens:
+            if any(_alinhadas(item, vizinha, linha.altura) for vizinha in vizinhas):
+                alinhada.add(id(item))
+        abaixo = linhas[k + 1] if k + 1 < len(linhas) else None
+        if (
+            abaixo is not None
+            and abaixo.topo - linha.base <= DISTANCIA_CABECALHO * linha.altura
+            and sum(_alinhadas(item, abaixo, linha.altura) for item in linha.itens) >= 2
+        ):
+            cabecalho.update(id(item) for item in linha.itens)
+    return Vizinhanca(frozenset(cabecalho), frozenset(alinhada))
+
+
+def _linhas(itens: list, vizinhanca: Vizinhanca = Vizinhanca()) -> list:
+    linhas = _separar_colunas([Linha(grupo) for grupo in agrupar_em_linhas(itens)])
+    return [parte for linha in linhas for parte in _separar_itens(linha, vizinhanca)]
 
 
 def _e_item(texto: str) -> bool:
@@ -273,16 +317,44 @@ def _mesma_aba(esquerda: str, direita: str, total: int) -> bool:
     )
 
 
-def _separar_itens(linha: Linha) -> list:
+def _rotulo_hud(texto: str) -> bool:
+    letra = next((c for c in texto if c.isalpha()), "")
+    return not _e_valor(texto) and letra.isupper() and len(texto.split()) <= 2
+
+
+def _e_hud(textos: list) -> bool:
+    """Linha inteira alternando rótulo e valor: "HP | 140/140 | DT | 0.0 | Caps | 27"."""
+    return (
+        len(textos) >= 4
+        and len(textos) % 2 == 0
+        and all(_rotulo_hud(t) for t in textos[0::2])
+        and all(_e_valor(t) for t in textos[1::2])
+    )
+
+
+def _separar_itens(linha: Linha, vizinhanca: Vizinhanca = Vizinhanca()) -> list:
     """Separa itens lado a lado da mesma linha: cada item vira uma linha.
 
-    Uma fila de MINIMO_ITENS caixas que são todas itens (menu, abas) é separada inteira.
-    Fora isso, separa duas caixas vizinhas em maiúsculas ("FIGHT" | "ACT") ou duas abas
-    com a mesma primeira palavra. Nos dois casos, só com vão maior que um espaço.
+    - HUD: rótulo e valor alternados viram um par por linha ("HP 140/140" | "DT 0.0").
+    - Fila de MINIMO_ITENS caixas que são todas itens (menu, abas): cada uma vira uma
+      linha. Precisa de vão maior que um espaço, a não ser que o OCR tenha agrupado
+      palavras numa das caixas ("Home Station"): aí caixas separadas são itens separados,
+      mesmo encostadas, desde que a linha não seja o cabeçalho de uma tabela.
+    - Duas caixas vizinhas em maiúsculas ("FIGHT" | "ACT"), duas abas com uma palavra em
+      comum na ponta, ou dois itens numa linha que não se alinha com as de cima e de
+      baixo ("Save Changes" | "Cancel"), sempre com vão maior que um espaço.
     """
     textos = [_texto(item) for item in linha.itens]
+    if _e_hud(textos):
+        grupos = [linha.itens[k:k + 2] for k in range(0, len(textos), 2)]
+        return [Linha(grupo, item_novo=k > 0) for k, grupo in enumerate(grupos)]
+
     vaos_ok = [vao >= VAO_ITENS * linha.altura for vao in linha.vaos_internos()]
-    if len(textos) >= MINIMO_ITENS and all(vaos_ok) and all(_e_item(t) for t in textos):
+    agrupou = any(len(t.split()) >= 2 for t in textos) and not any(
+        id(item) in vizinhanca.cabecalho for item in linha.itens
+    )
+    fila = len(textos) >= MINIMO_ITENS and all(_e_item(t) for t in textos)
+    if fila and (all(vaos_ok) or agrupou):
         grupos = [[item] for item in linha.itens]
     else:
         grupos = [[linha.itens[0]]]
@@ -295,6 +367,12 @@ def _separar_itens(linha: Linha) -> list:
                 grupos.append([item])
             else:
                 grupos[-1].append(item)
+        if (
+            len(grupos) == 1 and len(textos) == 2 and vaos_ok[0]
+            and all(_e_item(t) and sum(c.isalpha() for c in t) >= 2 for t in textos)
+            and not any(id(item) in vizinhanca.alinhada for item in linha.itens)
+        ):
+            grupos = [[linha.itens[0]], [linha.itens[1]]]
     if len(grupos) == 1:
         return [linha]
     return [Linha(grupo, item_novo=k > 0) for k, grupo in enumerate(grupos)]
@@ -626,7 +704,8 @@ def montar_paragrafos(resultados, idioma: str = "") -> list:
     if (idioma or "").lower() in IDIOMAS_DA_DIREITA:
         itens = [_espelhar(item) for item in itens]
     itens = _endireitar(_filtrar_lixo(itens))
-    todas = _linhas(itens)
+    vizinhanca = _vizinhanca(itens)
+    todas = _linhas(itens, vizinhanca)
     if not todas:
         return []
 
@@ -637,7 +716,7 @@ def montar_paragrafos(resultados, idioma: str = "") -> list:
 
     paragrafos = []
     for bloco in _blocos(itens, altura, _pares_de_valor(itens, altura)):
-        linhas = _linhas(bloco)
+        linhas = _linhas(bloco, vizinhanca)
         atuais = [[linhas[0].texto]]
         for anterior, seguinte in zip(linhas, linhas[1:]):
             if _comeca_paragrafo(anterior, seguinte, margem_dir, altura, letra):

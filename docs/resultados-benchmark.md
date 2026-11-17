@@ -32,9 +32,9 @@ só os 3 exemplos da pasta `base` estão no git.
 |---|---|
 | Acerto de letras | **95,1%** |
 | Acerto de palavras | **91,1%** |
-| Quebras achadas | 88% |
+| Quebras achadas | 89% |
 | Quebras certas | 89% |
-| Tempo médio por print | 1,0 s |
+| Tempo médio por print | 0,8 s |
 | Acerto de letras (EasyOCR na GPU, 15/11) | 89,8% |
 | Acerto de palavras (EasyOCR na GPU, 15/11) | 77,7% |
 | Quebras achadas / certas (EasyOCR na GPU, 15/11) | 74% / 86% |
@@ -48,25 +48,25 @@ A média é puxada para baixo por poucas telas muito difíceis:
 - mais da metade dos prints não erra **nenhuma letra**;
 - 78 dos 90 prints acertam 95% ou mais das letras, e 63 acertam 99% ou mais.
 
-Com a correção por contexto ligada, o acerto vai a 95,1% das letras e 91,2% das palavras, a 1,0 s por print, sem contar os ~5 s para carregar o BERT.
+Com a correção por contexto ligada, o acerto vai a 95,1% das letras e 91,2% das palavras, a 0,8 s por print, sem contar os ~5 s para carregar o BERT.
 
 ## Por jogo
 
 | Jogo | Prints | Acerto de letras | Acerto de palavras | Quebras achadas | Quebras certas | Letras: EasyOCR na GPU, 15/11 | Letras: RapidOCR antes das colunas, 16/11 |
 |---|---|---|---|---|---|---|---|
-| Danganronpa: Trigger Happy Havoc | 5 | 100,0% | 100,0% | 89% | 100% | 98,5% | 100,0% |
+| Danganronpa: Trigger Happy Havoc | 5 | 100,0% | 100,0% | 100% | 100% | 98,5% | 100,0% |
 | Doki Doki Literature Club | 3 | 100,0% | 100,0% | 29% | 100% | 91,6% | 100,0% |
 | Exemplos públicos (pasta base) | 3 | 99,9% | 99,5% | 100% | 100% | 99,3% | 99,9% |
 | Immortal Clan | 15 | 99,9% | 99,0% | 99% | 98% | 98,1% | 99,9% |
 | The Elder Scrolls III: Morrowind | 6 | 99,5% | 98,0% | 93% | 97% | 77,3% | 82,0% |
 | Mass Effect Legendary Edition | 5 | 99,3% | 91,9% | 100% | 100% | 99,4% | 99,3% |
 | Persona 4 Golden | 7 | 96,7% | 94,7% | 97% | 100% | 93,6% | 96,7% |
-| Fallout: New Vegas | 8 | 96,0% | 91,4% | 84% | 86% | 86,1% | 87,1% |
+| Fallout: New Vegas | 8 | 96,0% | 91,4% | 88% | 85% | 86,1% | 87,1% |
 | Undertale | 3 | 95,0% | 86,9% | 100% | 100% | 90,2% | 95,0% |
-| EVE Online | 12 | 94,5% | 87,1% | 89% | 88% | 85,4% | 87,1% |
+| EVE Online | 12 | 94,5% | 87,1% | 92% | 88% | 85,4% | 87,1% |
 | Night in the Woods | 14 | 87,7% | 79,8% | 91% | 62% | 85,0% | 87,5% |
 | Caves of Qud | 9 | 86,6% | 83,6% | 73% | 78% | 83,7% | 86,9% |
-| **Todos** | **90** | **95,1%** | **91,1%** | **88%** | **89%** | 89,8% | 92,2% |
+| **Todos** | **90** | **95,1%** | **91,1%** | **89%** | **89%** | 89,8% | 92,2% |
 
 ## Print a print
 
@@ -76,7 +76,7 @@ Média: 100,0% das letras e 100,0% das palavras.
 
 | Print | Acerto de letras | Acerto de palavras | Quebras achadas | A mais | Letras: EasyOCR na GPU, 15/11 | Letras: RapidOCR antes das colunas, 16/11 |
 |---|---|---|---|---|---|---|
-| `danganronpa_legenda_1` | 100,0% | 100,0% | 1 de 2 | 0 | 100,0% | 100,0% |
+| `danganronpa_legenda_1` | 100,0% | 100,0% | 2 de 2 | 0 | 100,0% | 100,0% |
 | `danganronpa_legenda_2` | 100,0% | 100,0% | 1 de 1 | 0 | 96,5% | 100,0% |
 | `danganronpa_menu` | 100,0% | 100,0% | 4 de 4 | 0 | 99,4% | 100,0% |
 | `danganronpa_titulo` | 100,0% | 100,0% | 2 de 2 | 0 | 96,8% | 100,0% |
@@ -176,12 +176,12 @@ Média: 96,0% das letras e 91,4% das palavras.
 
 | Print | Acerto de letras | Acerto de palavras | Quebras achadas | A mais | Letras: EasyOCR na GPU, 15/11 | Letras: RapidOCR antes das colunas, 16/11 |
 |---|---|---|---|---|---|---|
-| `fallout_bau` | 96,8% | 91,9% | 13 de 15 | 1 | 94,4% | 96,8% |
+| `fallout_bau` | 96,8% | 91,9% | 14 de 15 | 1 | 94,4% | 96,8% |
 | `fallout_dialogo` | 100,0% | 100,0% | 1 de 1 | 0 | 100,0% | 100,0% |
 | `fallout_legenda_1` | 100,0% | 100,0% | — | 1 | 100,0% | 100,0% |
 | `fallout_legenda_2` | 99,0% | 90,5% | — | 0 | 99,0% | 99,0% |
 | `fallout_missao` | 99,4% | 96,5% | 2 de 2 | 0 | 98,5% | 99,4% |
-| `fallout_pipboy` | 76,8% | 64,2% | 20 de 31 | 3 | 53,4% | 50,7% |
+| `fallout_pipboy` | 76,8% | 64,2% | 22 de 31 | 5 | 53,4% | 50,7% |
 | `fallout_special` | 95,9% | 88,2% | 16 de 16 | 6 | 48,0% | 50,6% |
 | `fallout_traits` | 100,0% | 100,0% | 17 de 17 | 0 | 95,5% | 100,0% |
 
@@ -203,8 +203,8 @@ Média: 94,5% das letras e 87,1% das palavras.
 
 | Print | Acerto de letras | Acerto de palavras | Quebras achadas | A mais | Letras: EasyOCR na GPU, 15/11 | Letras: RapidOCR antes das colunas, 16/11 |
 |---|---|---|---|---|---|---|
-| `eve_atributos` | 100,0% | 100,0% | 11 de 12 | 0 | 88,6% | 100,0% |
-| `eve_ficha` | 99,1% | 96,7% | 20 de 27 | 2 | 96,3% | 99,1% |
+| `eve_atributos` | 100,0% | 100,0% | 12 de 12 | 0 | 88,6% | 100,0% |
+| `eve_ficha` | 99,1% | 96,7% | 25 de 27 | 2 | 96,3% | 99,1% |
 | `eve_fila_treino` | 97,6% | 90,7% | 12 de 12 | 2 | 94,5% | 97,6% |
 | `eve_filamento` | 91,2% | 90,0% | 5 de 5 | 0 | 88,5% | 91,2% |
 | `eve_menu_contexto` | 99,0% | 96,0% | 23 de 23 | 1 | 72,0% | 73,4% |
