@@ -795,6 +795,60 @@ leitura do EasyOCR entraram também algumas quebras erradas em letreiros e no ov
 EVE. Dois casos simulados novos conferem as regras em outra língua: o HUD se separa em
 pares, e dois botões sozinhos em português ("Salvar tudo" | "Cancelar") se separam.
 
+### A margem de um painel estreito
+
+A regra "a primeira palavra de baixo caberia na linha de cima" media o espaço até a borda
+direita do print. Num painel estreito sem borda visível, essa borda fica longe, e quase
+toda linha parece ter acabado cedo. No diálogo do Morrowind, o texto vai até x = 1137 e a
+lista de tópicos ao lado até 1319. "…the great schools of magic:" termina em 1114, e
+"Destruction," caberia até 1319, então o app cortava a frase ao meio. No tutorial do
+Caves of Qud, "(The recommended way! Once you get your" se separava de "footing.)".
+
+Usar a borda do bloco já tinha falhado duas vezes, porque a linha mais longa de um menu
+vira a "margem" e os itens curtos se juntam. Descrevi o problema com coordenadas reais e
+pedi propostas a quatro IAs (ChatGPT, Copilot, Gemini e Grok). Depois medi cada uma nos 90
+prints, com os limiares que cada IA sugeriu:
+
+| Proposta | Ideia | Quebras certas (RapidOCR) | Quebras a mais | Linhas inteiras |
+|---|---|---|---|---|
+| Hoje | Borda do print | 662 | 85 | 519 |
+| **ChatGPT** | Fim das linhas longas vizinhas com a mesma esquerda | **662** | **79** | **524** |
+| Grok | Fim repetido por 2 linhas longas com a mesma esquerda | 658 | 79 | 520 |
+| Gemini | Mediana do fim das linhas que continuam em minúscula | 637 | 76 | 504 |
+| Copilot | Percentil 80 do fim das linhas longas do bloco | 634 | 78 | 496 |
+
+Entrou a do ChatGPT. Para cada par de linhas, o app olha até 2 linhas acima e abaixo que
+começam no mesmo x, têm a altura típica e ocupam 16 alturas de letra ou mais. A margem
+do painel é o fim da mais longa delas, mais uma altura. Ela só vale se ficar pelo menos 4
+alturas para dentro da borda do print. Menu não tem linha tão longa e tabela vai até a
+borda do print: nos dois, a margem continua a do print. Com âncoras de 14 a 18 alturas, e
+com 2 a 6 alturas de folga, o resultado é o mesmo. A regra não depende de um número
+afinado para estes prints.
+
+As outras falharam por motivos que já conhecíamos:
+- O Grok não exigia a folga até a borda do print e juntou 4 linhas da tabela do
+  overview do EVE, que terminam todas no mesmo x.
+- O Gemini e o Copilot usavam uma margem só para o bloco inteiro, a variante já
+  descartada, e estragaram fichas e menus (no mercado do EVE, 26 quebras certas viraram 8
+  e 14).
+- O Copilot ainda ilustrou a proposta com coordenadas que não estavam no material
+  enviado, como se fossem medidas do print.
+
+No RapidOCR, só 4 prints mudaram, e todos para melhor: os dois cortes do Morrowind, o
+"footing.)" e o "mutated / human." do Qud, e duas frases da reputação do Qud. Na leitura
+do EasyOCR, as linhas inteiras empataram (315) e as quebras a mais caíram de 114 para 111.
+As quebras certas caíram de 627 para 623, mas só uma dessas perdas é real. No Morrowind, a
+regra juntou três trechos certos: os dois do problema e "…of the Dwarves / Yes, that's…",
+que o gabarito também junta. E juntou um errado: o EasyOCR não leu o ponto final depois de
+"OHM", e o tópico "Mages Guild" grudou na fala de cima. As outras 3 perdas estão no
+genótipo do Qud, onde o texto ficou melhor, mas a contagem se confunde com palavras
+repetidas ("mutated", "human").
+
+O ganho foi menor do que eu tinha estimado. Eu atribuía a esse problema "a maior parte das
+quebras a mais das fichas", e eram 6. Dois casos simulados novos protegem a regra: um painel
+em português em que a frase continua depois de ":" com maiúscula, e um em inglês em que
+uma linha curta sem ponto ainda separa dois parágrafos.
+
 ## 8. De onde vem o erro que sobrou
 
 Medindo de novo do mesmo jeito, com as palavras em ordem alfabética:
@@ -822,10 +876,10 @@ Medindo de novo do mesmo jeito, com as palavras em ordem alfabética:
 Para olhar esse erro mais de perto, o benchmark ganhou duas medidas:
 
 - **Linhas inteiras.** Cada linha do gabarito com duas palavras ou mais é uma unidade que
-  o tradutor deveria receber inteira. Das 661, 519 (78,5%) saem inteiras e sozinhas.
-  Das que não saem:
+  o tradutor deveria receber inteira. Das 661, 524 (79,3%) saem inteiras e sozinhas
+  (eram 519 antes da margem do painel). Das que não saem:
   - 47 (7,1%) saem junto de outra linha, numa quebra perdida;
-  - 30 (4,5%) saem cortadas ou com outra região no meio;
+  - 25 (3,8%) saem cortadas ou com outra região no meio (eram 30);
   - 65 (9,8%) têm alguma palavra que o OCR não leu.
 
   Montagem e leitura pesam quase o mesmo no que ainda chega errado ao tradutor.
@@ -838,13 +892,13 @@ Para olhar esse erro mais de perto, o benchmark ganhou duas medidas:
   | Texto (descrições, tomos, diário, tutorial) | 28 | 99,5% | 92% |
   | Legenda (falas e avisos) | 21 | 99,4% | 81% |
   | Menu (opções, abas, diálogos com escolhas) | 9 | 98,8% | 80% |
-  | Ficha (tabelas, inventários, grades, painéis) | 24 | 90,3% | 72% |
+  | Ficha (tabelas, inventários, grades, painéis) | 24 | 90,3% | 74% (era 72%) |
   | Letreiro (placas, cartazes, títulos de cena) | 8 | 79,4% | 74% |
 
-  As fichas concentram o erro de montagem: 69 das 85 quebras a mais. Os letreiros
-  concentram o erro de leitura.
+  As fichas concentram o erro de montagem: 63 das 79 quebras a mais (eram 69 das 85).
+  Os letreiros concentram o erro de leitura.
 
-As regras também passaram a ter **testes automáticos**, em `tests/`. São os 22 casos
+As regras também passaram a ter **testes automáticos**, em `tests/`. São os 24 casos
 simulados em várias línguas e as métricas do benchmark. Rodam em menos de um segundo, sem
 prints e sem OCR. Cada regra nova seguiu os mesmos passos:
 1. achar um caso reproduzível;
@@ -854,7 +908,10 @@ prints e sem OCR. Cada regra nova seguiu os mesmos passos:
 4. rodar os testes;
 5. rodar o benchmark completo.
 
-**Próximos passos:**
+**Próximos passos.** O passo a passo da próxima rodada, começando por uma validação com
+jogos novos, está no [plano de validação](plano-de-validacao.md). Cada problema que
+continua aberto, com dados reais e o que já foi tentado, está em [problemas em
+aberto](problemas-em-aberto.md). Em resumo:
 1. **Abas de uma palavra encostadas e a barra do Doki Doki.** Sem uma caixa de duas
    palavras na linha, nem um espaço que valha para todas as fontes, não há sinal de
    posição que as separe. Talvez dê com o desenho da tela, como o fundo da aba
@@ -929,6 +986,11 @@ prints e sem OCR. Cada regra nova seguiu os mesmos passos:
     contrário, alemão cortado, fala em maiúsculas lida palavra a palavra) virou um teste
     automático. Assim, uma regra nova não pode trazer de volta um erro já resolvido sem
     alguém perceber.
+22. **Várias opiniões, uma régua.** Perguntar o mesmo problema a quatro IAs trouxe quatro
+    ideias diferentes, e só uma passou na medição. Duas repetiam uma variante já descartada,
+    e uma ilustrou a proposta com coordenadas que não estavam no material enviado. O que fez
+    a consulta valer a pena foi mandar o problema com números reais e o que já tinha
+    falhado, e medir cada resposta nos mesmos prints antes de acreditar nela.
 
 ## Como reproduzir
 
