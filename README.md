@@ -97,6 +97,14 @@ python main.py
   pip install torch==2.6.0 torchvision==0.21.0 --index-url https://download.pytorch.org/whl/cu124
   ```
 
+### Run the tests
+
+The text layout rules (paragraphs, columns, menus) have automated tests with simulated OCR boxes in several languages. They need no screenshots and run in under a second:
+
+```bash
+env\Scripts\python.exe -m unittest -v
+```
+
 ### Build the installer
 
 The installer is built from a separate environment, `env_build`, with the CPU version of PyTorch (the one on PyPI), so the CUDA libraries stay out of it:
@@ -117,6 +125,7 @@ The OCR pipeline is measured by a benchmark that runs the same code the app uses
 | Character error rate (CER)                 | **4.87%**      |
 | Word error rate (WER)                      | **8.87%**      |
 | Line breaks found / correct                | **89% / 89%**  |
+| Text lines that reach the translator whole | **79%**        |
 | Time per screenshot (CPU only)             | **about 1 s**  |
 
 These numbers come from 90 screenshots: 87 from 11 games (Undertale, Persona 4 Golden, Fallout: New Vegas, Morrowind, Mass Effect, EVE Online and others) and 3 public examples. Before the switch from EasyOCR to RapidOCR, the same benchmark gave a CER of 10.24% and a WER of 22.30%, at 3.0 s per screenshot on an NVIDIA MX350. Reading character sheets and grids column by column took RapidOCR from a CER of 7.81% to 4.87%. The results for each game and screenshot are in [docs/resultados-benchmark.md](docs/resultados-benchmark.md) (with EasyOCR: [docs/resultados-benchmark-easyocr.md](docs/resultados-benchmark-easyocr.md)), and the comparison between OCR engines is in [docs/comparacao-motores-ocr.md](docs/comparacao-motores-ocr.md), all in Portuguese. See [benchmark/README.md](benchmark/README.md) to run it and to add your own screenshots.

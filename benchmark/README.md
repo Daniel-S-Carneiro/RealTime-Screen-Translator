@@ -103,9 +103,49 @@ O relatório vai para `relatorios/benchmark/benchmark_<data>.csv`.
   quebras do gabarito e pôs 1 onde não havia. No resumo, **achadas** é a parte das
   quebras do gabarito que ele encontrou e **certas** é a parte das quebras que ele
   pôs que estão no gabarito.
+- **linhas inteiras**: cada linha do gabarito com duas palavras ou mais é uma unidade
+  que o tradutor deveria receber inteira. Em cada imagem, `linhas inteiras 5/6` quer
+  dizer que 5 das 6 saíram inteiras e sozinhas numa linha do app. O CSV separa as que
+  não saíram em três tipos:
+  - **com sobra**: saíram junto de outra linha (quebra perdida);
+  - **partidas**: saíram cortadas em linhas diferentes (quebra a mais, ou outra região
+    no meio);
+  - **faltando**: alguma palavra não foi lida.
 - **tempo**: imagem + OCR + pós-processamento (a tradução não entra).
 - **POR PASTA**: quando o teste pega mais de uma pasta, o resumo repete as médias
   de cada uma, para ver se um período ou um jogo foi pior que os outros.
+- **POR CATEGORIA**: o mesmo por tipo de tela. O tipo de cada print está em
+  [`categorias.json`](categorias.json): legenda, texto, menu, ficha ou letreiro. Ao
+  coletar um print novo, acrescente o nome dele lá.
 
 Só troque um padrão da produção quando a diferença aparecer **na média e na
 maioria das imagens**, não numa imagem só.
+
+## Testes automáticos
+
+Os casos de montagem do texto em várias línguas (com caixas de OCR simuladas, sem
+texto de jogo) e as métricas do benchmark têm testes em `tests/`. Eles rodam em menos
+de um segundo, sem prints e sem OCR:
+
+```
+env\Scripts\python.exe -m unittest -v
+```
+
+Os casos ficam em `tests/casos_paragrafos.py`. Os marcados com `limite_conhecido` ainda
+falham e aparecem como falha esperada.
+
+## Como mudar uma regra com segurança
+
+Toda regra nova de montagem do texto passou por estes passos:
+
+1. **Caso reproduzível:** achar o print que erra e olhar as caixas que o OCR devolveu.
+2. **Medida antes da regra:** medir o sinal em todos os prints antes de escrever a regra
+   (por exemplo, o vão entre caixas dos itens que deviam quebrar e dos que deviam ficar
+   juntos).
+3. **Teste diferencial:** rodar a regra sobre as caixas guardadas e comparar com a versão
+   da `main`, print a print, nas leituras dos dois motores. A ferramenta é
+   `laboratorios/quebras/testar_regras.py --comparar main`, que fica fora do git, junto
+   com as caixas guardadas.
+4. **Testes automáticos** (`tests/`), com um caso simulado novo quando a regra puder
+   afetar outra língua.
+5. **Benchmark completo**, e só então a regra entra na produção.
