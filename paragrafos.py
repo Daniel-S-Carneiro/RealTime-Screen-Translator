@@ -21,10 +21,10 @@ caixas são espelhadas, para a leitura ir da direita para a esquerda. Em chinês
 japonês e tailandês, que não usam espaço, os pedaços são juntados sem espaço e uma
 linha "cabe" mais uma letra, não mais uma palavra.
 
-Nos 90 prints do benchmark (11 jogos), com o RapidOCR, as colunas estreitas e os itens
-lado a lado (2026-11-17), as regras acharam 85% das quebras dos gabaritos, e 89% das
-quebras que puseram estavam certas (com o EasyOCR, antes dos blocos e das regras de 2026-11-15:
-69% e 78%).
+Nos 90 prints do benchmark (11 jogos), com o RapidOCR, as colunas estreitas, os itens
+lado a lado e as regras de aviso e título (2026-11-17), as regras acharam 88% das quebras
+dos gabaritos, e 89% das quebras que puseram estavam certas (com o EasyOCR, antes dos
+blocos e das regras de 2026-11-15: 69% e 78%).
 """
 
 import math
@@ -77,11 +77,15 @@ IDIOMAS_DA_DIREITA = frozenset({"ar", "fa", "ur", "ug"})
 SEM_ESPACO = re.compile(r"[฀-๿　-ヿ㐀-鿿豈-﫿＀-￯]")
 MENU_SEM_ESPACO = 8  # nessas escritas, opção de menu tem até 8 letras
 
-MARCADORES = "•-*►▶◆●·"
+# Começo de item ou entrada; ":" é o "::" do registro de mensagens do Caves of Qud
+MARCADORES = "•-*►▶◆●·:"
 # Verbete de efeito: "[Shield] Negates part of..." (com minúscula, é só uma frase quebrada)
 VERBETE = re.compile(r"\[[^\]]+\]\s*(\w)")
 # A linha de cima termina uma frase ou um rótulo
 FIM_DE_FRASE = re.compile(r"[.!?:;)\]]$")
+# A linha de cima termina uma sentença
+FIM_DE_SENTENCA = re.compile(r"[.!?]$")
+TITULO_PALAVRAS = 5  # um título tem até 5 palavras
 
 
 def _limites(item) -> tuple:
@@ -256,14 +260,16 @@ def _em_maiusculas(texto: str) -> bool:
 
 
 def _mesma_aba(esquerda: str, direita: str, total: int) -> bool:
-    """Duas abas com a mesma primeira palavra: "Skill Plans" | "Skill Catalogue"."""
-    palavras_esq, palavras_dir = esquerda.split(), direita.split()
+    """Duas abas com uma palavra em comum na ponta: "Skill Plans" | "Skill Catalogue",
+    "Certified Plans" | "Personal Plans"."""
+    palavras_esq = esquerda.lower().split()
+    palavras_dir = direita.lower().split()
     return (
         total == 2
         and _e_item(esquerda) and _e_item(direita)
         and not esquerda.isupper() and not direita.isupper()
         and min(len(palavras_esq), len(palavras_dir)) >= 2
-        and palavras_esq[0].lower() == palavras_dir[0].lower()
+        and (palavras_esq[0] == palavras_dir[0] or palavras_esq[-1] == palavras_dir[-1])
     )
 
 
@@ -525,6 +531,23 @@ def _recuou(anterior: Linha, seguinte: Linha, altura: float) -> bool:
     return abs(centro_anterior - centro_seguinte) >= CENTRALIZADO * altura
 
 
+def _parece_titulo(texto: str) -> bool:
+    """Linha curta com cara de título: até TITULO_PALAVRAS palavras, sem pontuação no
+    fim, e todas as palavras começando com maiúscula. "Surrender to" (fala quebrada) e
+    "Der Kapitän der Flotte" (alemão, que põe maiúscula em todo substantivo) não são
+    títulos; escritas sem maiúscula ficam de fora."""
+    palavras = texto.split()
+    iniciais = [next((c for c in p if c.isalpha()), "") for p in palavras]
+    iniciais = [c for c in iniciais if c]
+    return (
+        1 <= len(palavras) <= TITULO_PALAVRAS
+        and not FIM_DE_FRASE.search(texto)
+        and texto[-1:] not in ",;-"
+        and bool(iniciais)
+        and all(c.isupper() for c in iniciais)
+    )
+
+
 def _continua_frase(anterior: Linha, seguinte: Linha) -> bool:
     """A linha de baixo começa com minúscula e a de cima não fechou a frase.
 
@@ -561,6 +584,14 @@ def _comeca_paragrafo(
     anterior: Linha, seguinte: Linha, margem_dir: float, altura: float, letra: float
 ) -> bool:
     if seguinte.item_novo:
+        return True
+    # Sentença terminada e a de baixo não continua com minúscula: avisos seguidos
+    # ("...increased to 66." / "Item does not have enough charge.")
+    if FIM_DE_SENTENCA.search(anterior.texto) and not seguinte.texto[:1].islower():
+        return True
+    # Título em cima e texto começando com minúscula embaixo ("Wood Technique Chant" /
+    # "swept by the wind..."): sem isto, a regra da minúscula juntava os dois
+    if seguinte.texto[:1].islower() and _parece_titulo(anterior.texto):
         return True
     vao = seguinte.topo - anterior.base > VAO_PARAGRAFO * altura
     razao_fonte = seguinte.altura / max(anterior.altura, 1.0)

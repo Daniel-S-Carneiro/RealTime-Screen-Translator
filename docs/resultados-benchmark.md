@@ -32,9 +32,9 @@ só os 3 exemplos da pasta `base` estão no git.
 |---|---|
 | Acerto de letras | **95,1%** |
 | Acerto de palavras | **91,1%** |
-| Quebras achadas | 85% |
+| Quebras achadas | 88% |
 | Quebras certas | 89% |
-| Tempo médio por print | 0,9 s |
+| Tempo médio por print | 1,0 s |
 | Acerto de letras (EasyOCR na GPU, 15/11) | 89,8% |
 | Acerto de palavras (EasyOCR na GPU, 15/11) | 77,7% |
 | Quebras achadas / certas (EasyOCR na GPU, 15/11) | 74% / 86% |
@@ -48,25 +48,25 @@ A média é puxada para baixo por poucas telas muito difíceis:
 - mais da metade dos prints não erra **nenhuma letra**;
 - 78 dos 90 prints acertam 95% ou mais das letras, e 63 acertam 99% ou mais.
 
-Com a correção por contexto ligada, o acerto vai a 95,1% das letras e 91,1% das palavras, a 0,9 s por print, sem contar os ~5 s para carregar o BERT.
+Com a correção por contexto ligada, o acerto vai a 95,1% das letras e 91,2% das palavras, a 1,0 s por print, sem contar os ~5 s para carregar o BERT.
 
 ## Por jogo
 
 | Jogo | Prints | Acerto de letras | Acerto de palavras | Quebras achadas | Quebras certas | Letras: EasyOCR na GPU, 15/11 | Letras: RapidOCR antes das colunas, 16/11 |
 |---|---|---|---|---|---|---|---|
-| Danganronpa: Trigger Happy Havoc | 5 | 100,0% | 100,0% | 67% | 100% | 98,5% | 100,0% |
+| Danganronpa: Trigger Happy Havoc | 5 | 100,0% | 100,0% | 89% | 100% | 98,5% | 100,0% |
 | Doki Doki Literature Club | 3 | 100,0% | 100,0% | 29% | 100% | 91,6% | 100,0% |
 | Exemplos públicos (pasta base) | 3 | 99,9% | 99,5% | 100% | 100% | 99,3% | 99,9% |
-| Immortal Clan | 15 | 99,9% | 99,0% | 97% | 98% | 98,1% | 99,9% |
-| The Elder Scrolls III: Morrowind | 6 | 99,5% | 98,0% | 89% | 96% | 77,3% | 82,0% |
+| Immortal Clan | 15 | 99,9% | 99,0% | 99% | 98% | 98,1% | 99,9% |
+| The Elder Scrolls III: Morrowind | 6 | 99,5% | 98,0% | 93% | 97% | 77,3% | 82,0% |
 | Mass Effect Legendary Edition | 5 | 99,3% | 91,9% | 100% | 100% | 99,4% | 99,3% |
 | Persona 4 Golden | 7 | 96,7% | 94,7% | 97% | 100% | 93,6% | 96,7% |
-| Fallout: New Vegas | 8 | 96,0% | 91,4% | 83% | 87% | 86,1% | 87,1% |
+| Fallout: New Vegas | 8 | 96,0% | 91,4% | 84% | 86% | 86,1% | 87,1% |
 | Undertale | 3 | 95,0% | 86,9% | 100% | 100% | 90,2% | 95,0% |
-| EVE Online | 12 | 94,5% | 87,1% | 87% | 88% | 85,4% | 87,1% |
-| Night in the Woods | 14 | 87,7% | 79,8% | 78% | 60% | 85,0% | 87,5% |
-| Caves of Qud | 9 | 86,5% | 83,2% | 69% | 77% | 83,7% | 86,9% |
-| **Todos** | **90** | **95,1%** | **91,1%** | **85%** | **89%** | 89,8% | 92,2% |
+| EVE Online | 12 | 94,5% | 87,1% | 89% | 88% | 85,4% | 87,1% |
+| Night in the Woods | 14 | 87,7% | 79,8% | 91% | 62% | 85,0% | 87,5% |
+| Caves of Qud | 9 | 86,6% | 83,6% | 73% | 78% | 83,7% | 86,9% |
+| **Todos** | **90** | **95,1%** | **91,1%** | **88%** | **89%** | 89,8% | 92,2% |
 
 ## Print a print
 
@@ -79,7 +79,7 @@ Média: 100,0% das letras e 100,0% das palavras.
 | `danganronpa_legenda_1` | 100,0% | 100,0% | 1 de 2 | 0 | 100,0% | 100,0% |
 | `danganronpa_legenda_2` | 100,0% | 100,0% | 1 de 1 | 0 | 96,5% | 100,0% |
 | `danganronpa_menu` | 100,0% | 100,0% | 4 de 4 | 0 | 99,4% | 100,0% |
-| `danganronpa_titulo` | 100,0% | 100,0% | 0 de 2 | 0 | 96,8% | 100,0% |
+| `danganronpa_titulo` | 100,0% | 100,0% | 2 de 2 | 0 | 96,8% | 100,0% |
 | `danganronpa_tutorial` | 100,0% | 100,0% | — | 0 | 100,0% | 100,0% |
 
 - `danganronpa_titulo`: texto inclinado: depois de endireitado, as palavras saem na ordem certa, mas as três linhas viram um parágrafo só.
@@ -113,7 +113,7 @@ Média: 99,9% das letras e 99,0% das palavras.
 | `immortalclan_fase_efeito` | 100,0% | 100,0% | 2 de 2 | 0 | 95,8% | 100,0% |
 | `immortalclan_loja_investidor` | 99,6% | 97,3% | 7 de 8 | 1 | 96,2% | 99,6% |
 | `immortalclan_mapa_mist_island` | 100,0% | 100,0% | 1 de 1 | 0 | 100,0% | 100,0% |
-| `immortalclan_missoes_capitulo` | 99,0% | 89,7% | 7 de 8 | 0 | 95,6% | 99,0% |
+| `immortalclan_missoes_capitulo` | 99,0% | 89,7% | 8 de 8 | 0 | 95,6% | 99,0% |
 | `immortalclan_tomo_azure_blade` | 100,0% | 100,0% | 7 de 7 | 0 | 97,8% | 100,0% |
 | `immortalclan_tomo_bloodburn` | 100,0% | 100,0% | 9 de 9 | 0 | 97,8% | 100,0% |
 | `immortalclan_tomo_dragonbind` | 100,0% | 100,0% | 9 de 9 | 0 | 97,4% | 100,0% |
@@ -124,7 +124,7 @@ Média: 99,9% das letras e 99,0% das palavras.
 | `immortalclan_tomo_spirit_rhino` | 100,0% | 100,0% | 6 de 6 | 0 | 98,5% | 100,0% |
 | `immortalclan_tomo_thunder_verdict` | 100,0% | 100,0% | 9 de 9 | 0 | 97,7% | 100,0% |
 | `immortalclan_tomo_turbid_fire` | 100,0% | 100,0% | 9 de 9 | 0 | 99,8% | 100,0% |
-| `immortalclan_tomo_windriding` | 99,5% | 98,5% | 8 de 9 | 0 | 99,3% | 99,5% |
+| `immortalclan_tomo_windriding` | 99,5% | 98,5% | 9 de 9 | 0 | 99,3% | 99,5% |
 
 ### The Elder Scrolls III: Morrowind
 
@@ -132,11 +132,11 @@ Média: 99,5% das letras e 98,0% das palavras.
 
 | Print | Acerto de letras | Acerto de palavras | Quebras achadas | A mais | Letras: EasyOCR na GPU, 15/11 | Letras: RapidOCR antes das colunas, 16/11 |
 |---|---|---|---|---|---|---|
-| `morrowind_avisos` | 100,0% | 100,0% | 0 de 2 | 0 | 89,6% | 100,0% |
-| `morrowind_dialogo` | 99,9% | 99,2% | 22 de 26 | 3 | 76,6% | 82,7% |
+| `morrowind_avisos` | 100,0% | 100,0% | 2 de 2 | 0 | 89,6% | 100,0% |
+| `morrowind_dialogo` | 99,9% | 99,2% | 23 de 26 | 3 | 76,6% | 82,7% |
 | `morrowind_legenda` | 100,0% | 100,0% | — | 0 | 100,0% | 100,0% |
 | `morrowind_magias` | 99,8% | 98,4% | 23 de 23 | 0 | 96,3% | 99,6% |
-| `morrowind_nivel` | 97,9% | 93,5% | 8 de 12 | 0 | 69,5% | 79,8% |
+| `morrowind_nivel` | 97,9% | 93,5% | 9 de 12 | 0 | 69,5% | 79,8% |
 | `morrowind_status` | 99,2% | 96,7% | 28 de 28 | 0 | 31,7% | 30,1% |
 
 ### Mass Effect Legendary Edition
@@ -178,11 +178,11 @@ Média: 96,0% das letras e 91,4% das palavras.
 |---|---|---|---|---|---|---|
 | `fallout_bau` | 96,8% | 91,9% | 13 de 15 | 1 | 94,4% | 96,8% |
 | `fallout_dialogo` | 100,0% | 100,0% | 1 de 1 | 0 | 100,0% | 100,0% |
-| `fallout_legenda_1` | 100,0% | 100,0% | — | 0 | 100,0% | 100,0% |
+| `fallout_legenda_1` | 100,0% | 100,0% | — | 1 | 100,0% | 100,0% |
 | `fallout_legenda_2` | 99,0% | 90,5% | — | 0 | 99,0% | 99,0% |
 | `fallout_missao` | 99,4% | 96,5% | 2 de 2 | 0 | 98,5% | 99,4% |
 | `fallout_pipboy` | 76,8% | 64,2% | 20 de 31 | 3 | 53,4% | 50,7% |
-| `fallout_special` | 95,9% | 88,2% | 15 de 16 | 6 | 48,0% | 50,6% |
+| `fallout_special` | 95,9% | 88,2% | 16 de 16 | 6 | 48,0% | 50,6% |
 | `fallout_traits` | 100,0% | 100,0% | 17 de 17 | 0 | 95,5% | 100,0% |
 
 - `fallout_pipboy`: vários painéis, ícones e números pequenos na mesma tela.
@@ -204,16 +204,16 @@ Média: 94,5% das letras e 87,1% das palavras.
 | Print | Acerto de letras | Acerto de palavras | Quebras achadas | A mais | Letras: EasyOCR na GPU, 15/11 | Letras: RapidOCR antes das colunas, 16/11 |
 |---|---|---|---|---|---|---|
 | `eve_atributos` | 100,0% | 100,0% | 11 de 12 | 0 | 88,6% | 100,0% |
-| `eve_ficha` | 99,1% | 96,7% | 19 de 27 | 2 | 96,3% | 99,1% |
+| `eve_ficha` | 99,1% | 96,7% | 20 de 27 | 2 | 96,3% | 99,1% |
 | `eve_fila_treino` | 97,6% | 90,7% | 12 de 12 | 2 | 94,5% | 97,6% |
 | `eve_filamento` | 91,2% | 90,0% | 5 de 5 | 0 | 88,5% | 91,2% |
 | `eve_menu_contexto` | 99,0% | 96,0% | 23 de 23 | 1 | 72,0% | 73,4% |
-| `eve_mercado` | 97,6% | 86,0% | 25 de 29 | 0 | 63,1% | 63,1% |
+| `eve_mercado` | 97,6% | 86,0% | 26 de 29 | 0 | 63,1% | 63,1% |
 | `eve_minijogo` | 100,0% | 100,0% | 3 de 3 | 0 | 96,7% | 100,0% |
 | `eve_overview` | 95,2% | 86,9% | 36 de 39 | 8 | 91,4% | 95,2% |
 | `eve_painel_local` | 95,6% | 72,6% | 13 de 14 | 0 | 93,4% | 95,6% |
-| `eve_perfil` | 98,5% | 89,5% | 1 de 5 | 0 | 97,0% | 98,5% |
-| `eve_planos` | 100,0% | 100,0% | 5 de 6 | 0 | 100,0% | 100,0% |
+| `eve_perfil` | 98,5% | 89,5% | 3 de 5 | 0 | 97,0% | 98,5% |
+| `eve_planos` | 100,0% | 100,0% | 6 de 6 | 0 | 100,0% | 100,0% |
 | `eve_skills` | 60,6% | 37,3% | 37 de 43 | 14 | 42,8% | 32,1% |
 
 - `eve_skills`: a grade já sai coluna por coluna; sobram o lixo lido de um texto vertical e o painel de treino, que entra no meio da última coluna.
@@ -224,12 +224,12 @@ Média: 87,7% das letras e 79,8% das palavras.
 
 | Print | Acerto de letras | Acerto de palavras | Quebras achadas | A mais | Letras: EasyOCR na GPU, 15/11 | Letras: RapidOCR antes das colunas, 16/11 |
 |---|---|---|---|---|---|---|
-| `nitw_cartaz_desaparecido` | 100,0% | 100,0% | 2 de 2 | 0 | 99,2% | 100,0% |
-| `nitw_cartaz_harfest` | 100,0% | 100,0% | 4 de 5 | 0 | 100,0% | 100,0% |
+| `nitw_cartaz_desaparecido` | 100,0% | 100,0% | 2 de 2 | 1 | 99,2% | 100,0% |
+| `nitw_cartaz_harfest` | 100,0% | 100,0% | 5 de 5 | 0 | 100,0% | 100,0% |
 | `nitw_demontower_fase` | 100,0% | 100,0% | 1 de 1 | 0 | 100,0% | 100,0% |
-| `nitw_demontower_intro` | 97,3% | 91,3% | 0 de 1 | 1 | 85,6% | 97,3% |
+| `nitw_demontower_intro` | 97,3% | 91,3% | 1 de 1 | 1 | 85,6% | 97,3% |
 | `nitw_demontower_pergunta` | 96,8% | 83,3% | 1 de 2 | 0 | 87,1% | 96,8% |
-| `nitw_demontower_titulo` | 100,0% | 100,0% | 1 de 2 | 0 | 83,8% | 100,0% |
+| `nitw_demontower_titulo` | 100,0% | 100,0% | 2 de 2 | 0 | 83,8% | 100,0% |
 | `nitw_jornal` | 99,4% | 95,7% | — | 1 | 96,3% | 99,4% |
 | `nitw_legenda_1` | 100,0% | 100,0% | — | 0 | 100,0% | 100,0% |
 | `nitw_legenda_2` | 100,0% | 100,0% | — | 0 | 100,0% | 100,0% |
@@ -245,7 +245,7 @@ Média: 87,7% das letras e 79,8% das palavras.
 
 ### Caves of Qud
 
-Média: 86,5% das letras e 83,2% das palavras.
+Média: 86,6% das letras e 83,6% das palavras.
 
 | Print | Acerto de letras | Acerto de palavras | Quebras achadas | A mais | Letras: EasyOCR na GPU, 15/11 | Letras: RapidOCR antes das colunas, 16/11 |
 |---|---|---|---|---|---|---|
@@ -256,7 +256,7 @@ Média: 86,5% das letras e 83,2% das palavras.
 | `qud_dialogo` | 99,5% | 98,6% | 8 de 8 | 0 | 95,6% | 99,5% |
 | `qud_introducao` | 99,5% | 97,4% | 1 de 1 | 0 | 96,0% | 99,5% |
 | `qud_lugar` | 100,0% | 100,0% | 1 de 1 | 0 | 93,9% | 100,0% |
-| `qud_registro` | 99,4% | 94,1% | 21 de 26 | 0 | 90,9% | 99,4% |
+| `qud_registro` | 99,8% | 98,3% | 26 de 26 | 0 | 90,9% | 99,4% |
 | `qud_reputacao` | 64,9% | 59,4% | 26 de 36 | 12 | 65,9% | 67,9% |
 
 - `qud_criacao_resumo`: as palavras saem quase todas certas, mas a caixa de tutorial vem depois das colunas, e o gabarito a põe antes.
