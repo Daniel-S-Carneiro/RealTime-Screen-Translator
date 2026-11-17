@@ -215,4 +215,39 @@ CASOS = [
         [caixa(20, 0, 80, "ЭТО"), caixa(108, 0, 120, "БЫЛО"), caixa(236, 0, 100, "ДАВНО")],
         ["ЭТО БЫЛО ДАВНО"],
     ),
+    Caso(
+        "português: painel estreito sem borda, frase quebrada depois de ':' com maiúscula",
+        "pt",
+        [
+            caixa(1150, 0, 150, "Tópicos"),
+            caixa(20, 80, 620, "A guilda aceita apenas candidatos de mente afiada e"),
+            caixa(20, 120, 600, "vontade firme. Todos devem dominar as quatro escolas:"),
+            caixa(20, 160, 610, "Fogo, Água, Terra e Ar. Também devem conhecer as artes"),
+            caixa(20, 200, 340, "da alquimia e dos encantamentos."),
+        ],
+        [
+            "Tópicos",
+            "A guilda aceita apenas candidatos de mente afiada e vontade firme. Todos devem "
+            "dominar as quatro escolas: Fogo, Água, Terra e Ar. Também devem conhecer as artes "
+            "da alquimia e dos encantamentos.",
+        ],
+    ),
+    Caso(
+        "inglês: painel estreito, linha curta sem ponto e frase nova (quebra mantida)",
+        "en",
+        [
+            caixa(1150, 0, 150, "Topics"),
+            caixa(20, 80, 620, "Welcome to the guild hall, where every new member must"),
+            caixa(20, 120, 600, "sign the old ledger before taking any of the contracts"),
+            caixa(20, 160, 260, "posted on the board"),
+            caixa(20, 200, 610, "Ask the clerk at the front desk if you need any help with"),
+            caixa(20, 240, 250, "your first contract."),
+        ],
+        [
+            "Topics",
+            "Welcome to the guild hall, where every new member must sign the old ledger before "
+            "taking any of the contracts posted on the board",
+            "Ask the clerk at the front desk if you need any help with your first contract.",
+        ],
+    ),
 ]

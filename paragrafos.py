@@ -89,6 +89,15 @@ FIM_DE_FRASE = re.compile(r"[.!?:;)\]]$")
 FIM_DE_SENTENCA = re.compile(r"[.!?]$")
 TITULO_PALAVRAS = 5  # um título tem até 5 palavras
 
+# Margem do "caberia" num painel estreito sem borda visível (o diálogo do Morrowind, o
+# tutorial do Qud): a borda do print fica longe e quase toda linha parece acabar cedo.
+# As linhas longas vizinhas, com a mesma esquerda, mostram onde o painel acaba.
+LINHA_LONGA = 16.0  # em alturas de letra: linha que enche o painel (menu não chega a isso)
+VIZINHAS = 2  # linhas olhadas acima e abaixo
+MESMA_ESQUERDA = 1.0  # em alturas de letra
+ALTURA_PARECIDA = (0.8, 1.25)  # da altura típica: título e nota de rodapé não contam
+FOLGA_PRINT = 4.0  # a margem do painel só vale se ficar tão para dentro do print
+
 
 def _limites(item) -> tuple:
     """(esquerda, direita, topo, base) de uma caixa do EasyOCR."""
@@ -678,7 +687,7 @@ def _comeca_paragrafo(
         return vao or outra_fonte
 
     # A primeira palavra da seguinte caberia no fim da anterior: a anterior acabou ali.
-    # A margem é a do print inteiro: medir por bloco juntou itens curtos de menu.
+    # A margem é a do print ou a do painel (_margem_local); a do bloco juntou itens de menu.
     # Em escrita sem espaço, a linha quebra em qualquer letra: basta caber uma.
     primeira = seguinte.texto[:1] if SEM_ESPACO.match(seguinte.texto) else seguinte.texto.split()[0]
     cabia = margem_dir - anterior.dir > (len(primeira) + 1) * seguinte.largura_letra
@@ -692,6 +701,27 @@ def _comeca_paragrafo(
         or _comeca_com_marcador(seguinte.texto)
         or _menu_de_palavras(anterior, seguinte)
     )
+
+
+def _margem_local(linhas: list, indice: int, margem_dir: float, altura: float) -> float:
+    """Margem do "caberia" para linhas[indice]: a do painel ou, sem evidência, a do print.
+
+    O painel acaba onde terminam as linhas longas vizinhas que começam no mesmo x.
+    Menu não tem linha longa e tabela vai até a borda do print: nos dois fica a margem do
+    print. Usar o fim da linha mais longa do bloco todo juntava itens de menu.
+    """
+    atual = linhas[indice]
+    fins = [
+        linha.dir
+        for linha in linhas[max(0, indice - VIZINHAS) : indice + VIZINHAS + 1]
+        if ALTURA_PARECIDA[0] * altura <= linha.altura <= ALTURA_PARECIDA[1] * altura
+        and abs(linha.esq - atual.esq) <= MESMA_ESQUERDA * altura
+        and linha.dir - linha.esq >= LINHA_LONGA * altura
+    ]
+    if not fins:
+        return margem_dir
+    painel = max(fins) + altura
+    return painel if margem_dir - painel >= FOLGA_PRINT * altura else margem_dir
 
 
 def montar_paragrafos(resultados, idioma: str = "") -> list:
@@ -718,8 +748,10 @@ def montar_paragrafos(resultados, idioma: str = "") -> list:
     for bloco in _blocos(itens, altura, _pares_de_valor(itens, altura)):
         linhas = _linhas(bloco, vizinhanca)
         atuais = [[linhas[0].texto]]
-        for anterior, seguinte in zip(linhas, linhas[1:]):
-            if _comeca_paragrafo(anterior, seguinte, margem_dir, altura, letra):
+        for indice, (anterior, seguinte) in enumerate(zip(linhas, linhas[1:])):
+            if _comeca_paragrafo(
+                anterior, seguinte, _margem_local(linhas, indice, margem_dir, altura), altura, letra
+            ):
                 atuais.append([seguinte.texto])
             else:
                 atuais[-1].append(seguinte.texto)

@@ -38,7 +38,7 @@ só os 3 exemplos da pasta `base` estão no git.
 | Quebras achadas | 89% |
 | Quebras certas | 89% |
 | Linhas inteiras | 79% |
-| Tempo médio por print | 1,2 s |
+| Tempo médio por print | 0,9 s |
 | Acerto de letras (EasyOCR na GPU, 15/11) | 89,8% |
 | Acerto de palavras (EasyOCR na GPU, 15/11) | 77,7% |
 | Quebras achadas / certas (EasyOCR na GPU, 15/11) | 74% / 86% |
@@ -52,7 +52,7 @@ A média é puxada para baixo por poucas telas muito difíceis:
 - mais da metade dos prints não erra **nenhuma letra**;
 - 78 dos 90 prints acertam 95% ou mais das letras, e 63 acertam 99% ou mais.
 
-Com a correção por contexto ligada, o acerto vai a 95,1% das letras e 91,2% das palavras, a 1,2 s por print, sem contar os ~5 s para carregar o BERT.
+Com a correção por contexto ligada, o acerto vai a 95,1% das letras e 91,2% das palavras, a 0,9 s por print, sem contar os ~5 s para carregar o BERT.
 
 ## Por tipo de tela
 
@@ -64,7 +64,7 @@ mudança mexe, coisa que a média geral esconde.
 | texto | Título com texto corrido: descrições, tomos, diário, tutorial, registro | 28 | 99,5% | 98,7% | 100% | 98% | 92% |
 | legenda | Falas, legendas e avisos curtos | 21 | 99,4% | 96,6% | 54% | 93% | 81% |
 | menu | Menus, opções de diálogo e abas | 9 | 98,8% | 95,4% | 100% | 99% | 80% |
-| ficha | Fichas, tabelas, inventários, grades e painéis lado a lado | 24 | 90,3% | 83,4% | 85% | 85% | 72% |
+| ficha | Fichas, tabelas, inventários, grades e painéis lado a lado | 24 | 90,3% | 83,4% | 85% | 86% | 74% |
 | letreiro | Letreiros, cartazes e títulos de cena | 8 | 79,4% | 68,4% | 95% | 66% | 74% |
 
 ## Por jogo
@@ -75,14 +75,14 @@ mudança mexe, coisa que a média geral esconde.
 | Doki Doki Literature Club | 3 | 100,0% | 100,0% | 29% | 100% | 100% | 91,6% | 100,0% |
 | Exemplos públicos (pasta base) | 3 | 99,9% | 99,5% | 100% | 100% | 93% | 99,3% | 99,9% |
 | Immortal Clan | 15 | 99,9% | 99,0% | 99% | 98% | 93% | 98,1% | 99,9% |
-| The Elder Scrolls III: Morrowind | 6 | 99,5% | 98,0% | 93% | 97% | 81% | 77,3% | 82,0% |
+| The Elder Scrolls III: Morrowind | 6 | 99,5% | 98,0% | 93% | 99% | 84% | 77,3% | 82,0% |
 | Mass Effect Legendary Edition | 5 | 99,3% | 91,9% | 100% | 100% | 80% | 99,4% | 99,3% |
 | Persona 4 Golden | 7 | 96,7% | 94,7% | 97% | 100% | 57% | 93,6% | 96,7% |
 | Fallout: New Vegas | 8 | 96,0% | 91,4% | 88% | 85% | 82% | 86,1% | 87,1% |
 | Undertale | 3 | 95,0% | 86,9% | 100% | 100% | 0% | 90,2% | 95,0% |
 | EVE Online | 12 | 94,5% | 87,1% | 92% | 88% | 72% | 85,4% | 87,1% |
 | Night in the Woods | 14 | 87,7% | 79,8% | 91% | 62% | 68% | 85,0% | 87,5% |
-| Caves of Qud | 9 | 86,6% | 83,6% | 73% | 78% | 76% | 83,7% | 86,9% |
+| Caves of Qud | 9 | 86,6% | 83,6% | 73% | 81% | 79% | 83,7% | 86,9% |
 | **Todos** | **90** | **95,1%** | **91,1%** | **89%** | **89%** | **79%** | 89,8% | 92,2% |
 
 ## Print a print
@@ -150,7 +150,7 @@ Média: 99,5% das letras e 98,0% das palavras.
 | Print | Acerto de letras | Acerto de palavras | Quebras achadas | A mais | Linhas inteiras | Letras: EasyOCR na GPU, 15/11 | Letras: RapidOCR antes das colunas, 16/11 |
 |---|---|---|---|---|---|---|---|
 | `morrowind_avisos` | 100,0% | 100,0% | 2 de 2 | 0 | 3 de 3 | 89,6% | 100,0% |
-| `morrowind_dialogo` | 99,9% | 99,2% | 23 de 26 | 3 | 7 de 14 | 76,6% | 82,7% |
+| `morrowind_dialogo` | 99,9% | 99,2% | 23 de 26 | 1 | 9 de 14 | 76,6% | 82,7% |
 | `morrowind_legenda` | 100,0% | 100,0% | — | 0 | 1 de 1 | 100,0% | 100,0% |
 | `morrowind_magias` | 99,8% | 98,4% | 23 de 23 | 0 | 23 de 23 | 96,3% | 99,6% |
 | `morrowind_nivel` | 97,9% | 93,5% | 9 de 12 | 0 | 5 de 11 | 69,5% | 79,8% |
@@ -266,15 +266,15 @@ Média: 86,6% das letras e 83,6% das palavras.
 
 | Print | Acerto de letras | Acerto de palavras | Quebras achadas | A mais | Linhas inteiras | Letras: EasyOCR na GPU, 15/11 | Letras: RapidOCR antes das colunas, 16/11 |
 |---|---|---|---|---|---|---|---|
-| `qud_criacao_genotipo` | 96,8% | 95,5% | 10 de 12 | 3 | 6 de 10 | 92,9% | 96,8% |
-| `qud_criacao_preset` | 84,1% | 80,7% | 8 de 21 | 4 | 6 de 13 | 84,2% | 84,1% |
+| `qud_criacao_genotipo` | 96,8% | 95,5% | 10 de 12 | 2 | 7 de 10 | 92,9% | 96,8% |
+| `qud_criacao_preset` | 84,1% | 80,7% | 8 de 21 | 3 | 6 de 13 | 84,2% | 84,1% |
 | `qud_criacao_resumo` | 35,0% | 24,0% | 9 de 19 | 8 | 12 de 15 | 35,3% | 35,0% |
 | `qud_criatura` | 99,6% | 98,7% | 6 de 6 | 0 | 5 de 6 | 98,5% | 99,6% |
 | `qud_dialogo` | 99,5% | 98,6% | 8 de 8 | 0 | 8 de 9 | 95,6% | 99,5% |
 | `qud_introducao` | 99,5% | 97,4% | 1 de 1 | 0 | 1 de 2 | 96,0% | 99,5% |
 | `qud_lugar` | 100,0% | 100,0% | 1 de 1 | 0 | 1 de 1 | 93,9% | 100,0% |
 | `qud_registro` | 99,8% | 98,3% | 26 de 26 | 0 | 25 de 27 | 90,9% | 99,4% |
-| `qud_reputacao` | 64,9% | 59,4% | 26 de 36 | 12 | 19 de 26 | 65,9% | 67,9% |
+| `qud_reputacao` | 64,9% | 59,4% | 26 de 36 | 10 | 21 de 26 | 65,9% | 67,9% |
 
 - `qud_criacao_resumo`: as palavras saem quase todas certas, mas a caixa de tutorial vem depois das colunas, e o gabarito a põe antes.
 - `qud_reputacao`: três colunas de texto por facção: as colunas saem separadas, mas o texto de várias facções se mistura.
