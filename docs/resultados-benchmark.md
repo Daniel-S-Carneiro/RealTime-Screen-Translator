@@ -33,12 +33,12 @@ só os 3 exemplos da pasta `base` estão no git.
 
 | Medida | Resultado |
 |---|---|
-| Acerto de letras | **95,1%** |
-| Acerto de palavras | **91,1%** |
+| Acerto de letras | **95,7%** |
+| Acerto de palavras | **91,5%** |
 | Quebras achadas | 91% |
 | Quebras certas | 90% |
 | Linhas inteiras | 80% |
-| Tempo médio por print | 0,8 s |
+| Tempo médio por print | 1,3 s |
 | Acerto de letras (EasyOCR na GPU, 15/11) | 89,8% |
 | Acerto de palavras (EasyOCR na GPU, 15/11) | 77,7% |
 | Quebras achadas / certas (EasyOCR na GPU, 15/11) | 74% / 86% |
@@ -52,7 +52,7 @@ A média é puxada para baixo por poucas telas muito difíceis:
 - mais da metade dos prints não erra **nenhuma letra**;
 - 78 dos 90 prints acertam 95% ou mais das letras, e 63 acertam 99% ou mais.
 
-Com a correção por contexto ligada, o acerto vai a 95,1% das letras e 91,2% das palavras, a 0,9 s por print, sem contar os ~5 s para carregar o BERT.
+Com a correção por contexto ligada, o acerto vai a 95,7% das letras e 91,5% das palavras, a 1,2 s por print, sem contar os ~5 s para carregar o BERT.
 
 ## Por tipo de tela
 
@@ -64,8 +64,8 @@ mudança mexe, coisa que a média geral esconde.
 | texto | Título com texto corrido: descrições, tomos, diário, tutorial, registro | 28 | 99,5% | 98,7% | 100% | 98% | 92% |
 | legenda | Falas, legendas e avisos curtos | 21 | 99,4% | 96,6% | 96% | 96% | 81% |
 | menu | Menus, opções de diálogo e abas | 9 | 98,8% | 95,4% | 100% | 99% | 80% |
-| ficha | Fichas, tabelas, inventários, grades e painéis lado a lado | 24 | 90,3% | 83,4% | 87% | 87% | 75% |
-| letreiro | Letreiros, cartazes e títulos de cena | 8 | 79,4% | 68,4% | 95% | 66% | 74% |
+| ficha | Fichas, tabelas, inventários, grades e painéis lado a lado | 24 | 90,3% | 83,6% | 87% | 87% | 75% |
+| letreiro | Letreiros, cartazes e títulos de cena | 8 | 85,9% | 72,1% | 91% | 80% | 78% |
 
 ## Por jogo
 
@@ -80,10 +80,10 @@ mudança mexe, coisa que a média geral esconde.
 | Persona 4 Golden | 7 | 96,7% | 94,7% | 97% | 100% | 57% | 93,6% | 96,7% |
 | Fallout: New Vegas | 8 | 96,0% | 91,4% | 88% | 85% | 82% | 86,1% | 87,1% |
 | Undertale | 3 | 95,0% | 86,9% | 100% | 100% | 0% | 90,2% | 95,0% |
-| EVE Online | 12 | 94,5% | 87,1% | 95% | 88% | 73% | 85,4% | 87,1% |
-| Night in the Woods | 14 | 87,7% | 79,8% | 91% | 62% | 68% | 85,0% | 87,5% |
+| EVE Online | 12 | 94,6% | 87,5% | 95% | 89% | 74% | 85,4% | 87,1% |
+| Night in the Woods | 14 | 91,5% | 81,9% | 87% | 74% | 71% | 85,0% | 87,5% |
 | Caves of Qud | 9 | 86,6% | 83,6% | 73% | 81% | 79% | 83,7% | 86,9% |
-| **Todos** | **90** | **95,1%** | **91,1%** | **91%** | **90%** | **80%** | 89,8% | 92,2% |
+| **Todos** | **90** | **95,7%** | **91,5%** | **91%** | **90%** | **80%** | 89,8% | 92,2% |
 
 ## Print a print
 
@@ -216,7 +216,7 @@ Média: 95,0% das letras e 86,9% das palavras.
 
 ### EVE Online
 
-Média: 94,5% das letras e 87,1% das palavras.
+Média: 94,6% das letras e 87,5% das palavras.
 
 | Print | Acerto de letras | Acerto de palavras | Quebras achadas | A mais | Linhas inteiras | Letras: EasyOCR na GPU, 15/11 | Letras: RapidOCR antes das colunas, 16/11 |
 |---|---|---|---|---|---|---|---|
@@ -227,17 +227,17 @@ Média: 94,5% das letras e 87,1% das palavras.
 | `eve_menu_contexto` | 99,0% | 96,0% | 23 de 23 | 1 | 10 de 12 | 72,0% | 73,4% |
 | `eve_mercado` | 97,6% | 86,0% | 28 de 29 | 0 | 13 de 18 | 63,1% | 63,1% |
 | `eve_minijogo` | 100,0% | 100,0% | 3 de 3 | 0 | 4 de 4 | 96,7% | 100,0% |
-| `eve_overview` | 95,2% | 86,9% | 38 de 39 | 8 | 19 de 37 | 91,4% | 95,2% |
+| `eve_overview` | 95,7% | 88,4% | 38 de 39 | 7 | 21 de 37 | 91,4% | 95,2% |
 | `eve_painel_local` | 95,6% | 72,6% | 13 de 14 | 0 | 6 de 13 | 93,4% | 95,6% |
 | `eve_perfil` | 98,5% | 89,5% | 5 de 5 | 0 | 4 de 6 | 97,0% | 98,5% |
 | `eve_planos` | 100,0% | 100,0% | 6 de 6 | 0 | 7 de 7 | 100,0% | 100,0% |
-| `eve_skills` | 60,6% | 37,3% | 37 de 43 | 14 | 29 de 38 | 42,8% | 32,1% |
+| `eve_skills` | 61,4% | 39,8% | 37 de 43 | 14 | 29 de 38 | 42,8% | 32,1% |
 
 - `eve_skills`: a grade já sai coluna por coluna; sobram o lixo lido de um texto vertical e o painel de treino, que entra no meio da última coluna.
 
 ### Night in the Woods
 
-Média: 87,7% das letras e 79,8% das palavras.
+Média: 91,5% das letras e 81,9% das palavras.
 
 | Print | Acerto de letras | Acerto de palavras | Quebras achadas | A mais | Linhas inteiras | Letras: EasyOCR na GPU, 15/11 | Letras: RapidOCR antes das colunas, 16/11 |
 |---|---|---|---|---|---|---|---|
@@ -252,7 +252,7 @@ Média: 87,7% das letras e 79,8% das palavras.
 | `nitw_legenda_2` | 100,0% | 100,0% | — | 0 | 1 de 1 | 100,0% | 100,0% |
 | `nitw_legenda_3` | 100,0% | 100,0% | — | 0 | 1 de 1 | 100,0% | 100,0% |
 | `nitw_legenda_4` | 100,0% | 100,0% | — | 0 | 1 de 1 | 91,2% | 100,0% |
-| `nitw_letreiro_banca` | 0,0% | 5,9% | 5 de 6 | 6 | 1 de 4 | 13,9% | 0,0% |
+| `nitw_letreiro_banca` | 47,5% | 35,3% | 4 de 6 | 0 | 2 de 4 | 13,9% | 0,0% |
 | `nitw_letreiro_diner` | 86,7% | 0,0% | — | 0 | — | 86,7% | 86,7% |
 | `nitw_letreiros` | 53,3% | 41,7% | 4 de 4 | 4 | 3 de 5 | 45,6% | 53,3% |
 
@@ -278,5 +278,3 @@ Média: 86,6% das letras e 83,6% das palavras.
 
 - `qud_criacao_resumo`: as palavras saem quase todas certas, mas a caixa de tutorial vem depois das colunas, e o gabarito a põe antes.
 - `qud_reputacao`: três colunas de texto por facção: as colunas saem separadas, mas o texto de várias facções se mistura.
-
-Prints em que o erro passou de 100% em alguma medida (acerto mostrado como 0%): `nitw_letreiro_banca`.

@@ -23,16 +23,16 @@ para jogos que o app nunca viu. Um conjunto que serve para ajustar não serve pa
 ## Ponto de partida
 
 A versão de referência é a `main` com a margem do painel estreito, as listas de rótulo
-e valor (17/11/2026), as abas pelo fundo e a barra de menu numa caixa só (18/11/2026), as
-últimas regras que entram antes da coleta. Antes delas, a
+e valor (17/11/2026), as abas pelo fundo, a barra de menu numa caixa só e a segunda
+leitura das caixas pequenas (18/11/2026), as últimas regras que entram antes da coleta. Antes delas, a
 referência era o commit `235b28e`. Nos 90 prints atuais:
 
 | Medida | Resultado |
 |---|---|
-| Acerto de letras | 95,1% |
-| Acerto de palavras | 91,1% |
-| Quebras achadas / certas | 91% / 90% (79 a mais) |
-| Linhas inteiras | 80% (529 de 661) |
+| Acerto de letras | 95,7% |
+| Acerto de palavras | 91,5% |
+| Quebras achadas / certas | 91% / 90% (72 a mais) |
+| Linhas inteiras | 80% (532 de 661) |
 
 | Tipo de tela | Acerto de letras | Linhas inteiras |
 |---|---|---|
@@ -40,11 +40,11 @@ referência era o commit `235b28e`. Nos 90 prints atuais:
 | legenda | 99,4% | 81% |
 | menu | 98,8% | 80% |
 | ficha | 90,3% | 75% |
-| letreiro | 79,4% | 74% |
+| letreiro | 85,9% | 78% |
 
 Nenhuma regra muda até a validação ser medida. A validação também vai dizer se a margem
-do painel, a regra das listas, a das abas e a da barra de menu, medidas só nestes 90
-prints, valem em jogos novos.
+do painel, a regra das listas, a das abas, a da barra de menu e a segunda leitura, medidas
+só nestes 90 prints, valem em jogos novos.
 
 ## Fase 1: coleta
 
@@ -134,7 +134,7 @@ referência.
   entre 92% e 95% nas letras e entre 70% e 78% nas linhas inteiras. Muito abaixo disso,
   alguma regra decorou o dataset.
 
-**3.3 Teste: testes automáticos.** Os 52 testes continuam passando.
+**3.3 Teste: testes automáticos.** Os 61 testes continuam passando.
 
 **3.4 Organização: registro.** O resultado vai para um anexo próprio,
 `docs/resultados-validacao.md`, e para o estudo de caso, sem sobrescrever os resultados
