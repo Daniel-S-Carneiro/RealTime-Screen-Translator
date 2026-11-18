@@ -849,6 +849,56 @@ quebras a mais das fichas", e eram 6. Dois casos simulados novos protegem a regr
 em português em que a frase continua depois de ":" com maiúscula, e um em inglês em que
 uma linha curta sem ponto ainda separa dois parágrafos.
 
+### Listas de rótulo e valor
+
+Na subida de nível do Morrowind, a coluna da direita saía numa linha só: "Endurance 41
+Personality 30 Luck 40". No perfil do EVE, o mesmo com "Born: 2022.01.13 16:29 Total Net
+Worth: Security Status: 0.0". Nenhuma regra de quebra disparava, e o motivo é o oposto do
+painel estreito: a lista encosta na borda direita do print. No Morrowind, "Endurance 41"
+termina em x = 472, a margem é 509, e "Personality" precisa de uns 120 px. No EVE, a lista
+é o texto mais largo do print. Quebrar toda linha que termina em número ou em ":" não
+serve, porque isso acontece em prosa ("...founded in 1990" / "and later...", "...schools
+of magic:" / "Destruction, ...").
+
+Mandei o problema às mesmas quatro IAs, com o retorno da rodada anterior. Medi as quatro
+propostas nos 90 prints e em 7 casos novos de prosa com números e de listas em outras
+línguas:
+
+| Proposta | Ideia | Quebras certas | Quebras a mais | Linhas inteiras |
+|---|---|---|---|---|
+| Antes | — | 662 | 79 | 524 |
+| **Grok** | 3+ linhas curtas empilhadas com número no fim ou ":" de rótulo; nunca antes de minúscula | **666** | **79** | **529** |
+| ChatGPT | Janela de 3 ou 4 linhas com passo regular, 75% com número no fim | 666 | 80 | 528 |
+| Copilot | Grupo alinhado de até 5 linhas, 60% com número ou ":" | 665 | 80 | 526 |
+| Gemini | Duas linhas seguidas com "valor" no fim ou ":" | 666 | 91 | 519 |
+| Copilot, só geometria | 3+ linhas com o mesmo x e larguras parecidas | 667 | 198 | 494 |
+
+Entrou a do Grok. Uma linha é um campo quando tem menos de 16 alturas de largura, até 8
+palavras e termina num valor ("41", "0.0", "16:29", "0.0 ?") ou tem um ":" com letra
+logo antes ("Total Net Worth:"; o ":" de "16:29" não conta). Três campos ou mais seguidos,
+empilhados na mesma coluna, viram uma linha cada. A exceção é a linha que começa com
+minúscula, que continua a de cima. No RapidOCR, só a ficha do Morrowind e o perfil do EVE
+mudaram, os dois para melhor, e o resultado é o mesmo com 10 a 24 alturas e com trechos
+de 2 a 4 linhas.
+
+Duas ideias decidiram:
+- **Exigir repetição.** Uma linha que termina em número é comum em prosa; três seguidas,
+  curtas e empilhadas, quase só em ficha. O Gemini quebrava pares de linhas e, pela
+  expressão que propôs, contava como "valor" qualquer linha terminada em "." ou ",". Isso
+  pôs 12 quebras erradas em legendas e diálogos.
+- **A guarda da minúscula.** O ChatGPT e o Copilot não a tinham e cortaram uma frase do
+  registro de combate do Qud ("...armor with / your bronze dagger. [18]").
+
+A alternativa "só geometria" do Copilot, que ele recomendou testar primeiro, pôs 119
+quebras erradas: um parágrafo comum alinhado à esquerda também tem o mesmo x de início e
+larguras parecidas, e todos os tomos do Immortal Clan foram picados.
+
+A regra tem um limite conhecido, previsto pelo próprio Grok: três linhas curtas de prosa
+seguidas, todas terminando em número e com maiúscula na linha de baixo, viram três
+parágrafos. Isso é comum em alemão, que escreve todo substantivo com maiúscula. Ficou
+registrado como caso simulado de limite. Cinco casos novos protegem a regra: duas listas em
+português, a prosa inglesa com anos que continua em minúscula, e duas frases alemãs.
+
 ## 8. De onde vem o erro que sobrou
 
 Medindo de novo do mesmo jeito, com as palavras em ordem alfabética:
@@ -861,24 +911,24 @@ Medindo de novo do mesmo jeito, com as palavras em ordem alfabética:
   não lê no inventário do Persona e alguns espaços comidos ("resteasy"). Separar as
   palavras grudadas pelo dicionário do SymSpell quebrou nomes de jogo ("Dragonbind",
   "Garrus") e ficou de fora.
-- **Quebras:** o app acha 662 das 744 quebras dos gabaritos. Das 82 que perde, 17 são
+- **Quebras:** o app acha 666 das 744 quebras dos gabaritos. Das 78 que perde, 17 são
   itens lado a lado que saem juntos:
   - 11 vêm numa caixa só do OCR, e 10 deles são a barra do Doki Doki;
   - 6 são abas de uma palavra só e encostadas, sem uma caixa de duas palavras que mostre
     como o OCR agrupa ("Browse | Quickbar", "General | Mining | WarpTo").
 
-  Outras 11 são linhas de cima e de baixo que ainda saem juntas, como títulos inclinados
-  e frases curtas de descrição sem pontuação. As demais quebras perdidas estão nas telas
-  em que a ordem não bate com o gabarito.
+  O resto são linhas de cima e de baixo que ainda saem juntas, como títulos inclinados e
+  frases curtas de descrição sem pontuação, e quebras nas telas em que a ordem não bate
+  com o gabarito.
 - **Ordem ambígua:** o resumo do Caves of Qud ainda erra 65% só por ordem, mas ali as duas
   ordens fazem sentido.
 
 Para olhar esse erro mais de perto, o benchmark ganhou duas medidas:
 
 - **Linhas inteiras.** Cada linha do gabarito com duas palavras ou mais é uma unidade que
-  o tradutor deveria receber inteira. Das 661, 524 (79,3%) saem inteiras e sozinhas
-  (eram 519 antes da margem do painel). Das que não saem:
-  - 47 (7,1%) saem junto de outra linha, numa quebra perdida;
+  o tradutor deveria receber inteira. Das 661, 529 (80,0%) saem inteiras e sozinhas
+  (eram 519 antes da margem do painel e 524 antes das listas). Das que não saem:
+  - 42 (6,4%) saem junto de outra linha, numa quebra perdida (eram 47);
   - 25 (3,8%) saem cortadas ou com outra região no meio (eram 30);
   - 65 (9,8%) têm alguma palavra que o OCR não leu.
 
@@ -892,13 +942,13 @@ Para olhar esse erro mais de perto, o benchmark ganhou duas medidas:
   | Texto (descrições, tomos, diário, tutorial) | 28 | 99,5% | 92% |
   | Legenda (falas e avisos) | 21 | 99,4% | 81% |
   | Menu (opções, abas, diálogos com escolhas) | 9 | 98,8% | 80% |
-  | Ficha (tabelas, inventários, grades, painéis) | 24 | 90,3% | 74% (era 72%) |
+  | Ficha (tabelas, inventários, grades, painéis) | 24 | 90,3% | 75% (era 72%) |
   | Letreiro (placas, cartazes, títulos de cena) | 8 | 79,4% | 74% |
 
   As fichas concentram o erro de montagem: 63 das 79 quebras a mais (eram 69 das 85).
   Os letreiros concentram o erro de leitura.
 
-As regras também passaram a ter **testes automáticos**, em `tests/`. São os 24 casos
+As regras também passaram a ter **testes automáticos**, em `tests/`. São os 29 casos
 simulados em várias línguas e as métricas do benchmark. Rodam em menos de um segundo, sem
 prints e sem OCR. Cada regra nova seguiu os mesmos passos:
 1. achar um caso reproduzível;
@@ -991,6 +1041,10 @@ aberto](problemas-em-aberto.md). Em resumo:
     e uma ilustrou a proposta com coordenadas que não estavam no material enviado. O que fez
     a consulta valer a pena foi mandar o problema com números reais e o que já tinha
     falhado, e medir cada resposta nos mesmos prints antes de acreditar nela.
+23. **O freio vale tanto quanto o sinal.** No problema das listas, três IAs acharam o mesmo
+    sinal: várias linhas seguidas terminando em número. Ganhou a única que lembrou de um
+    freio, não quebrar antes de uma linha que começa com minúscula. Sem ele, a mesma ideia
+    cortava frases ao meio.
 
 ## Como reproduzir
 

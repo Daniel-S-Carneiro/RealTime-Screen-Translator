@@ -98,6 +98,18 @@ MESMA_ESQUERDA = 1.0  # em alturas de letra
 ALTURA_PARECIDA = (0.8, 1.25)  # da altura típica: título e nota de rodapé não contam
 FOLGA_PRINT = 4.0  # a margem do painel só vale se ficar tão para dentro do print
 
+# Listas de "rótulo valor" ("Endurance 41" / "Personality 30" / "Luck 40", "Born: ..." /
+# "Total Net Worth:"): a lista encosta na borda direita do print, o "caberia" nunca acha
+# espaço e nenhuma regra quebra. O sinal é a repetição: linhas curtas seguidas, cada uma
+# terminando em número ou com ":" de rótulo. Uma só ("...founded in 1990", "...magic:")
+# acontece em prosa.
+CAMPO_LARGURA = 16.0  # em alturas de letra: mais longa que isso é frase, não campo
+CAMPO_PALAVRAS = 8
+CAMPOS_SEGUIDOS = 3  # linhas da lista, no mínimo
+CAMPO_VAO = 0.8  # vão vertical máximo entre dois campos, em alturas de letra
+CAMPO_SOBREPOSICAO = 0.4  # da largura do mais curto: os dois estão na mesma coluna
+DOIS_PONTOS = ":："
+
 
 def _limites(item) -> tuple:
     """(esquerda, direita, topo, base) de uma caixa do EasyOCR."""
@@ -724,6 +736,71 @@ def _margem_local(linhas: list, indice: int, margem_dir: float, altura: float) -
     return painel if margem_dir - painel >= FOLGA_PRINT * altura else margem_dir
 
 
+def _termina_em_numero(texto: str) -> bool:
+    """O último pedaço é um valor: "41", "0.0", "16:29", "1,409,640", "0.0 ?", "75%"."""
+    resto = texto.rstrip().rstrip("?!.%)]").rstrip()
+    if not resto:
+        return False
+    ultimo = resto.split()[-1]
+    return any(c.isdigit() for c in ultimo) and not any(c.isalpha() for c in ultimo)
+
+
+def _tem_rotulo(texto: str) -> bool:
+    """Tem ":" de rótulo ("Total Net Worth:"), com letra logo antes; "16:29" não conta."""
+    return any(c in DOIS_PONTOS and i > 0 and texto[i - 1].isalpha() for i, c in enumerate(texto))
+
+
+def _e_campo(linha: Linha, altura: float) -> bool:
+    """Linha curta de ficha: "Endurance 41", "Security Status: 0.0", "Total Net Worth:"."""
+    return (
+        linha.dir - linha.esq < CAMPO_LARGURA * altura
+        and len(linha.texto.split()) <= CAMPO_PALAVRAS
+        and (_termina_em_numero(linha.texto) or _tem_rotulo(linha.texto))
+    )
+
+
+def _empilhadas(cima: Linha, baixo: Linha, altura: float) -> bool:
+    """Uma logo abaixo da outra, na mesma coluna (sem exigir o mesmo x: "x2 Speed 62")."""
+    sobreposicao = min(cima.dir, baixo.dir) - max(cima.esq, baixo.esq)
+    menor = min(cima.dir - cima.esq, baixo.dir - baixo.esq)
+    return (
+        baixo.topo - cima.base <= CAMPO_VAO * altura
+        and sobreposicao >= CAMPO_SOBREPOSICAO * menor
+    )
+
+
+def _quebras_de_lista(linhas: list, altura: float) -> set:
+    """Índices i em que linhas[i + 1] é um campo novo de uma lista "rótulo valor".
+
+    Vale só para CAMPOS_SEGUIDOS linhas ou mais, curtas e empilhadas. Antes de uma linha
+    que começa com minúscula não quebra: é continuação ("...in 1990" / "and later...").
+    """
+    quebras = set()
+    trecho = []
+    for indice, linha in enumerate(linhas + [None]):
+        campo = linha is not None and _e_campo(linha, altura)
+        if campo and trecho and _empilhadas(linhas[trecho[-1]], linha, altura):
+            trecho.append(indice)
+            continue
+        if len(trecho) >= CAMPOS_SEGUIDOS:
+            quebras.update(i for i in trecho[:-1] if not linhas[i + 1].texto[:1].islower())
+        trecho = [indice] if campo else []
+    return quebras
+
+
+def _paragrafos_do_bloco(linhas: list, margem_dir: float, altura: float, letra: float) -> list:
+    """Junta as linhas de um bloco em parágrafos."""
+    de_lista = _quebras_de_lista(linhas, altura)
+    atuais = [[linhas[0].texto]]
+    for indice, (anterior, seguinte) in enumerate(zip(linhas, linhas[1:])):
+        margem = _margem_local(linhas, indice, margem_dir, altura)
+        if indice in de_lista or _comeca_paragrafo(anterior, seguinte, margem, altura, letra):
+            atuais.append([seguinte.texto])
+        else:
+            atuais[-1].append(seguinte.texto)
+    return [_juntar(partes) for partes in atuais]
+
+
 def montar_paragrafos(resultados, idioma: str = "") -> list:
     """Resultados do EasyOCR -> lista de parágrafos (cada um já numa linha só).
 
@@ -746,14 +823,5 @@ def montar_paragrafos(resultados, idioma: str = "") -> list:
 
     paragrafos = []
     for bloco in _blocos(itens, altura, _pares_de_valor(itens, altura)):
-        linhas = _linhas(bloco, vizinhanca)
-        atuais = [[linhas[0].texto]]
-        for indice, (anterior, seguinte) in enumerate(zip(linhas, linhas[1:])):
-            if _comeca_paragrafo(
-                anterior, seguinte, _margem_local(linhas, indice, margem_dir, altura), altura, letra
-            ):
-                atuais.append([seguinte.texto])
-            else:
-                atuais[-1].append(seguinte.texto)
-        paragrafos += [_juntar(partes) for partes in atuais]
+        paragrafos += _paragrafos_do_bloco(_linhas(bloco, vizinhanca), margem_dir, altura, letra)
     return paragrafos

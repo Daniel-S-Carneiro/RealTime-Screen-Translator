@@ -70,7 +70,7 @@ resolução.
 - **Teste diferencial:** `laboratorios/quebras/testar_regras.py --comparar main` aplica a
   regra sobre as caixas guardadas dos 90 prints (leituras do RapidOCR e do EasyOCR) e
   compara com a versão atual, print a print, em segundos.
-- **Testes automáticos:** 24 casos simulados em várias línguas (`tests/`). Uma regra nova
+- **Testes automáticos:** 29 casos simulados em várias línguas (`tests/`). Uma regra nova
   não pode quebrá-los.
 - **Critério de entrada:** melhora a média, não piora a maioria dos prints e não estraga
   outra língua.
@@ -94,16 +94,16 @@ resolução.
 |---|---|
 | Acerto de letras | 95,1% |
 | Acerto de palavras | 91,1% |
-| Quebras achadas / certas | 89% / 89% (662 de 744 achadas, 79 a mais) |
-| Linhas inteiras | 79% (524 de 661) |
-| Das que não chegam inteiras | 47 com sobra (quebra perdida), 25 partidas, 65 com palavra faltando |
+| Quebras achadas / certas | 90% / 89% (666 de 744 achadas, 79 a mais) |
+| Linhas inteiras | 80% (529 de 661) |
+| Das que não chegam inteiras | 42 com sobra (quebra perdida), 25 partidas, 65 com palavra faltando |
 
 | Tipo de tela | Prints | Acerto de letras | Linhas inteiras | Quebras a mais |
 |---|---|---|---|---|
 | texto | 28 | 99,5% | 92% | 3 |
 | legenda | 21 | 99,4% | 81% | 1 |
 | menu | 9 | 98,8% | 80% | 1 |
-| ficha | 24 | 90,3% | 74% | 63 |
+| ficha | 24 | 90,3% | 75% | 63 |
 | letreiro | 8 | 79,4% | 74% | 11 |
 
 Os 10 prints que mais perdem linhas inteiras são todos fichas e somam 57% das perdas.
@@ -179,7 +179,28 @@ Em documentos isso se chama análise de layout ou segmentação de colunas de te
 **Como medir.** Quebras a mais nas fichas (69 hoje) e linhas "partidas" (30 hoje), sem
 aumentar as "com sobra" (47) nos menus.
 
-### Problema 2: listas de "rótulo valor" que saem numa linha só
+### Problema 2: listas de "rótulo valor" que saem numa linha só (resolvido)
+
+**Resolvido em 17/11/2026.** Uma linha é um campo quando tem menos de 16 alturas de
+largura, até 8 palavras e termina num valor ("41", "0.0", "16:29", "0.0 ?") ou tem ":" com
+letra logo antes ("Total Net Worth:"). Três campos ou mais seguidos, empilhados na mesma
+coluna (vão de até 0,8 altura e sobreposição de 0,4 da largura do mais curto), viram uma
+linha cada, menos antes de uma linha que começa com minúscula. A ideia veio da resposta do
+Grok; foram medidas as propostas de quatro IAs:
+
+| Proposta | Quebras certas (RapidOCR) | Quebras a mais | Linhas inteiras | Por que ganhou ou perdeu |
+|---|---|---|---|---|
+| Antes | 662 | 79 | 524 | — |
+| **Grok** (3+ campos curtos empilhados, guarda da minúscula) | **666** | **79** | **529** | Só os 2 prints do problema mudaram; igual de 10h a 24h e de 2 a 4 linhas |
+| ChatGPT (janela de 3-4 linhas com passo regular) | 666 | 80 | 528 | Sem a guarda da minúscula, cortou uma frase do registro do Qud |
+| Copilot (grupo alinhado, 60% com número ou ":") | 665 | 80 | 526 | Idem; e só separou parte do perfil do EVE |
+| Gemini (par de linhas com "valor" no fim) | 666 | 91 | 519 | Contava "." e "," como valor e não exigia repetição: 12 quebras erradas |
+| Copilot, só geometria (mesmo x, larguras parecidas) | 667 | 198 | 494 | Todo parágrafo alinhado à esquerda vira lista |
+
+Limite conhecido: três linhas curtas de prosa seguidas, todas terminando em número, com
+maiúscula embaixo (comum em alemão), viram parágrafos separados. Está em
+`tests/casos_paragrafos.py` como caso de limite. O teste está em
+`laboratorios/quebras/experimentos/fichas.py`. O texto abaixo fica como registro do problema.
 
 **Tipo:** montagem. **Prints:** subida de nível do Morrowind e perfil do EVE.
 
@@ -373,7 +394,7 @@ linhas.
 ### Problema 10: outras línguas sem prints reais
 
 **Tipo:** validação. Todos os 90 prints são em inglês. O app lê 83 línguas: 43 pelo
-RapidOCR e 40 pelo EasyOCR. As regras de montagem só foram conferidas com 24 casos
+RapidOCR e 40 pelo EasyOCR. As regras de montagem só foram conferidas com 29 casos
 simulados.
 
 **O que pesquisar:**
@@ -398,4 +419,6 @@ Para não pesquisar de novo o que já tem resposta:
 | Contraste entre nome e etiqueta em maiúsculas | 5 quebras certas e 8 erradas |
 | Margem do bloco no "cabia" | Perdeu nas duas versões testadas e de novo nas propostas do Copilot e do Gemini (percentil 80 e mediana do bloco) |
 | Margem por "apoio" de 2 linhas longas sem folga até o print (Grok) | Juntou linhas de tabela que terminam no mesmo x |
+| Quebrar pares de linhas que terminam em número ou têm ":" (Gemini) | Sem exigir repetição, quebrou legendas e diálogos |
+| Lista pela geometria só (mesmo x, larguras parecidas, Copilot) | Todo parágrafo alinhado à esquerda vira lista: 119 quebras erradas |
 | Qualquer linha de título quebra | Estragava falas em maiúsculas |
