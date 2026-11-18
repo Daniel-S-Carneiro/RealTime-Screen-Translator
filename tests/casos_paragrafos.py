@@ -250,4 +250,63 @@ CASOS = [
             "Ask the clerk at the front desk if you need any help with your first contract.",
         ],
     ),
+    Caso(
+        "português: lista de atributos 'rótulo número', uma linha por atributo",
+        "pt",
+        [
+            caixa(20, 0, 200, "Força 72"),
+            caixa(20, 35, 220, "Agilidade 41"),
+            caixa(20, 70, 260, "Inteligência 30"),
+            caixa(20, 105, 160, "Sorte 40"),
+        ],
+        ["Força 72", "Agilidade 41", "Inteligência 30", "Sorte 40"],
+    ),
+    Caso(
+        "português: perfil com rótulos de dois pontos, um deles sem valor",
+        "pt",
+        [
+            caixa(20, 0, 330, "Nascido: 13/01/2022"),
+            caixa(20, 35, 240, "Patrimônio:"),
+            caixa(20, 70, 300, "Reputação: 0.0"),
+            caixa(20, 105, 330, "Base: Kisogo 1.0"),
+        ],
+        ["Nascido: 13/01/2022", "Patrimônio:", "Reputação: 0.0", "Base: Kisogo 1.0"],
+    ),
+    Caso(
+        "inglês: prosa com um ano no fim de 3 linhas, continuando em minúscula (NÃO é lista)",
+        "en",
+        [
+            caixa(20, 0, 520, "The building was founded in 1990"),
+            caixa(20, 40, 400, "and expanded in 2005"),
+            caixa(20, 80, 420, "before closing in 2010."),
+        ],
+        ["The building was founded in 1990 and expanded in 2005 before closing in 2010."],
+    ),
+    Caso(
+        "alemão: linha que termina em número e substantivo maiúsculo embaixo (NÃO é lista)",
+        "de",
+        [
+            caixa(20, 0, 900, "Die Wachen berichten, dass die Karawane im Morgengrauen mit 40"),
+            caixa(20, 40, 880, "Soldaten und 12 Wagen die Stadt verlassen hat."),
+        ],
+        [
+            "Die Wachen berichten, dass die Karawane im Morgengrauen mit 40 Soldaten und 12 Wagen "
+            "die Stadt verlassen hat."
+        ],
+    ),
+    Caso(
+        "alemão: prosa estreita com 3 linhas seguidas terminando em número",
+        "de",
+        [
+            caixa(20, 0, 470, "Die Stadt hatte im Jahr 1990 rund 5000"),
+            caixa(20, 40, 460, "Einwohner und wuchs bis 2005 auf 8000"),
+            caixa(20, 80, 450, "Einwohner, und 2010 waren es 9000"),
+            caixa(20, 120, 300, "Einwohner in der Stadt."),
+        ],
+        [
+            "Die Stadt hatte im Jahr 1990 rund 5000 Einwohner und wuchs bis 2005 auf 8000 "
+            "Einwohner, und 2010 waren es 9000 Einwohner in der Stadt."
+        ],
+        limite_conhecido=True,
+    ),
 ]

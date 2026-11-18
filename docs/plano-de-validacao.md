@@ -22,27 +22,27 @@ para jogos que o app nunca viu. Um conjunto que serve para ajustar não serve pa
 
 ## Ponto de partida
 
-A versão de referência é a `main` com a margem do painel estreito (17/11/2026), a última
-regra que entra antes da coleta. Antes dela, a referência era o commit `235b28e`. Nos 90
-prints atuais:
+A versão de referência é a `main` com a margem do painel estreito e as listas de rótulo
+e valor (17/11/2026), as últimas regras que entram antes da coleta. Antes delas, a
+referência era o commit `235b28e`. Nos 90 prints atuais:
 
 | Medida | Resultado |
 |---|---|
 | Acerto de letras | 95,1% |
 | Acerto de palavras | 91,1% |
-| Quebras achadas / certas | 89% / 89% (79 a mais) |
-| Linhas inteiras | 79% (524 de 661) |
+| Quebras achadas / certas | 90% / 89% (79 a mais) |
+| Linhas inteiras | 80% (529 de 661) |
 
 | Tipo de tela | Acerto de letras | Linhas inteiras |
 |---|---|---|
 | texto | 99,5% | 92% |
 | legenda | 99,4% | 81% |
 | menu | 98,8% | 80% |
-| ficha | 90,3% | 74% |
+| ficha | 90,3% | 75% |
 | letreiro | 79,4% | 74% |
 
 Nenhuma regra muda até a validação ser medida. A validação também vai dizer se a margem
-do painel, medida só nestes 90 prints, vale em jogos novos.
+do painel e a regra das listas, medidas só nestes 90 prints, valem em jogos novos.
 
 ## Fase 1: coleta
 
@@ -106,7 +106,7 @@ referência.
   entre 92% e 95% nas letras e entre 70% e 78% nas linhas inteiras. Muito abaixo disso,
   alguma regra decorou o dataset.
 
-**3.3 Teste: testes automáticos.** Os 30 testes continuam passando.
+**3.3 Teste: testes automáticos.** Os 35 testes continuam passando.
 
 **3.4 Organização: registro.** O resultado vai para um anexo próprio,
 `docs/resultados-validacao.md`, e para o estudo de caso, sem sobrescrever os resultados
@@ -148,7 +148,7 @@ caso, anexos, README), commit, PR e `main`.
 
 ## Fase 6: alvos depois da validação, nesta ordem
 
-1. **Fichas:** 74% das linhas inteiras e 63 das 79 quebras a mais.
+1. **Fichas:** 75% das linhas inteiras e 63 das 79 quebras a mais.
 2. **Letreiros:** 79,4% das letras. A ideia que restou é super-resolução só nas caixas
    pequenas; ampliar o print inteiro piorou, mas ampliar só as caixas pequenas não foi
    testado.
