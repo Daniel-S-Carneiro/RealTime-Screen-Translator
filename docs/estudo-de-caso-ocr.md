@@ -951,6 +951,69 @@ O cuidado é a evidência: são três barras de um jogo só. Zero erros nos 90 p
 leituras, é um bom sinal, mas a diferença de 25 níveis foi medida numa paleta só. A coleta
 de validação vai trazer abas de outros jogos.
 
+### Itens numa caixa só: quando o erro estava nos meus dados
+
+A barra do Doki Doki ("History Skip Auto Save Load Settings") vem numa caixa só do OCR.
+Mandei o problema às cinco IAs com os vãos que eu tinha medido nos pixels: fala de 0,12 a
+0,20 altura, barra de 0,4, um "buraco" de 1,8 a 3,7 entre "Auto" e "Save", e fala de outra
+fonte até 0,35. Quatro das cinco propostas se apoiaram no buraco ou no limite de 0,35.
+
+Ao conferir a barra no print, o buraco não estava lá. "Skip" está apagado (item
+desabilitado) e, num dos prints, "Auto" está em branco (item ativo). A medida que usei
+(Otsu dentro da caixa) separa a tinta em duas cores e jogava essas palavras no fundo. Com
+a tinta medida pela distância ao tom mais comum da caixa, os vãos da barra ficam entre
+0,31 e 0,45, sem buraco. E o limite de 0,35 só valia para os dois jogos que eu tinha
+olhado: a mediana do espaço da fala vai de 0,16 (Immortal Clan) a 0,63 (Undertale). Os 0,4
+da barra estão abaixo da fala de cinco jogos.
+
+Com a medida corrigida, nenhuma proposta passou. A do DeepSeek, que parecia a melhor com a
+medida antiga (7 quebras certas a mais, nenhuma errada), só funcionava por causa do buraco
+falso. A do Mistral separou a barra inteira num dos prints, mas no EasyOCR cortou nomes de
+atributo do EVE. As outras picaram falas de jogos com espaço largo. A ideia mais promissora
+é a do Grok, que compara com a fala do mesmo print. Ela só não pegou a barra porque exigia
+fala de altura parecida, e a letra da fala do Doki Doki é 1,4 a 1,6 vez maior. Abrindo essa
+tolerância, quase todos os itens das duas barras se separam (11 quebras certas a mais),
+mas surgem 7 quebras
+erradas em tabelas e pares como "4 SP". O problema ficou aberto, com os dados corrigidos em
+[problemas em aberto](problemas-em-aberto.md). O outro sinal que sobrou é a cor de cada
+item, que eu não tinha mandado.
+
+Mandei a segunda rodada com os dados corrigidos e medidas novas: a cor de cada palavra da
+barra e os vãos de cada um dos 7 cortes errados. Desta vez as IAs usaram o modo de
+raciocínio (ChatGPT "pensar", Grok "Build Beta", Mistral "refletir", Qwen "pensamento",
+DeepSeek "pensamento profundo"):
+
+| Proposta (2ª rodada) | Quebras certas (RapidOCR) | Quebras a mais | O que aconteceu |
+|---|---|---|---|
+| Antes | 670 | 79 | — |
+| **Grok**, com referência de 5 vãos de fala | **680** | **79** | As duas barras inteiras, nenhuma quebra errada |
+| Grok, como escreveu (8 vãos) | 675 | 79 | Uma barra só: no outro print a fala mede só 5 vãos |
+| Qwen | 679 | 80 | Separou as barras, mas cortou uma frase; no EasyOCR, mais 5 erradas |
+| ChatGPT | 670 | 79 | Exigia 12 vãos de fala em 3 linhas; o Doki Doki tem 10 em 2 |
+| DeepSeek | 670 | 79 | O filtro de cor contradiz os números (as palavras normais variam 10 níveis; no print 2 há duas diferentes) |
+| Mistral | 670 | 79 | Num print a barra não é "isolada" (a fala está perto); no outro, fala com menos de 10 vãos |
+
+Entrou a do Grok, que mudou duas coisas na própria regra. **A linha inteira decide**: só
+separa se o MENOR espaço entre as palavras for 1,5 vez o espaço típico da fala do mesmo
+print e maior que o p90 dela. Nos 7 cortes errados havia um espaço grande no meio de
+espaços normais; na barra, os cinco são grandes. E **filtros de texto**: 6 palavras ou
+mais, todas só letras, com 3 letras ou mais, sem palavra só minúscula. A fala serve de
+referência se tiver de 0,5 a 2 vezes a altura da barra. O único ajuste meu foi o mínimo de
+espaços de fala medidos: o Grok pediu 8, e um dos prints do Doki Doki só tem 5 medíveis.
+Com 5 (ou até 3) o resultado é o mesmo.
+
+O próprio Grok pediu uma conta antes de ligar a regra: quantas linhas passam nos filtros
+de texto. Nos 90 prints, só as duas barras. Afrouxando para 4 palavras, aparecem mais 10
+linhas ("Daily Earnings How Enviable", "Wood Technique Sword Art", "YOU NEED THE SUGAR"), e
+o teste do espaço rejeita todas. O multiplicador dá o mesmo com 1,5, 1,6 e 1,7.
+
+A regra mede o espaço na tinta, dentro da caixa, com a medida corrigida (pixels a 20
+níveis ou mais do tom mais comum da caixa), e corta a caixa em pedaços no meio de cada
+espaço. Sete testes desenham a tela: a barra com fala no print, um título de 6 palavras
+com o espaço da fala, a barra sem fala para comparar, a barra num jogo de fonte larga, um
+item de 2 letras e um slogan com um espaço grande no meio. No EasyOCR nada muda, porque
+ali a barra já vem em caixas de 2 ou 3 palavras.
+
 ## 8. De onde vem o erro que sobrou
 
 Medindo de novo do mesmo jeito, com as palavras em ordem alfabética:
@@ -963,9 +1026,9 @@ Medindo de novo do mesmo jeito, com as palavras em ordem alfabética:
   não lê no inventário do Persona e alguns espaços comidos ("resteasy"). Separar as
   palavras grudadas pelo dicionário do SymSpell quebrou nomes de jogo ("Dragonbind",
   "Garrus") e ficou de fora.
-- **Quebras:** o app acha 670 das 744 quebras dos gabaritos. Das 74 que perde, 13 são
+- **Quebras:** o app acha 680 das 744 quebras dos gabaritos. Das 64 que perde, 3 são
   itens lado a lado que saem juntos:
-  - 11 vêm numa caixa só do OCR, e 10 deles são a barra do Doki Doki;
+  - 1 vem numa caixa só do OCR (as 10 da barra do Doki Doki já se separam);
   - 2 são abas de uma palavra só e encostadas que a regra do fundo ainda não pega (as
     três barras do EVE, que eram 4 dessas quebras, já se separam).
 
@@ -1001,7 +1064,7 @@ Para olhar esse erro mais de perto, o benchmark ganhou duas medidas:
   Os letreiros concentram o erro de leitura.
 
 As regras também passaram a ter **testes automáticos**, em `tests/`. São os 29 casos
-simulados em várias línguas, 10 testes de abas com telas desenhadas e as métricas do
+simulados em várias línguas, 17 testes com telas desenhadas (abas e barras de menu) e as métricas do
 benchmark. Rodam em menos de um segundo, sem
 prints e sem OCR. Cada regra nova seguiu os mesmos passos:
 1. achar um caso reproduzível;
@@ -1015,9 +1078,8 @@ prints e sem OCR. Cada regra nova seguiu os mesmos passos:
 jogos novos, está no [plano de validação](plano-de-validacao.md). Cada problema que
 continua aberto, com dados reais e o que já foi tentado, está em [problemas em
 aberto](problemas-em-aberto.md). Em resumo:
-1. **A barra do Doki Doki.** O OCR lê os itens numa caixa só, e não há um espaço que
-   valha para todas as fontes. As abas encostadas já se separam pelo fundo da aba
-   selecionada; a barra do Doki Doki não tem item destacado.
+1. **Letreiros miúdos e borrados** (Problema 5), o maior erro de leitura que sobrou. As
+   abas encostadas e a barra do Doki Doki já se separam.
 2. **Medir o RapidOCR nas outras escritas:** ele tem modelos de cerca de 8 MB para
    cirílico, árabe, coreano, devanágari e tailandês, que poderiam substituir o EasyOCR
    nessas línguas, se lerem melhor.
@@ -1101,6 +1163,13 @@ aberto](problemas-em-aberto.md). Em resumo:
     acertou sozinha. A medida do fundo veio de uma, os vetos de texto de outra, e a peça
     que três repetiam (o veto de tabela) era justamente a que travava os casos reais.
     Medir cada peça separada mostrou o que manter e o que tirar.
+25. **Confira os dados antes de pedir ajuda.** No problema dos itens numa caixa só, as
+    cinco IAs trabalharam sobre dois números meus que estavam errados: um vão que era
+    erro de medida e um limite de fala que só valia para dois jogos. Olhar o recorte da
+    imagem, em vez de confiar na medida, teria mostrado o erro antes da rodada.
+26. **Errar os dados não é perder a rodada.** Com os números corrigidos, a segunda
+    rodada do mesmo problema deu a regra certa. O retorno que mostrou onde cada proposta
+    errou valeu tanto quanto a pergunta: o Grok mudou a própria regra a partir dele.
 
 ## Como reproduzir
 

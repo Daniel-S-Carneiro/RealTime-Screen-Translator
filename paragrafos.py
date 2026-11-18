@@ -27,10 +27,14 @@ as regras acharam 90% das quebras dos gabaritos, e 89% das quebras que puseram e
 certas (com o EasyOCR, antes dos blocos e das regras de 2026-11-15: 69% e 78%).
 """
 
+# As regras de montagem dependem umas das outras (linhas, blocos, itens, quebras) e foram
+# medidas juntas: ficam num módulo só, mesmo passando de mil linhas.
+# pylint: disable=too-many-lines
+
 import math
 import re
 import statistics
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 import numpy as np
 
@@ -120,6 +124,22 @@ ABAS_MAXIMO = 5  # caixas numa fileira de abas; mais que isso é frase
 ABA_FUNDO = 25  # níveis de cinza (0-255) entre o fundo da aba selecionada e o das outras
 ABAS_FUNDO_IGUAL = 8  # as outras abas têm o mesmo fundo, com essa folga
 PONTUACAO_DE_FRASE = frozenset("',.!?…;:’")
+
+# Barra de menu que o OCR lê numa caixa só ("History Skip Auto Save Load Settings" no Doki
+# Doki). Os itens ficam à distância de uma palavra, mas maior que a da fala do mesmo print
+# (0,31 a 0,45 altura contra 0,18). Um limite fixo não serve: a fala de cinco jogos tem
+# espaço maior que o da barra. O espaço é medido na tinta, dentro da caixa.
+BARRA_PALAVRAS = 6  # itens de uma palavra só, no mínimo
+BARRA_LETRAS = 3  # letras em cada item ("OK" não passa)
+BARRA_ESPACO = 1.5  # o MENOR espaço da barra contra a mediana do espaço da fala
+BARRA_AMOSTRA = 5  # espaços de fala medidos no print, no mínimo
+BARRA_ALTURA_FALA = (0.5, 2.0)  # altura da fala que serve de referência, contra a da barra
+PONTUACAO_DE_FALA = frozenset("',.!?…;’")
+# Tinta = pixel a 20 níveis ou mais do tom mais comum da caixa, para os dois lados: pega o
+# item apagado e o item claro, que o Otsu jogava no fundo e transformava num "buraco"
+TINTA = 20
+TINTA_COLUNA = 3  # pixels de tinta para uma coluna contar
+ESPACO_CONFIAVEL = 0.08  # um "espaço" menor que isso é fresta de letra: a medida falhou
 
 
 def _limites(item) -> tuple:
@@ -283,6 +303,7 @@ class Vizinhanca:
 
     cabecalho: frozenset = frozenset()
     alinhada: frozenset = frozenset()
+    comeca_item: frozenset = frozenset()  # pedaços de uma barra de menu cortada (_separar_barras)
 
 
 def _alinhadas(item, linha: Linha, altura: float) -> bool:
@@ -336,6 +357,46 @@ class Fundo:
             return None
         return int(np.bincount(self.cinza[y0:y1, x0:x1].ravel(), minlength=256).argmax())
 
+    def espacos(self, item):
+        """Espaços entre as palavras da caixa, medidos na tinta: (larguras em alturas da
+        caixa, x do meio de cada espaço) ou None se a medida não for confiável.
+
+        Os (palavras - 1) maiores vãos sem tinta, entre a primeira e a última letra, são os
+        espaços. Linhas com tinta em 70% da largura (sublinhado) não contam.
+        """
+        espacos = len(_texto(item).split()) - 1
+        esq, dir_, topo, base = _limites(item)
+        x0 = max(0, int(round(esq + self.deslocamento)))
+        x1 = min(self.cinza.shape[1], int(round(dir_ + self.deslocamento)))
+        y0, y1 = max(0, int(round(topo))), min(self.cinza.shape[0], int(round(base)))
+        if espacos < 1 or x1 - x0 < 4 or y1 - y0 < 2:
+            return None
+        vaos = _vaos_sem_tinta(self.cinza[y0:y1, x0:x1])
+        if len(vaos) < espacos:
+            return None
+        vaos = sorted(sorted(vaos, key=lambda v: v[1] - v[0], reverse=True)[:espacos])
+        larguras = [(b - a) / (y1 - y0) for a, b in vaos]
+        if min(larguras) < ESPACO_CONFIAVEL:
+            return None
+        return larguras, [x0 + (a + b) / 2 - self.deslocamento for a, b in vaos]
+
+
+def _vaos_sem_tinta(recorte: np.ndarray) -> list:
+    """Faixas de colunas sem tinta entre letras: [(início, fim)], sem as das pontas."""
+    recorte = recorte.astype(int)
+    fundo = int(np.bincount(recorte.ravel(), minlength=256).argmax())
+    tinta = np.abs(recorte - fundo) >= TINTA
+    tinta[tinta.mean(axis=1) >= 0.7, :] = False
+    vaos, inicio = [], None
+    for x, tem in enumerate(tinta.sum(axis=0) >= TINTA_COLUNA):
+        if not tem and inicio is None:
+            inicio = x
+        elif tem and inicio is not None:
+            if inicio > 0:
+                vaos.append((inicio, x))
+            inicio = None
+    return vaos
+
 
 def _fundo(imagem, espelhada: bool):
     """Fundo a partir do print em cinza (uint8, 2 dimensões); sem print, None."""
@@ -385,6 +446,93 @@ def _abas_pelo_fundo(itens: list, fundo) -> bool:
         ):
             return True
     return False
+
+
+def _so_minuscula(palavra: str) -> bool:
+    return any(c.islower() for c in palavra) and not any(c.isupper() for c in palavra)
+
+
+def _e_fala(texto: str) -> bool:
+    """Texto de frase: alguma palavra só minúscula ou pontuação de frase."""
+    return any(_so_minuscula(p) for p in texto.split()) or any(
+        c in PONTUACAO_DE_FALA for c in texto
+    )
+
+
+def _espaco_da_fala(item, itens: list, fundo: Fundo):
+    """(mediana, p90) do espaço entre palavras da fala do print, em caixas de altura
+    comparável à desta (a fala do Doki Doki tem letra 1,4 a 1,6 vez maior que a barra)."""
+    altura = _altura_caixa(item)
+    espacos = []
+    for outro in itens:
+        if outro is item or not _e_fala(_texto(outro)):
+            continue
+        if not BARRA_ALTURA_FALA[0] <= _altura_caixa(outro) / altura <= BARRA_ALTURA_FALA[1]:
+            continue
+        medida = fundo.espacos(outro)
+        if medida:
+            espacos += medida[0]
+    if len(espacos) < BARRA_AMOSTRA:
+        return None
+    return statistics.median(espacos), statistics.quantiles(espacos, n=10, method="inclusive")[8]
+
+
+def _barra_de_menu(item, itens: list, fundo: Fundo) -> list:
+    """x dos cortes de uma barra de menu lida numa caixa só; [] se não for barra.
+
+    A linha inteira decide: 6+ palavras de 3+ letras, nenhuma só minúscula e sem
+    pontuação, e o MENOR espaço entre elas 1,5 vez maior que o espaço típico da fala do
+    mesmo print (e acima do p90 dela). Numa frase, um espaço grande fica no meio de
+    espaços normais; na barra, todos são grandes. Proposta do Grok (2ª rodada, 18/11/2026).
+    """
+    palavras = _texto(item).split()
+    if len(palavras) < BARRA_PALAVRAS or not all(
+        p.isalpha() and len(p) >= BARRA_LETRAS and not _so_minuscula(p) for p in palavras
+    ):
+        return []
+    medida = fundo.espacos(item)
+    referencia = _espaco_da_fala(item, itens, fundo) if medida else None
+    if referencia is None:
+        return []
+    menor = min(medida[0])
+    if menor >= BARRA_ESPACO * referencia[0] and menor > referencia[1]:
+        return medida[1]
+    return []
+
+
+def _separar_barras(itens: list, fundo) -> tuple:
+    """Corta cada barra de menu numa caixa por palavra. Devolve as caixas e os ids dos
+    pedaços que começam um item novo (todos menos o primeiro de cada barra)."""
+    if fundo is None:
+        return itens, frozenset()
+    saida, novos = [], set()
+    for item in itens:
+        cortes = _barra_de_menu(item, itens, fundo)
+        if not cortes:
+            saida.append(item)
+            continue
+        esq, dir_, topo, base = _limites(item)
+        xs = [esq] + list(cortes) + [dir_]
+        for k, palavra in enumerate(_texto(item).split()):
+            pontos = [[xs[k], topo], [xs[k + 1], topo], [xs[k + 1], base], [xs[k], base]]
+            pedaco = (pontos, palavra) + tuple(item[2:])
+            if k > 0:
+                novos.add(id(pedaco))
+            saida.append(pedaco)
+    return saida, frozenset(novos)
+
+
+def _cortar_nos_itens(parte: Linha, comeca: frozenset) -> list:
+    """Separa a linha antes de cada pedaço de barra de menu que começa um item."""
+    if not any(id(item) in comeca for item in parte.itens[1:]):
+        return [parte]
+    grupos = [[parte.itens[0]]]
+    for item in parte.itens[1:]:
+        if id(item) in comeca:
+            grupos.append([item])
+        else:
+            grupos[-1].append(item)
+    return [Linha(grupo, item_novo=parte.item_novo or k > 0) for k, grupo in enumerate(grupos)]
 
 
 def _linhas(itens: list, vizinhanca: Vizinhanca = Vizinhanca(), fundo=None) -> list:
@@ -439,19 +587,17 @@ def _e_hud(textos: list) -> bool:
 
 def _separar_itens(linha: Linha, vizinhanca: Vizinhanca = Vizinhanca(), fundo=None) -> list:
     """Itens lado a lado da mesma linha viram linhas: pelo texto e pela posição
-    (_separar_itens_pelo_texto) e, com o print, abas encostadas pelo fundo."""
-    partes = _separar_itens_pelo_texto(linha, vizinhanca)
-    if fundo is None:
-        return partes
+    (_separar_itens_pelo_texto) e, com o print, abas encostadas pelo fundo e pedaços de
+    barra de menu (_separar_barras)."""
     saida = []
-    for parte in partes:
-        if _abas_pelo_fundo(parte.itens, fundo):
+    for parte in _separar_itens_pelo_texto(linha, vizinhanca):
+        if fundo is not None and _abas_pelo_fundo(parte.itens, fundo):
             saida += [
                 Linha([item], item_novo=parte.item_novo or k > 0)
                 for k, item in enumerate(parte.itens)
             ]
         else:
-            saida.append(parte)
+            saida += _cortar_nos_itens(parte, vizinhanca.comeca_item)
     return saida
 
 
@@ -908,7 +1054,8 @@ def montar_paragrafos(resultados, idioma: str = "", imagem=None) -> list:
 
     idioma é o código do texto lido; em árabe, persa, urdu e uigur a leitura vai da
     direita para a esquerda. imagem é o print em tons de cinza, nas coordenadas das
-    caixas (opcional): sem ele, as abas encostadas não são separadas pelo fundo.
+    caixas (opcional): sem ele, as abas encostadas e as barras de menu lidas numa caixa só
+    não são separadas.
     """
     itens = [item for item in resultados if len(item) >= 2 and _texto(item)]
     espelhada = (idioma or "").lower() in IDIOMAS_DA_DIREITA
@@ -916,9 +1063,10 @@ def montar_paragrafos(resultados, idioma: str = "", imagem=None) -> list:
         itens = [_espelhar(item) for item in itens]
     filtrados = _filtrar_lixo(itens)
     itens = _endireitar(filtrados)
-    # Caixas giradas não batem mais com a imagem: aí a regra do fundo fica de fora
+    # Caixas giradas não batem mais com a imagem: aí as regras da imagem ficam de fora
     fundo = _fundo(imagem, espelhada) if itens is filtrados else None
-    vizinhanca = _vizinhanca(itens)
+    itens, pedacos = _separar_barras(itens, fundo)
+    vizinhanca = replace(_vizinhanca(itens), comeca_item=pedacos)
     todas = _linhas(itens, vizinhanca, fundo)
     if not todas:
         return []

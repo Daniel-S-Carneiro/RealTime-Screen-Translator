@@ -70,7 +70,7 @@ resolução.
 - **Teste diferencial:** `laboratorios/quebras/testar_regras.py --comparar main` aplica a
   regra sobre as caixas guardadas dos 90 prints (leituras do RapidOCR e do EasyOCR) e
   compara com a versão atual, print a print, em segundos.
-- **Testes automáticos:** 29 casos simulados em várias línguas e 10 testes de abas com telas desenhadas (`tests/`). Uma regra nova
+- **Testes automáticos:** 29 casos simulados em várias línguas e 17 testes com telas desenhadas, de abas e de barras de menu (`tests/`). Uma regra nova
   não pode quebrá-los.
 - **Critério de entrada:** melhora a média, não piora a maioria dos prints e não estraga
   outra língua.
@@ -94,7 +94,7 @@ resolução.
 |---|---|
 | Acerto de letras | 95,1% |
 | Acerto de palavras | 91,1% |
-| Quebras achadas / certas | 90% / 89% (670 de 744 achadas, 79 a mais) |
+| Quebras achadas / certas | 91% / 90% (680 de 744 achadas, 79 a mais) |
 | Linhas inteiras | 80% (529 de 661) |
 | Das que não chegam inteiras | 42 com sobra (quebra perdida), 25 partidas, 65 com palavra faltando |
 
@@ -295,7 +295,66 @@ leve, sem rede neural pesada.
 
 **Como medir.** As 6 quebras, sem separar cabeçalhos de tabela nem falas em maiúsculas.
 
-### Problema 4: itens que o OCR lê numa caixa só
+### Problema 4: itens que o OCR lê numa caixa só (resolvido)
+
+**Resolvido em 18/11/2026, na 2ª rodada.** Uma caixa com 6 palavras ou mais, todas só
+letras, com 3 letras ou mais e nenhuma só minúscula, vira uma linha por palavra quando o
+MENOR espaço entre as palavras, medido na tinta, é 1,5 vez a mediana do espaço da fala do
+mesmo print e maior que o p90 dela (fala de 0,5 a 2 vezes a altura da caixa, 5 espaços
+medidos ou mais). Proposta do Grok; as duas barras do Doki Doki se separam inteiras (670
+→ 680 quebras certas), sem nenhuma quebra errada nos 90 prints, nas duas leituras. O
+teste está em `laboratorios/quebras/experimentos/menus2.py`. Abaixo, o registro da 1ª
+rodada e dos dados corrigidos.
+
+
+**Rodada de 18/11/2026: sem solução, e com dois dados meus corrigidos.** Mandei o
+problema a cinco IAs (ChatGPT, Grok, DeepSeek, Mistral e Qwen). Ao medir as propostas,
+achei dois erros nos números que eu tinha passado:
+
+- **O "buraco" entre "Auto" e "Save" não existe.** Na barra, "Skip" está apagado (item
+  desabilitado) e, num dos prints, "Auto" está em branco (item ativo). A medida antiga (Otsu
+  dentro da caixa) separa a tinta em duas cores e jogava essas palavras no fundo; o vão
+  "de 1,8 a 3,7" era a largura delas. Medindo a tinta pela distância ao tom mais comum da
+  caixa (20 níveis, 3 pixels por coluna), os cinco vãos da barra ficam entre 0,31 e 0,45.
+- **A fala não fica sempre abaixo de 0,35.** Isso valia para o Doki Doki e o Mass Effect.
+  Mediana do espaço entre palavras da fala, por jogo (em alturas da caixa):
+
+  | Jogo | Mediana | p90 | | Jogo | Mediana | p90 |
+  |---|---|---|---|---|---|---|
+  | Immortal Clan | 0,16 | 0,21 | | Morrowind | 0,37 | 0,45 |
+  | Doki Doki | 0,18 | 0,20 | | Persona 4 | 0,40 | 0,56 |
+  | Mass Effect | 0,20 | 0,34 | | EVE Online | 0,41 | 0,50 |
+  | Danganronpa | 0,22 | 0,34 | | Caves of Qud | 0,52 | 0,69 |
+  | Fallout | 0,26 | 0,55 | | Undertale | 0,63 | 0,67 |
+  | Night in the Woods | 0,31 | 0,39 | | | | |
+
+  Os 0,4 da barra do Doki Doki estão abaixo da fala de cinco jogos. Só uma comparação com
+  a fala **do mesmo print** pode funcionar.
+
+Resultado das propostas (RapidOCR; antes: 670 quebras certas, 79 a mais):
+
+| Proposta | Medida antiga: certas / a mais | Medida corrigida: certas / a mais | O que aconteceu |
+|---|---|---|---|
+| ChatGPT (espaço 1,35x o das vizinhas, macroespaço, regularidade) | 672 / 88 | 670 / 125 | As vizinhas nem sempre são fala da mesma fonte: picou textos do Qud e do Immortal Clan |
+| Grok (2x a mediana da fala do print e acima do p90; sem fala, só vão de 1,5h) | 674 / 83 | 672 / 86 | Não pegou a barra com a medida corrigida; separou "Hifumi \| Yamada" e linhas de tabela do EVE |
+| DeepSeek (gatilho: vão de 1,5h e 2,5x o segundo; corta em 0,35h) | 677 / 79 | 670 / 79 | Só funcionou por causa do buraco falso, e deixou "History Skip" junto; com a medida certa, não faz nada |
+| Mistral (linha isolada; pedaços com todos os vãos de 0,35h ou mais) | 673 / 81 | 675 / 80 | Separou a barra inteira num print; no outro, "Skip" tem vão de 0,31. No EasyOCR, +8 erradas ("Unassigned \| Attribute \| Points") |
+| Qwen (desvio dos vãos, maior vão de 0,35, larguras, maiúsculas) | 674 / 101 | 671 / 103 | Cortou falas, menus de contexto e fichas |
+| Grok com a referência aberta (fala de 0,5 a 2 vezes a altura da barra) | — | 681 / 86 | Separou quase todos os itens das duas barras (11 quebras certas a mais), mas pôs 7 erradas em outros jogos ("Perimeter IX - \\| Ca", "4 \\| SP") e perdeu 2 linhas inteiras |
+
+Nenhuma entrou. A mais promissora é a do Grok, que compara com a fala do mesmo print: ela
+só falhou porque exigia a fala com altura parecida (25%), e no Doki Doki a letra da fala é
+1,4 a 1,6 vez maior que a da barra. Aberta essa tolerância, quase todos os itens se separam, mas a regra
+ainda precisa de vetos para não cortar linhas de tabela e pares como "4 SP". O sinal que sobrou, e que nenhuma IA viu porque eu não mandei, é a **cor
+de cada item**: na barra, um item apagado e outro em branco. É parecido com o fundo da aba
+selecionada do Problema 3, mas na tinta. O risco é que jogos também pintam palavras
+dentro da fala (nome de item, tecla). Medido: na barra, a tinta de "Skip" tem tom 122-129 e
+a das outras palavras 66-81; no print 2, "Auto" tem 226. Mas, nos 90 prints, 268 palavras
+(em 809 caixas de 2 ou mais palavras) ficam a 40 níveis ou mais da mediana das outras da
+mesma caixa: a cor sozinha não basta. Esses dados foram para a segunda rodada com as IAs
+(pasta `rodada2-problema4`, fora do repositório). O teste está em
+`laboratorios/quebras/experimentos/menus.py`. O texto abaixo é o registro original, com os
+dados errados.
 
 **Tipo:** OCR e montagem. **Tamanho:** 11 quebras, 10 delas de um jogo. **Print:** barra
 do Doki Doki ("History Skip Auto Save Load Settings").
@@ -352,13 +411,16 @@ algumas centenas de milissegundos por print.
 
 ### Problema 6: números pequenos e ícones perto do texto
 
-**Tipo:** leitura. **Prints:** inventário do Persona 4, overview do EVE.
+**Tipo:** leitura. **Prints:** inventário do Persona 4, overview e skills do EVE,
+reputação do Caves of Qud.
 
-**O que acontece:**
-- no inventário do Persona, as quantidades ("x 1") somem: o "×" vira "X" e o número
-  pequeno não é lido ("Soul Drop X" no lugar de "Soul Drop x 5");
-- no overview do EVE, ícones da primeira coluna viram letras soltas ("i", "n", "D", "0",
-  "△") e entram no texto.
+**O que acontece** (conferido no app em 18/11/2026):
+- no inventário do Persona, as quantidades somem ou se deformam: "Medicine x 1" sai
+  "Medicine", "Soul Drop x 5" sai "Soul Drop X", "Peach Seed x 6" sai "Peach Seed 6". No
+  mesmo print, para um personagem, "HP 136" / "SP 31" saem só "136" / "31";
+- ícones viram letras soltas e entram no texto: "i" no overview do EVE; "D", "0", "po" e
+  "on" na reputação do Caves of Qud (ícones das facções); "☑ - ×" nas skills do EVE.
+  (A versão anterior deste texto citava "n" e "△" no EVE; não aparecem na leitura atual.)
 
 **O que pesquisar:**
 - uma segunda leitura de recortes pequenos à direita de um rótulo, só para números;
@@ -417,7 +479,7 @@ linhas.
 ### Problema 10: outras línguas sem prints reais
 
 **Tipo:** validação. Todos os 90 prints são em inglês. O app lê 83 línguas: 43 pelo
-RapidOCR e 40 pelo EasyOCR. As regras de montagem só foram conferidas com 29 casos e 10 testes de abas
+RapidOCR e 40 pelo EasyOCR. As regras de montagem só foram conferidas com 29 casos e 17 testes de telas desenhadas
 simulados.
 
 **O que pesquisar:**
@@ -447,4 +509,6 @@ Para não pesquisar de novo o que já tem resposta:
 | Veto de "tabela embaixo" para abas (ChatGPT, Grok, DeepSeek) | Toda barra de abas fica em cima de uma lista: o veto travou as abas reais |
 | Sublinhado como sinal de barra de abas | Passa embaixo das abas e do cabeçalho de tabela; não diferencia |
 | Fundo medido fora da caixa (faixa acima ou abaixo da letra) | Com as caixas altas do RapidOCR, a faixa cai fora do retângulo da aba |
+| Separar itens numa caixa por um limite fixo de vão (0,35h) | A fala de cinco jogos tem vão maior que o da barra do Doki Doki (0,4) |
+| Separar itens pelo "buraco" grande da barra do Doki Doki | O buraco era um erro de medida: palavras de outra cor que o Otsu jogava no fundo |
 | Qualquer linha de título quebra | Estragava falas em maiúsculas |
