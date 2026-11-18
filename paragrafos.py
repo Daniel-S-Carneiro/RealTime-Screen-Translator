@@ -7,15 +7,18 @@ Texto na tela tem dois tipos de quebra de linha:
 Só a primeira deve chegar ao tradutor: cortar uma frase no meio estraga a tradução,
 e o texto traduzido tem outro tamanho, então a quebra visual não serviria de qualquer
 jeito. As regras usam a posição das caixas do OCR (RapidOCR ou EasyOCR), sempre em
-proporção ao tamanho das letras, para valer em qualquer resolução. Só uma olha a imagem:
-a das abas de uma palavra encostadas, que acha a aba selecionada pelo fundo.
+proporção ao tamanho das letras, para valer em qualquer resolução. Duas olham a imagem:
+a das abas de uma palavra encostadas, que acha a aba selecionada pelo fundo, e a da barra
+de menu lida numa caixa só, que mede o espaço entre as palavras na tinta.
 
 Antes das linhas, o print é dividido em blocos (corte XY): painéis lado a lado, como
 uma lista à esquerda e a descrição à direita, são lidos um de cada vez. Sem isso, o
 app lia linha a linha da tela inteira e picava a descrição entre os itens. As colunas
 de ficha, grade e tabela também viram blocos: a faixa vazia entre elas pode ser
 estreita, mas se repete em várias linhas seguidas. Dentro de uma linha, itens lado a
-lado (menu, abas, botões) viram linhas separadas.
+lado (menu, abas, botões) viram linhas separadas. Uma pilha de linhas curtas com cara de
+item (menu vertical, lista de características) quebra em cada linha, mesmo quando o
+primeiro item é o mais largo.
 
 As regras valem para qualquer língua de origem. Em árabe, persa, urdu e uigur as
 caixas são espelhadas, para a leitura ir da direita para a esquerda. Em chinês,
@@ -23,7 +26,7 @@ japonês e tailandês, que não usam espaço, os pedaços são juntados sem espa
 linha "cabe" mais uma letra, não mais uma palavra.
 
 Nos 90 prints do benchmark (11 jogos), com o RapidOCR e todas as regras até 2026-11-18,
-as regras acharam 90% das quebras dos gabaritos, e 89% das quebras que puseram estavam
+as regras acharam 92% das quebras dos gabaritos, e 91% das quebras que puseram estavam
 certas (com o EasyOCR, antes dos blocos e das regras de 2026-11-15: 69% e 78%).
 """
 
@@ -115,6 +118,22 @@ CAMPOS_SEGUIDOS = 3  # linhas da lista, no mínimo
 CAMPO_VAO = 0.8  # vão vertical máximo entre dois campos, em alturas de letra
 CAMPO_SOBREPOSICAO = 0.4  # da largura do mais curto: os dois estão na mesma coluna
 DOIS_PONTOS = ":："
+
+# Menu vertical em que o primeiro item é o mais largo ("New game" / "Continue" / "Options"
+# / "Quit"): num print só do menu, a margem do "caberia" é o fim do próprio "New game", e a
+# regra de menu pede uma palavra por linha. Num parágrafo, as linhas que não são a última
+# enchem a medida; numa pilha de itens, alguma delas acaba bem antes da mais larga.
+MENU_MINIMO = 3  # linhas na pilha (duas não se distinguem de uma frase quebrada)
+MENU_VAO = 0.8  # vão máximo entre as linhas, em alturas de letra (o mesmo da quebra)
+MENU_VAO_REGULAR = 0.5  # maior vão menos o menor
+MENU_ALINHADA = 1.0  # bordas a até isso estão alinhadas (as duas alinhadas: justificado)
+MENU_CENTRO = 0.5  # centros alinhados: menu centralizado
+MENU_LARGURA = 16.0  # linha mais larga que isso é texto corrido (como LINHA_LONGA)
+MENU_CURTA = 0.85  # alguma linha que não é a última tem menos que isso da mais larga
+MENU_PALAVRAS = 5  # por item; em escrita sem espaço, 1 palavra a cada 4 letras
+FIM_DE_ITEM = ".!?。！？؟"  # mas "Load game..." é item de menu
+FIM_NO_MEIO = re.compile(r"[.!?;][\s\"]|[。！？；](?=.)")  # frase que acaba no meio da linha
+VIRGULA_NO_MEIO = re.compile(r",\s+\S|[，、](?=.)")  # oração no meio da linha ("1,409" não)
 
 # Abas de uma palavra encostadas ("Browse | Quickbar", "General | Mining | WarpTo"): o vão
 # é o de um espaço e o texto não as distingue de uma frase lida palavra a palavra. A aba
@@ -1036,9 +1055,80 @@ def _quebras_de_lista(linhas: list, altura: float) -> set:
     return quebras
 
 
+def _pilhas(linhas: list, altura: float) -> list:
+    """Trechos (início, fim) de MENU_MINIMO+ linhas seguidas com vãos pequenos e regulares."""
+    trechos = []
+    inicio = 0
+    while inicio < len(linhas):
+        fim = inicio
+        vaos = []
+        while fim + 1 < len(linhas):
+            vao = linhas[fim + 1].topo - linhas[fim].base
+            irregular = max(vaos + [vao]) - min(vaos + [vao]) > MENU_VAO_REGULAR * altura
+            if vao > MENU_VAO * altura or irregular:
+                break
+            vaos.append(vao)
+            fim += 1
+        if fim - inicio + 1 >= MENU_MINIMO:
+            trechos.append((inicio, fim))
+        inicio = fim + 1 if fim > inicio else inicio + 1
+    return trechos
+
+
+def _palavras(texto: str) -> int:
+    if SEM_ESPACO.match(texto):
+        return (len(texto) + 3) // 4
+    return len(texto.split())
+
+
+def _parece_item(texto: str) -> bool:
+    """Sem cara de frase: não começa com minúscula, não termina nem para no meio de uma
+    frase (ponto, vírgula), até MENU_PALAVRAS palavras. Reticências são de item de menu."""
+    termina = texto[-1:] in FIM_DE_ITEM and not texto.endswith(("...", "…"))
+    return not (
+        texto[:1].islower()
+        or termina
+        or FIM_NO_MEIO.search(texto)
+        or VIRGULA_NO_MEIO.search(texto)
+        or _palavras(texto) > MENU_PALAVRAS
+    )
+
+
+def _e_menu(pilha: list, altura: float) -> bool:
+    """Uma borda alinhada e a outra não (ou centralizado), linhas curtas, itens sem cara de
+    frase e alguma linha antes da última bem mais curta que a mais larga."""
+    def amplitude(valores):
+        return max(valores) - min(valores)
+
+    esquerda = amplitude([l.esq for l in pilha]) <= MENU_ALINHADA * altura
+    direita = amplitude([l.dir for l in pilha]) <= MENU_ALINHADA * altura
+    centro = amplitude([(l.esq + l.dir) / 2 for l in pilha]) <= MENU_CENTRO * altura
+    larguras = [l.dir - l.esq for l in pilha]
+    return (
+        (esquerda != direita or (centro and not esquerda))
+        and max(larguras) < MENU_LARGURA * altura
+        and all(_parece_item(l.texto) for l in pilha)
+        and any(w < MENU_CURTA * max(larguras) for w in larguras[:-1])
+    )
+
+
+def _quebras_de_menu(linhas: list, altura: float) -> set:
+    """Índices i em que linhas[i + 1] é outro item de um menu vertical.
+
+    Proposta do Grok (Problema 7, 18/11/2026), com as travas medidas: fim de frase ou
+    vírgula no meio da linha e até 5 palavras (uma manchete em maiúsculas e uma linha de
+    10 palavras do EasyOCR viravam menu) e reticências como item.
+    """
+    quebras = set()
+    for inicio, fim in _pilhas(linhas, altura):
+        if _e_menu(linhas[inicio : fim + 1], altura):
+            quebras.update(range(inicio, fim))
+    return quebras
+
+
 def _paragrafos_do_bloco(linhas: list, margem_dir: float, altura: float, letra: float) -> list:
     """Junta as linhas de um bloco em parágrafos."""
-    de_lista = _quebras_de_lista(linhas, altura)
+    de_lista = _quebras_de_lista(linhas, altura) | _quebras_de_menu(linhas, altura)
     atuais = [[linhas[0].texto]]
     for indice, (anterior, seguinte) in enumerate(zip(linhas, linhas[1:])):
         margem = _margem_local(linhas, indice, margem_dir, altura)

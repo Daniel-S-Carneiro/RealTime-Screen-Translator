@@ -455,10 +455,10 @@ alemão, russo, japonês, chinês e árabe. Os casos acharam três problemas:
 | Chinês, japonês e tailandês, que não usam espaço | Os pedaços ganhavam espaço no meio, e o nome de quem fala e as opções de menu grudavam no texto | Junção sem espaço; basta caber uma letra, não uma palavra, para a linha de cima ter acabado; linhas curtas seguidas viram itens de menu |
 | Chinês e japonês | Um título grande de até 3 letras ("第一章") era descartado como desenho | O filtro de desenhos só vale para texto ASCII |
 
-Português, espanhol, alemão e russo já funcionavam. O que sobrou é um limite geral, que
-acontece igual em inglês: num menu em que o primeiro item é o mais largo, os dois
-primeiros itens se juntam. E os casos são simulados: falta medir com prints reais em
-outras línguas.
+Português, espanhol, alemão e russo já funcionavam. O que sobrou era um limite geral, que
+acontecia igual em inglês: num menu em que o primeiro item é o mais largo, os dois
+primeiros itens se juntavam (resolvido em 18/11, mais abaixo). E os casos são simulados:
+falta medir com prints reais em outras línguas.
 
 ### Trocar o motor: do EasyOCR para o RapidOCR
 
@@ -1113,8 +1113,60 @@ letras de 4,27% para 4,21%, linhas inteiras de 532 para 535, quebras a mais de 7
 69. O erro de palavras subiu de 8,50% para 8,59%, e isso é formato: o gabarito escreve
 "x 1" e o app escreve "×1". Por isso as 8 linhas do Persona, certas, ainda não contam
 como inteiras. São no máximo 8 recortes relidos por print, e só nos prints com coluna de
-quantidade (16 nos 90). Continuam o "D" e o
-"po" / "on" do Qud, e o "HP" / "SP" claro do primeiro personagem do Persona.
+quantidade (16 nos 90). Continuam o "D" e o "po" / "on" do Qud, e o "HP" / "SP" claro do
+primeiro personagem do Persona.
+
+### Menus em que o primeiro item é o mais largo
+
+Um caso simulado nos testes falhava desde o começo: o menu "New game" / "Continue" /
+"Options" / "Quit", com o primeiro item mais largo, saía "New game Continue". Num print
+que só tem o menu, a margem do "caberia" é o fim da linha mais larga do print, o próprio
+"New game", e nada cabe depois dela. A regra de menu exige uma palavra por linha, e "New
+game" tem duas.
+
+Medi as cinco propostas em 41 casos simulados (os 29 dos testes e 12 novos, de menus e de
+prosa estreita que não pode quebrar) e nos 90 prints, nas duas leituras. Para isso, guardei
+uma leitura do RapidOCR igual à que o app entrega hoje à montagem, já com a segunda
+leitura e as quantidades (`laboratorios/quebras/cache_app.py`); ela reproduz o benchmark
+exatamente.
+
+| Proposta | Resolve o caso? | Casos certos (de 41) | Linhas inteiras (RapidOCR / EasyOCR) | O que aconteceu |
+|---|---|---|---|---|
+| Antes | não | 32 | 535 / 318 | — |
+| **Grok** | **sim** | 36 | 538 / 319 | No EasyOCR, partiu uma manchete em maiúsculas e uma linha de 10 palavras (+8 quebras erradas) |
+| Qwen | sim | 34 | 538 / 318 | Só os dois menus simulados: o perfil "no máximo uma linha cheia" falha com itens de largura parecida |
+| ChatGPT | sim | 29 | 536 / 317 | A pontuação de evidências quebra 5 casos de prosa que passavam |
+| DeepSeek | não | 32 | 535 / 320 | Mede a linha "curta" contra a largura do print; num print só de menu, a mais larga é o print |
+| Mistral | não | 32 | 535 / 318 | O mesmo problema da largura; tirar as linhas do par da margem do painel não muda nada, porque item de menu não chega a 16 alturas |
+
+Entrou a do Grok, com quatro travas. Uma pilha de 3+ linhas seguidas, com vãos pequenos e
+regulares, vira menu quando:
+- uma borda é alinhada e a outra não (ou os centros estão alinhados);
+- a linha mais larga tem menos de 16 alturas;
+- nenhuma linha começa com minúscula ou termina com ponto;
+- alguma linha que não é a última tem menos de 0,85 da mais larga.
+
+As travas novas:
+- **fim de frase no meio da linha**, a mesma ideia do "não termina com ponto" do Grok;
+- **até 5 palavras por item** e **reticências valem** ("Load game..."), duas ideias do
+  Qwen;
+- **vírgula seguida de espaço no meio da linha**, para o furo que o próprio Grok apontou:
+  fala estreita em alemão, sem ponto e com as linhas começando por substantivo.
+
+Resultado: 38 dos 41 casos (os dois menus que eram limite conhecido viraram testes
+normais), linhas inteiras de 535 para 538 no RapidOCR e de 318 para 320 no EasyOCR, sem
+nenhuma quebra a mais nas duas leituras. O resultado é o mesmo com o limiar de 0,80 a 0,95
+e com 4 a 6 palavras. No benchmark completo só mudou um print, o do Caves of Qud: linhas
+inteiras de 535 para 538, quebras achadas de 91% para 92%, letras e palavras iguais.
+
+A regra resolveu também o problema seguinte da lista. As descrições curtas da criação de
+personagem do Caves of Qud ("Charge-based melee fighter" / "Ability to freeze enemies" /
+"Highly maneuverable" / "Most survivable starting build") saíam numa frase só; para a
+regra, são uma pilha de itens, e saem uma por linha, como no gabarito. Na leitura do
+EasyOCR, "Major Skills" e "Minor Skills" do Morrowind passaram a sair com um item por linha.
+
+Ficam como limite conhecido, nos testes: menu de só 2 itens (duas linhas não bastam para
+ver a pilha) e uma fala estreita em japonês, que uma regra antiga de menu sem espaço corta.
 
 ## 8. De onde vem o erro que sobrou
 
@@ -1129,25 +1181,25 @@ Medindo de novo do mesmo jeito, com as palavras em ordem alfabética:
   quantidades do inventário do Persona já saem inteiras. Separar as palavras grudadas
   pelo dicionário do SymSpell quebrou nomes de jogo ("Dragonbind", "Garrus") e ficou de
   fora.
-- **Quebras:** o app acha 679 das 744 quebras dos gabaritos. Das 65 que perde, 3 são
+- **Quebras:** o app acha 681 das 744 quebras dos gabaritos. Das 63 que perde, 3 são
   itens lado a lado que saem juntos:
   - 1 vem numa caixa só do OCR (as 10 da barra do Doki Doki já se separam);
   - 2 são abas de uma palavra só e encostadas que a regra do fundo ainda não pega (as
     três barras do EVE, que eram 4 dessas quebras, já se separam).
 
   O resto são linhas de cima e de baixo que ainda saem juntas, como títulos inclinados e
-  frases curtas de descrição sem pontuação, e quebras nas telas em que a ordem não bate
-  com o gabarito.
+  frases do mesmo parágrafo separadas, e quebras nas telas em que a ordem não bate com o
+  gabarito. As descrições curtas sem pontuação do Caves of Qud já saem uma por linha.
 - **Ordem ambígua:** o resumo do Caves of Qud ainda erra 65% só por ordem, mas ali as duas
   ordens fazem sentido.
 
 Para olhar esse erro mais de perto, o benchmark ganhou duas medidas:
 
 - **Linhas inteiras.** Cada linha do gabarito com duas palavras ou mais é uma unidade que
-  o tradutor deveria receber inteira. Das 661, 535 (80,9%) saem inteiras e sozinhas
-  (eram 519 antes da margem do painel, 524 antes das listas e 532 antes das
-  quantidades). Das que não saem:
-  - 37 (5,6%) saem junto de outra linha, numa quebra perdida (eram 47);
+  o tradutor deveria receber inteira. Das 661, 538 (81,4%) saem inteiras e sozinhas
+  (eram 519 antes da margem do painel, 524 antes das listas, 532 antes das quantidades e
+  535 antes do menu vertical). Das que não saem:
+  - 34 (5,1%) saem junto de outra linha, numa quebra perdida (eram 47);
   - 22 (3,3%) saem cortadas ou com outra região no meio (eram 30);
   - 67 (10,1%) têm alguma palavra que o OCR não leu ou leu diferente (as quantidades do
     Persona saem "×1", e o gabarito diz "x 1").
@@ -1162,13 +1214,13 @@ Para olhar esse erro mais de perto, o benchmark ganhou duas medidas:
   | Texto (descrições, tomos, diário, tutorial) | 28 | 99,5% | 92% |
   | Legenda (falas e avisos) | 21 | 99,4% | 81% |
   | Menu (opções, abas, diálogos com escolhas) | 9 | 98,8% | 80% |
-  | Ficha (tabelas, inventários, grades, painéis) | 24 | 90,5% | 76% (era 72%) |
+  | Ficha (tabelas, inventários, grades, painéis) | 24 | 90,5% | 77% (era 72%) |
   | Letreiro (placas, cartazes, títulos de cena) | 8 | 85,9% (era 79,4%) | 78% (era 74%) |
 
   As fichas concentram o erro de montagem: 59 das 69 quebras a mais (eram 69 das 85).
   Os letreiros concentram o erro de leitura.
 
-As regras também passaram a ter **testes automáticos**, em `tests/`. São os 29 casos
+As regras também passaram a ter **testes automáticos**, em `tests/`. São os 41 casos
 simulados em várias línguas, 17 testes com telas desenhadas (abas e barras de menu), 23
 com um leitor de mentira (segunda leitura, quantidades e ícones) e as métricas do
 benchmark. Rodam em menos de um segundo, sem prints e sem OCR. Cada regra nova seguiu os mesmos passos:
@@ -1192,8 +1244,8 @@ aberto](problemas-em-aberto.md). Em resumo:
    nessas línguas, se lerem melhor.
 3. **Repensar o pacote de GPU:** com o RapidOCR, a placa só acelera as línguas que ficaram
    no EasyOCR.
-4. **Separar os itens de um menu em que o primeiro item é o mais largo**, que ainda saem
-   juntos.
+4. **Menu de só 2 itens** com o primeiro mais largo, que ainda sai junto (o de 3 ou mais
+   já se separa).
 5. **Coletar prints reais em outras línguas**, começando por japonês e árabe.
 
 ## 9. O que aprendi
@@ -1287,6 +1339,10 @@ aberto](problemas-em-aberto.md). Em resumo:
 29. **O reconhecedor lê melhor com contexto.** O "×" sozinho saía com confiança de 0,5;
     junto com o número, de 0,74 a 0,99. Reler o campo inteiro completou as 8 linhas;
     reler cada célula separada, só 3.
+30. **Dois problemas podem ser um só.** Mandei às IAs o menu com o primeiro item mais
+    largo e, separado, as descrições curtas sem pontuação do Caves of Qud. A regra do menu
+    resolveu os dois, porque os dois são uma pilha de itens curtos. Antes de abrir um
+    problema novo, vale rodar a última regra nele.
 
 ## Como reproduzir
 
