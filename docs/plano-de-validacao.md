@@ -23,15 +23,15 @@ para jogos que o app nunca viu. Um conjunto que serve para ajustar não serve pa
 ## Ponto de partida
 
 A versão de referência é a `main` com a margem do painel estreito, as listas de rótulo
-e valor (17/11/2026) e as abas pelo fundo (18/11/2026), as últimas regras que entram antes
-da coleta. Antes delas, a
+e valor (17/11/2026), as abas pelo fundo e a barra de menu numa caixa só (18/11/2026), as
+últimas regras que entram antes da coleta. Antes delas, a
 referência era o commit `235b28e`. Nos 90 prints atuais:
 
 | Medida | Resultado |
 |---|---|
 | Acerto de letras | 95,1% |
 | Acerto de palavras | 91,1% |
-| Quebras achadas / certas | 90% / 89% (79 a mais) |
+| Quebras achadas / certas | 91% / 90% (79 a mais) |
 | Linhas inteiras | 80% (529 de 661) |
 
 | Tipo de tela | Acerto de letras | Linhas inteiras |
@@ -43,8 +43,8 @@ referência era o commit `235b28e`. Nos 90 prints atuais:
 | letreiro | 79,4% | 74% |
 
 Nenhuma regra muda até a validação ser medida. A validação também vai dizer se a margem
-do painel, a regra das listas e a das abas, medidas só nestes 90 prints, valem em jogos
-novos.
+do painel, a regra das listas, a das abas e a da barra de menu, medidas só nestes 90
+prints, valem em jogos novos.
 
 ## Fase 1: coleta
 
@@ -66,6 +66,30 @@ grava o print e o rascunho do OCR na pasta do dia.
 - **Abas:** se o jogo tiver uma barra de abas (inventário, mapa, opções), inclua um print
   dela. A regra das abas só foi medida nas abas do EVE.
 - *O que esperar:* cerca de 30 prints numa ou duas pastas de dia, sem precisar renomear.
+
+**1.3 Coleta: um tipo de jogo para cada regra nova (18/11/2026).** As quatro regras que
+entraram por último foram medidas em um ou dois jogos cada. Cada jogo novo deve testar uma
+delas (os títulos são exemplos; qualquer jogo do mesmo tipo serve):
+
+| Tipo de jogo | Exemplos | O que testa | Os 6 prints |
+|---|---|---|---|
+| Visual novel feita em Ren'Py | Katawa Shoujo, Butterfly Soup (grátis), Slay the Princess | Barra de menu numa caixa só | 3 falas com a barra de menu embaixo (de preferência com um item apagado ou destacado), menu principal, preferências, tela de salvar |
+| RPG com diálogo em painel e ficha | Disco Elysium, Pillars of Eternity, Baldur's Gate 3, Skyrim | Margem do painel estreito, listas de rótulo e valor | 2 diálogos longos no painel, 2 fichas de atributos, 1 inventário, 1 diário |
+| Jogo com inventário em abas | Stardew Valley, Terraria, Fallout 4, Path of Exile | Abas pelo fundo | 2 telas com a barra de abas (uma aba selecionada), 2 inventários, 1 fala, 1 descrição de item |
+| Jogo 3D com placas no cenário | Firewatch, Life is Strange, Persona 5, Cyberpunk 2077 | Letreiros (Problema 5) | 3 placas ou letreiros (pequenos, de longe, inclinados), 2 legendas, 1 menu |
+| Estratégia ou simulação | Civilization VI, Stellaris, Crusader Kings III, Football Manager | Tabelas, painéis, menus | 2 tabelas, 2 painéis de informação, 1 menu, 1 texto de enciclopédia |
+
+Opcional, e de grande valor: um sexto jogo em espanhol ou japonês, com o app configurado
+na língua, com 2 legendas, 2 menus e 2 fichas.
+
+**1.4 Coleta: voltar a jogos que já estão no dataset (opcional).** Não serve para a
+validação, que só vale com jogos novos. Serve para os problemas que continuam abertos, e
+os prints vão para a pasta do dia, como os outros 90, não para `validacao/`:
+- Persona 4: 2 telas de inventário com quantidades ("x 5"), para o Problema 6;
+- Night in the Woods: 2 letreiros de rua, para o Problema 5;
+- Caves of Qud: 1 ou 2 telas de criação de personagem com listas de características, para
+  o Problema 7 (descrições curtas sem pontuação; é o Problema 8 no arquivo de perguntas
+  para as IAs).
 
 ## Fase 2: organização e descarte
 
@@ -110,7 +134,7 @@ referência.
   entre 92% e 95% nas letras e entre 70% e 78% nas linhas inteiras. Muito abaixo disso,
   alguma regra decorou o dataset.
 
-**3.3 Teste: testes automáticos.** Os 45 testes continuam passando.
+**3.3 Teste: testes automáticos.** Os 52 testes continuam passando.
 
 **3.4 Organização: registro.** O resultado vai para um anexo próprio,
 `docs/resultados-validacao.md`, e para o estudo de caso, sem sobrescrever os resultados

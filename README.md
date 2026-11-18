@@ -124,7 +124,7 @@ The OCR pipeline is measured by a benchmark that runs the same code the app uses
 | :----------------------------------------- | :------------- |
 | Character error rate (CER)                 | **4.87%**      |
 | Word error rate (WER)                      | **8.87%**      |
-| Line breaks found / correct                | **90% / 89%**  |
+| Line breaks found / correct                | **91% / 90%**  |
 | Text lines that reach the translator whole | **80%**        |
 | Time per screenshot (CPU only)             | **about 1 s**  |
 
