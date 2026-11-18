@@ -21,6 +21,7 @@ import cv2
 import numpy as np
 
 from paragrafos import agrupar_em_linhas
+from releitura import conferir_caixas_pequenas
 
 # Códigos do idiomas.json (os mesmos do EasyOCR) que o modelo PP-OCRv6 small lê
 LINGUAS_CJK = frozenset({"ch_sim", "ch_tra", "ja"})
@@ -143,9 +144,14 @@ class MotorOCR:
 
     def _ler_rapidocr(self, imagem: np.ndarray) -> list:
         if imagem.ndim == 2:
+            cinza = imagem
             imagem = cv2.cvtColor(imagem, cv2.COLOR_GRAY2BGR)
-        saida = self.rapidocr(imagem, use_cls=False)
-        if saida.boxes is None or saida.txts is None:
+        else:
+            cinza = cv2.cvtColor(imagem, cv2.COLOR_BGR2GRAY)
+        # use_det e use_rec sempre explícitos: o RapidOCR guarda o modo da última chamada,
+        # e a releitura (_reler) chama só o reconhecedor
+        saida = self.rapidocr(imagem, use_det=True, use_cls=False, use_rec=True)
+        if getattr(saida, "boxes", None) is None or saida.txts is None:
             return []
 
         latina = not any(idioma in LINGUAS_CJK for idioma in self.idiomas_atuais)
@@ -153,14 +159,27 @@ class MotorOCR:
         for caixa, texto, confianca in zip(saida.boxes, saida.txts, saida.scores):
             if confianca < CONFIANCA_MINIMA:
                 continue
-            texto = str(texto)
-            if latina:
-                texto = CJK.sub(" ", texto)
-            texto = " ".join(texto.split())
+            texto = self._limpar(str(texto), latina)
             if texto:
                 cantos = [[float(x), float(y)] for x, y in caixa]
                 resultados.append((cantos, texto, float(confianca)))
-        return resultados
+        # Letreiros miúdos: o lixo que o OCR inventa não se confirma numa segunda leitura
+        return conferir_caixas_pequenas(cinza, resultados, lambda r: self._reler(r, latina))
+
+    @staticmethod
+    def _limpar(texto: str, latina: bool) -> str:
+        if latina:
+            texto = CJK.sub(" ", texto)
+        return " ".join(texto.split())
+
+    def _reler(self, recorte: np.ndarray, latina: bool) -> tuple:
+        """Só o reconhecedor, num recorte em cinza: (texto, confiança)."""
+        saida = self.rapidocr(
+            cv2.cvtColor(recorte, cv2.COLOR_GRAY2BGR), use_det=False, use_cls=False, use_rec=True
+        )
+        if not saida.txts:
+            return "", 0.0
+        return self._limpar(str(saida.txts[0]), latina), float(saida.scores[0])
 
 
 if __name__ == "__main__":

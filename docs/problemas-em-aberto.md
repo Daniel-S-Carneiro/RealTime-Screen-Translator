@@ -92,19 +92,19 @@ resolução.
 
 | Medida | Resultado |
 |---|---|
-| Acerto de letras | 95,1% |
-| Acerto de palavras | 91,1% |
-| Quebras achadas / certas | 91% / 90% (680 de 744 achadas, 79 a mais) |
-| Linhas inteiras | 80% (529 de 661) |
-| Das que não chegam inteiras | 42 com sobra (quebra perdida), 25 partidas, 65 com palavra faltando |
+| Acerto de letras | 95,7% |
+| Acerto de palavras | 91,5% |
+| Quebras achadas / certas | 91% / 90% (679 de 744 achadas, 72 a mais) |
+| Linhas inteiras | 80% (532 de 661) |
+| Das que não chegam inteiras | 39 com sobra (quebra perdida), 25 partidas, 65 com palavra faltando |
 
 | Tipo de tela | Prints | Acerto de letras | Linhas inteiras | Quebras a mais |
 |---|---|---|---|---|
 | texto | 28 | 99,5% | 92% | 3 |
 | legenda | 21 | 99,4% | 81% | 1 |
 | menu | 9 | 98,8% | 80% | 1 |
-| ficha | 24 | 90,3% | 75% | 63 |
-| letreiro | 8 | 79,4% | 74% | 11 |
+| ficha | 24 | 90,3% | 75% | 62 |
+| letreiro | 8 | 85,9% | 78% | 5 |
 
 Os 10 prints que mais perdem linhas inteiras são todos fichas e somam 57% das perdas.
 
@@ -386,7 +386,31 @@ os itens por uma lista de palavras ("Save", "Load"), porque só funcionaria em i
 **Como medir.** As 10 quebras da barra, sem cortar falas e títulos de várias palavras
 ("Mass Effect Legendary Edition").
 
-### Problema 5: texto miúdo e borrado em letreiros
+### Problema 5: texto miúdo e borrado em letreiros (resolvido em parte)
+
+**Resolvido em parte em 18/11/2026.** 65% do erro dos letreiros era texto a mais (lixo
+lido em capas de revista), e 5 dos 8 prints já estavam perfeitos. Uma segunda leitura do
+recorte (`releitura.py`) tira o lixo: as 8 caixas pequenas de menor confiança de cada
+print (menos de 32 px e menos de 0,6 da altura típica) são relidas pelo reconhecedor,
+ampliadas com Lanczos; se a releitura não confirma e a confiança é menor que 0,85, a
+caixa sai do texto. Proposta do Grok. Acerto de letras de 95,13% para 95,73%; letreiros
+de 79,4% para 85,9%; texto a mais nos letreiros de 112 para 33 caracteres; nenhum outro
+tipo de tela piorou. Custo: cerca de 35 ms por caixa relida, até 0,3 s nos prints com 8
+candidatas.
+
+| Proposta | Letras (90 prints) | Letreiros | Por que ganhou ou perdeu |
+|---|---|---|---|
+| Antes | 95,13% | 79,4% | — |
+| **Grok** (concordância entre leituras, descarte abaixo de 0,85) | **95,73%** | **85,9%** | Tira o lixo que muda na releitura; mantém o que se confirma |
+| Qwen (releitura com contraste esticado, troca com +0,10) | 95,13% | 79,4% | Só troca, nunca descarta: o lixo fica |
+| Mistral (detector + reconhecedor de novo no recorte x2) | 95,03% | 79,5% | O detector novo cria e muda caixas em fichas e legendas |
+| DeepSeek (reler as caixas de confiança 0,30-0,70) | 94,91% | 78,3% | Traz de volta caixas que o app descartava, com mais lixo |
+| ChatGPT (discordou, sai; sem limite de confiança) | 94,80% | 79,1% | Descarta texto real das tabelas do EVE |
+
+**O que continua aberto:** letras trocadas que as duas leituras erram igual ("SOCIAL
+SECUPITY", "ADIMANISTRATION") e parte do lixo da banca (52% de erro). O teste está em
+`laboratorios/quebras/experimentos/letreiros2.py`. O texto abaixo fica como registro.
+
 
 **Tipo:** leitura. **Tamanho:** os letreiros acertam 79,4% das letras, contra 95,1% na
 média. **Prints:** letreiro da banca e letreiros de rua do Night in the Woods (104,9% e
@@ -418,9 +442,12 @@ reputação do Caves of Qud.
 - no inventário do Persona, as quantidades somem ou se deformam: "Medicine x 1" sai
   "Medicine", "Soul Drop x 5" sai "Soul Drop X", "Peach Seed x 6" sai "Peach Seed 6". No
   mesmo print, para um personagem, "HP 136" / "SP 31" saem só "136" / "31";
-- ícones viram letras soltas e entram no texto: "i" no overview do EVE; "D", "0", "po" e
-  "on" na reputação do Caves of Qud (ícones das facções); "☑ - ×" nas skills do EVE.
-  (A versão anterior deste texto citava "n" e "△" no EVE; não aparecem na leitura atual.)
+- ícones viram letras soltas e entram no texto: "i", "n", "0" e "△" no overview do EVE;
+  "D", "0", "po" e "on" na reputação do Caves of Qud (ícones das facções); "+" nos botões
+  das skills do EVE. A segunda leitura dos letreiros (18/11) já tira os ícones de
+  confiança baixa ("D", "0" e "☑ - ×" no EVE); estes ficam porque o reconhecedor os lê do
+  mesmo jeito duas vezes, com confiança alta. (Uma revisão de 18/11 tinha tirado "n" e
+  "△" desta lista por engano: a conferência olhou só os primeiros 14 itens.)
 
 **O que pesquisar:**
 - uma segunda leitura de recortes pequenos à direita de um rótulo, só para números;
@@ -479,7 +506,7 @@ linhas.
 ### Problema 10: outras línguas sem prints reais
 
 **Tipo:** validação. Todos os 90 prints são em inglês. O app lê 83 línguas: 43 pelo
-RapidOCR e 40 pelo EasyOCR. As regras de montagem só foram conferidas com 29 casos e 17 testes de telas desenhadas
+RapidOCR e 40 pelo EasyOCR. As regras de montagem só foram conferidas com 29 casos e 17 testes de telas desenhadas (e a releitura, com 9 testes de leitor de mentira)
 simulados.
 
 **O que pesquisar:**
@@ -509,6 +536,9 @@ Para não pesquisar de novo o que já tem resposta:
 | Veto de "tabela embaixo" para abas (ChatGPT, Grok, DeepSeek) | Toda barra de abas fica em cima de uma lista: o veto travou as abas reais |
 | Sublinhado como sinal de barra de abas | Passa embaixo das abas e do cabeçalho de tabela; não diferencia |
 | Fundo medido fora da caixa (faixa acima ou abaixo da letra) | Com as caixas altas do RapidOCR, a faixa cai fora do retângulo da aba |
+| Letreiros: detector + reconhecedor de novo no recorte ampliado (Mistral) | O detector novo cria e muda caixas em fichas e legendas |
+| Letreiros: reler as caixas que o corte de 0,7 descarta (DeepSeek) | Traz de volta mais lixo do que texto |
+| Letreiros: descartar sempre que as leituras discordam (ChatGPT) | Descarta texto real de tabelas |
 | Separar itens numa caixa por um limite fixo de vão (0,35h) | A fala de cinco jogos tem vão maior que o da barra do Doki Doki (0,4) |
 | Separar itens pelo "buraco" grande da barra do Doki Doki | O buraco era um erro de medida: palavras de outra cor que o Otsu jogava no fundo |
 | Qualquer linha de título quebra | Estragava falas em maiúsculas |

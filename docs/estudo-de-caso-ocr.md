@@ -1014,6 +1014,51 @@ com o espaço da fala, a barra sem fala para comparar, a barra num jogo de fonte
 item de 2 letras e um slogan com um espaço grande no meio. No EasyOCR nada muda, porque
 ali a barra já vem em caixas de 2 ou 3 palavras.
 
+### Letreiros: uma segunda leitura para tirar o lixo
+
+Os 8 prints de letreiro acertavam 79,4% das letras, contra 95,1% na média. Antes de
+mandar o problema às IAs, duas delas pediram para separar o erro, e foi o que mudou a
+pergunta. Cinco dos 8 letreiros já saíam perfeitos; o erro vinha de dois: a banca de
+jornal (105% de erro) e as placas da Social Security (47%). E 65% do erro de letras dos
+letreiros era **texto a mais**: lixo lido nas capas de revista da banca ("SADRKRNIT",
+"(RNED BEEE"). Letra trocada era 29%, e texto que faltou, 6%. O problema não era ler
+melhor; era não mandar lixo para o tradutor.
+
+O sinal veio de uma segunda leitura do recorte, só pelo reconhecedor do RapidOCR. Lido de
+novo, ampliado, o lixo muda e perde confiança ("SADRKRNIT" vira "SARIENIT"); o texto real
+continua igual ("PIEROGI SANDWICH • 3.99").
+
+| Proposta | Acerto de letras (90 prints) | Letreiros | Texto a mais nos letreiros | O que aconteceu |
+|---|---|---|---|---|
+| Antes | 95,13% | 79,4% | 112 | — |
+| **Grok** | **95,73%** | **85,9%** | **33** | Tirou as 6 caixas de lixo da banca, sem piorar outro tipo de tela |
+| Qwen | 95,13% | 79,4% | 112 | Só troca leituras, nunca tira lixo: não mudou nada |
+| Mistral | 95,03% | 79,5% | 111 | Detectar de novo no recorte ampliado criou e mudou caixas em fichas e legendas |
+| DeepSeek | 94,91% | 78,3% | 139 | Trouxe de volta caixas que o app descartava, com mais lixo |
+| ChatGPT | 94,80% | 79,1% | 113 | Sem limite de confiança, descartou texto real (a lista de skills do EVE caiu de 61% para 32%) |
+
+Entrou a do Grok. As caixas candidatas têm menos de 32 px de altura e são menores que
+0,6 da altura típica do print (num print só de letra miúda, toda caixa abaixo de 32 px
+entra); são relidas as 8 de menor confiança, com 15% de margem, ampliadas com Lanczos
+até perto dos 48 px que o reconhecedor usa. Se as duas leituras concordam, fica a
+original; se a nova é parecida e mais confiante, fica a nova; se discordam, a original só
+fica com confiança de 0,85 ou mais e sem cara de lixo (caixa vazia ou chapada, duas
+escritas misturadas, mais símbolos que letras). Senão, a caixa sai do texto. De bônus, a
+regra tirou ícones de baixa confiança lidos como letra nas tabelas do EVE ("D", "0",
+"☑ - ×"). O resultado é o mesmo com 28 a 32 px, 0,5 a 0,75 da típica e 0,85 a 0,90 de
+confiança; só piora se aceitar caixas de 40 px, porque aí entram linhas de ficha.
+
+Nenhuma IA precisou de super-resolução neural: o Grok sugeriu o FSRCNN só se o Lanczos não
+bastasse, e bastou. A releitura custa cerca de 35 ms por caixa, até 0,3 s nos prints com
+8 candidatas (a banca, as tabelas do EVE) e nada nos outros. Ela fica num módulo próprio
+(`releitura.py`), com 9 testes que usam um leitor de mentira. Um detalhe de implementação
+quase passou: o RapidOCR guarda o modo da última chamada, então a leitura normal passou a
+pedir o detector explicitamente; sem isso, depois da primeira releitura, o print seguinte
+seria lido sem detector.
+
+O que sobra nos letreiros são as letras trocadas que as duas leituras erram igual
+("SOCIAL SECUPITY", "ADIMANISTRATION"), e parte do lixo da banca.
+
 ## 8. De onde vem o erro que sobrou
 
 Medindo de novo do mesmo jeito, com as palavras em ordem alfabética:
@@ -1021,9 +1066,10 @@ Medindo de novo do mesmo jeito, com as palavras em ordem alfabética:
   agora responde por 0,9. Sem contar a ordem, o erro de letras continua em 3,9%.
 - **Poucas telas concentram o erro.** Os 10 piores prints somam 84% de todo o erro de
   letras. Sem eles, o acerto médio seria de 99,1%.
-- **O que sobra de leitura** é o lixo dos letreiros miúdos e borrados (só o letreiro da
-  banca do Night in the Woods pesa mais de 1 ponto na média), as quantidades que o OCR
-  não lê no inventário do Persona e alguns espaços comidos ("resteasy"). Separar as
+- **O que sobra de leitura** são as letras trocadas dos letreiros miúdos (o lixo da
+  banca do Night in the Woods caiu de 105% para 52% de erro com a segunda leitura), as
+  quantidades que o OCR não lê no inventário do Persona, ícones lidos como letra e alguns
+  espaços comidos ("resteasy"). Separar as
   palavras grudadas pelo dicionário do SymSpell quebrou nomes de jogo ("Dragonbind",
   "Garrus") e ficou de fora.
 - **Quebras:** o app acha 680 das 744 quebras dos gabaritos. Das 64 que perde, 3 são
@@ -1078,8 +1124,9 @@ prints e sem OCR. Cada regra nova seguiu os mesmos passos:
 jogos novos, está no [plano de validação](plano-de-validacao.md). Cada problema que
 continua aberto, com dados reais e o que já foi tentado, está em [problemas em
 aberto](problemas-em-aberto.md). Em resumo:
-1. **Letreiros miúdos e borrados** (Problema 5), o maior erro de leitura que sobrou. As
-   abas encostadas e a barra do Doki Doki já se separam.
+1. **Números pequenos e ícones perto do texto** (Problema 6): as quantidades do
+   inventário do Persona e os ícones lidos como letra. O lixo dos letreiros, as abas
+   encostadas e a barra do Doki Doki já foram resolvidos.
 2. **Medir o RapidOCR nas outras escritas:** ele tem modelos de cerca de 8 MB para
    cirílico, árabe, coreano, devanágari e tailandês, que poderiam substituir o EasyOCR
    nessas línguas, se lerem melhor.
@@ -1170,6 +1217,10 @@ aberto](problemas-em-aberto.md). Em resumo:
 26. **Errar os dados não é perder a rodada.** Com os números corrigidos, a segunda
     rodada do mesmo problema deu a regra certa. O retorno que mostrou onde cada proposta
     errou valeu tanto quanto a pergunta: o Grok mudou a própria regra a partir dele.
+27. **Separe o erro antes de corrigir.** Nos letreiros, a pergunta era "como ler melhor
+    letra miúda". Separado em troca, falta e sobra, o erro mostrou que 65% era texto a
+    mais, e que 5 dos 8 prints já estavam perfeitos. A solução virou "não mandar lixo",
+    que é mais simples, mais barata e não precisou de nenhum modelo novo.
 
 ## Como reproduzir
 
