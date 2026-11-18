@@ -368,11 +368,13 @@ def pipeline_processamento(
     idioma_alvo: str,
     usar_ia: bool = False,
     pontuacao_agressiva: bool = False,
+    imagem=None,
 ) -> str:
     """Pipeline unificado consumido pelo main.py: um parágrafo corrigido por linha.
 
     idioma_alvo é a língua do texto lido na tela (a de origem da tradução): ela decide
-    a direção da leitura e se as correções do inglês rodam.
+    a direção da leitura e se as correções do inglês rodam. imagem é o print em tons de
+    cinza nas coordenadas das caixas (opcional), para separar abas pelo fundo.
     """
     chave = (usar_ia, pontuacao_agressiva)
     if chave not in _PROCESSADORES:
@@ -380,6 +382,6 @@ def pipeline_processamento(
     processador = _PROCESSADORES[chave]
     corrigidos = (
         processador.corrigir_texto(paragrafo, idioma_alvo)
-        for paragrafo in montar_paragrafos(resultados_ocr, idioma_alvo)
+        for paragrafo in montar_paragrafos(resultados_ocr, idioma_alvo, imagem=imagem)
     )
     return "\n".join(paragrafo.strip() for paragrafo in corrigidos if paragrafo.strip())
