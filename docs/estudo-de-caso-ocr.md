@@ -899,6 +899,58 @@ parágrafos. Isso é comum em alemão, que escreve todo substantivo com maiúscu
 registrado como caso simulado de limite. Cinco casos novos protegem a regra: duas listas em
 português, a prosa inglesa com anos que continua em minúscula, e duas frases alemãs.
 
+### Abas de uma palavra pela cor do fundo
+
+As abas do EVE "Browse | Quickbar", "Details | Groups" e "General | Mining | WarpTo" vêm
+em caixas separadas, mas a 0,17 a 0,29 altura uma da outra: o espaço de uma palavra. A
+regra de itens exige 0,8 altura, porque o EasyOCR lê algumas falas com uma caixa por
+palavra, e uma fala em maiúsculas ("IT'S BEEN EIGHT DAYS") viraria uma palavra por linha.
+As caixas não distinguem as duas coisas; a imagem distingue. A aba selecionada tem fundo
+mais claro, e uma frase tem o mesmo fundo em todas as palavras.
+
+Desta vez mandei o problema a cinco IAs: ChatGPT, Grok e, no lugar do Copilot e do Gemini,
+DeepSeek, Mistral e Qwen. Medi o tom de cinza nas três barras reais e depois cada proposta
+nos 90 prints, com os próprios prints do dataset:
+
+| Proposta | Quebras certas (RapidOCR) | (EasyOCR) | Quebras erradas novas | Barras separadas |
+|---|---|---|---|---|
+| Antes | 666 | 626 | — | 0 de 3 |
+| ChatGPT (fundo fora da caixa, sublinhado, veto de tabela) | 666 | 626 | 0 | 0 |
+| Grok (fundo acima da letra, vetos de texto, veto de cabeçalho, CamelCase) | 666 | 628 | 1 | 2 só no EasyOCR |
+| DeepSeek (sublinhado de 0,8 a 1,6 altura abaixo, veto de tabela) | 666 | 620 | 29 no EasyOCR | 0 |
+| Mistral (tom mais comum dentro da caixa) | 668 | 626 | 0 | 2 só no RapidOCR |
+| Qwen | — | — | — | leu o problema ao contrário |
+| **Mistral + vetos do Grok, sem veto de tabela** | **670** | **630** | **0** | **3 nas duas leituras** |
+
+Nenhuma resolveu sozinha, e os motivos ensinam mais que os números:
+- **O veto de "tabela embaixo"** (ChatGPT, Grok e DeepSeek) travou as abas reais. Toda
+  barra de abas fica em cima de uma lista, e as colunas da lista parecem as de uma tabela.
+- **Medir o fundo fora da caixa** (ChatGPT, Grok) falhou com o RapidOCR, cujas caixas já
+  são altas: a faixa acima da letra cai fora do retângulo da aba.
+- **O sublinhado não serve,** como o Grok avisou: ele passa embaixo das abas e do
+  cabeçalho da tabela.
+- **Exigir a mesma altura nas caixas** (Mistral, 0,2 altura) falhou com o "g" de "Mining",
+  que deixa a caixa mais alta.
+
+A regra que entrou junta a peça boa de cada uma. São de 2 a 5 caixas de uma palavra
+encostadas (vão menor que 0,8 altura), nenhuma só minúscula e nenhuma com pontuação de
+frase (os vetos do Grok). Uma delas tem o tom mais comum *dentro* da caixa (a medida do
+Mistral) 25 níveis ou mais diferente do das outras, e as outras têm o mesmo tom. Nas barras
+reais, a diferença foi de 27 a 35 níveis; com o mínimo em 15 ou 25 o resultado é o mesmo, e
+com 40 nada é separado. Não há veto de tabela: o cabeçalho de uma tabela tem o mesmo fundo
+em todas as colunas.
+
+Foi a primeira regra da montagem que olha a imagem. O print em cinza, que o OCR já usa,
+passa a descer pelo pipeline até a separação dos itens, como parâmetro opcional: sem ele,
+tudo funciona como antes. O modo binarizado perde os tons e desliga a regra, e em árabe
+a imagem é espelhada junto com as caixas. Dez testes desenham a tela: abas com uma
+selecionada, frase com o fundo igual, palavra minúscula ou fala com apóstrofo com uma
+palavra destacada, japonês sem maiúscula e árabe espelhado.
+
+O cuidado é a evidência: são três barras de um jogo só. Zero erros nos 90 prints, nas duas
+leituras, é um bom sinal, mas a diferença de 25 níveis foi medida numa paleta só. A coleta
+de validação vai trazer abas de outros jogos.
+
 ## 8. De onde vem o erro que sobrou
 
 Medindo de novo do mesmo jeito, com as palavras em ordem alfabética:
@@ -911,11 +963,11 @@ Medindo de novo do mesmo jeito, com as palavras em ordem alfabética:
   não lê no inventário do Persona e alguns espaços comidos ("resteasy"). Separar as
   palavras grudadas pelo dicionário do SymSpell quebrou nomes de jogo ("Dragonbind",
   "Garrus") e ficou de fora.
-- **Quebras:** o app acha 666 das 744 quebras dos gabaritos. Das 78 que perde, 17 são
+- **Quebras:** o app acha 670 das 744 quebras dos gabaritos. Das 74 que perde, 13 são
   itens lado a lado que saem juntos:
   - 11 vêm numa caixa só do OCR, e 10 deles são a barra do Doki Doki;
-  - 6 são abas de uma palavra só e encostadas, sem uma caixa de duas palavras que mostre
-    como o OCR agrupa ("Browse | Quickbar", "General | Mining | WarpTo").
+  - 2 são abas de uma palavra só e encostadas que a regra do fundo ainda não pega (as
+    três barras do EVE, que eram 4 dessas quebras, já se separam).
 
   O resto são linhas de cima e de baixo que ainda saem juntas, como títulos inclinados e
   frases curtas de descrição sem pontuação, e quebras nas telas em que a ordem não bate
@@ -949,7 +1001,8 @@ Para olhar esse erro mais de perto, o benchmark ganhou duas medidas:
   Os letreiros concentram o erro de leitura.
 
 As regras também passaram a ter **testes automáticos**, em `tests/`. São os 29 casos
-simulados em várias línguas e as métricas do benchmark. Rodam em menos de um segundo, sem
+simulados em várias línguas, 10 testes de abas com telas desenhadas e as métricas do
+benchmark. Rodam em menos de um segundo, sem
 prints e sem OCR. Cada regra nova seguiu os mesmos passos:
 1. achar um caso reproduzível;
 2. medir o sinal em todos os prints antes de escrever a regra;
@@ -962,10 +1015,9 @@ prints e sem OCR. Cada regra nova seguiu os mesmos passos:
 jogos novos, está no [plano de validação](plano-de-validacao.md). Cada problema que
 continua aberto, com dados reais e o que já foi tentado, está em [problemas em
 aberto](problemas-em-aberto.md). Em resumo:
-1. **Abas de uma palavra encostadas e a barra do Doki Doki.** Sem uma caixa de duas
-   palavras na linha, nem um espaço que valha para todas as fontes, não há sinal de
-   posição que as separe. Talvez dê com o desenho da tela, como o fundo da aba
-   selecionada ou o sublinhado da barra.
+1. **A barra do Doki Doki.** O OCR lê os itens numa caixa só, e não há um espaço que
+   valha para todas as fontes. As abas encostadas já se separam pelo fundo da aba
+   selecionada; a barra do Doki Doki não tem item destacado.
 2. **Medir o RapidOCR nas outras escritas:** ele tem modelos de cerca de 8 MB para
    cirílico, árabe, coreano, devanágari e tailandês, que poderiam substituir o EasyOCR
    nessas línguas, se lerem melhor.
@@ -1045,6 +1097,10 @@ aberto](problemas-em-aberto.md). Em resumo:
     sinal: várias linhas seguidas terminando em número. Ganhou a única que lembrou de um
     freio, não quebrar antes de uma linha que começa com minúscula. Sem ele, a mesma ideia
     cortava frases ao meio.
+24. **Junte as peças, não só as propostas.** No problema das abas, nenhuma das cinco IAs
+    acertou sozinha. A medida do fundo veio de uma, os vetos de texto de outra, e a peça
+    que três repetiam (o veto de tabela) era justamente a que travava os casos reais.
+    Medir cada peça separada mostrou o que manter e o que tirar.
 
 ## Como reproduzir
 

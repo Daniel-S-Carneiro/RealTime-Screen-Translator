@@ -6,8 +6,9 @@ Texto na tela tem dois tipos de quebra de linha:
 
 Só a primeira deve chegar ao tradutor: cortar uma frase no meio estraga a tradução,
 e o texto traduzido tem outro tamanho, então a quebra visual não serviria de qualquer
-jeito. As regras usam só a posição das caixas do OCR (RapidOCR ou EasyOCR), sempre em
-proporção ao tamanho das letras, para valer em qualquer resolução.
+jeito. As regras usam a posição das caixas do OCR (RapidOCR ou EasyOCR), sempre em
+proporção ao tamanho das letras, para valer em qualquer resolução. Só uma olha a imagem:
+a das abas de uma palavra encostadas, que acha a aba selecionada pelo fundo.
 
 Antes das linhas, o print é dividido em blocos (corte XY): painéis lado a lado, como
 uma lista à esquerda e a descrição à direita, são lidos um de cada vez. Sem isso, o
@@ -21,16 +22,17 @@ caixas são espelhadas, para a leitura ir da direita para a esquerda. Em chinês
 japonês e tailandês, que não usam espaço, os pedaços são juntados sem espaço e uma
 linha "cabe" mais uma letra, não mais uma palavra.
 
-Nos 90 prints do benchmark (11 jogos), com o RapidOCR, as colunas estreitas, os itens
-lado a lado e as regras de aviso e título (2026-11-17), as regras acharam 89% das quebras
-dos gabaritos, e 89% das quebras que puseram estavam certas (com o EasyOCR, antes dos
-blocos e das regras de 2026-11-15: 69% e 78%).
+Nos 90 prints do benchmark (11 jogos), com o RapidOCR e todas as regras até 2026-11-18,
+as regras acharam 90% das quebras dos gabaritos, e 89% das quebras que puseram estavam
+certas (com o EasyOCR, antes dos blocos e das regras de 2026-11-15: 69% e 78%).
 """
 
 import math
 import re
 import statistics
 from dataclasses import dataclass, field
+
+import numpy as np
 
 # Proporções da altura típica das letras (ou da largura típica de uma letra)
 VAO_PARAGRAFO = 0.8  # espaço entre linhas maior que o normal
@@ -109,6 +111,15 @@ CAMPOS_SEGUIDOS = 3  # linhas da lista, no mínimo
 CAMPO_VAO = 0.8  # vão vertical máximo entre dois campos, em alturas de letra
 CAMPO_SOBREPOSICAO = 0.4  # da largura do mais curto: os dois estão na mesma coluna
 DOIS_PONTOS = ":："
+
+# Abas de uma palavra encostadas ("Browse | Quickbar", "General | Mining | WarpTo"): o vão
+# é o de um espaço e o texto não as distingue de uma frase lida palavra a palavra. A aba
+# selecionada tem fundo próprio, medido pelo tom mais comum dentro da caixa (a tinta das
+# letras é minoria). No EVE: 53 contra 24, 58 contra 22.
+ABAS_MAXIMO = 5  # caixas numa fileira de abas; mais que isso é frase
+ABA_FUNDO = 25  # níveis de cinza (0-255) entre o fundo da aba selecionada e o das outras
+ABAS_FUNDO_IGUAL = 8  # as outras abas têm o mesmo fundo, com essa folga
+PONTUACAO_DE_FRASE = frozenset("',.!?…;:’")
 
 
 def _limites(item) -> tuple:
@@ -303,9 +314,82 @@ def _vizinhanca(itens: list) -> Vizinhanca:
     return Vizinhanca(frozenset(cabecalho), frozenset(alinhada))
 
 
-def _linhas(itens: list, vizinhanca: Vizinhanca = Vizinhanca()) -> list:
+@dataclass(frozen=True)
+class Fundo:
+    """O print em tons de cinza, nas coordenadas das caixas.
+
+    Em escrita da direita para a esquerda as caixas são espelhadas (x vira -x): aí a
+    imagem também é espelhada e deslocada, para cada caixa cair no mesmo lugar.
+    """
+
+    cinza: np.ndarray
+    deslocamento: float = 0.0
+
+    def tom_dominante(self, item):
+        """Tom de cinza mais comum dentro da caixa: o fundo, porque a tinta é minoria."""
+        esq, dir_, topo, base = _limites(item)
+        altura, largura = self.cinza.shape
+        x0 = max(0, int(round(esq + self.deslocamento)))
+        x1 = min(largura, int(round(dir_ + self.deslocamento)))
+        y0, y1 = max(0, int(round(topo))), min(altura, int(round(base)))
+        if x1 <= x0 or y1 <= y0:
+            return None
+        return int(np.bincount(self.cinza[y0:y1, x0:x1].ravel(), minlength=256).argmax())
+
+
+def _fundo(imagem, espelhada: bool):
+    """Fundo a partir do print em cinza (uint8, 2 dimensões); sem print, None."""
+    if imagem is None or getattr(imagem, "ndim", 0) != 2:
+        return None
+    cinza = np.asarray(imagem, dtype=np.uint8)
+    if espelhada:
+        return Fundo(cinza[:, ::-1], cinza.shape[1] - 1)
+    return Fundo(cinza)
+
+
+def _palavra_de_aba(texto: str) -> bool:
+    """Uma palavra com 2+ letras, sem pontuação de frase e que não é só minúscula ("been",
+    "der"). Escritas sem maiúscula (árabe, japonês) passam: aí decide o fundo."""
+    return (
+        " " not in texto
+        and sum(c.isalpha() for c in texto) >= 2
+        and not any(c in PONTUACAO_DE_FRASE for c in texto)
+        and not (any(c.islower() for c in texto) and not any(c.isupper() for c in texto))
+    )
+
+
+def _abas_pelo_fundo(itens: list, fundo) -> bool:
+    """Fileira de abas de uma palavra encostadas: só uma caixa tem fundo próprio.
+
+    Uma frase lida palavra a palavra tem o mesmo fundo em todas as caixas. Não há veto de
+    tabela: a barra de abas fica sempre em cima de uma lista, e o cabeçalho de uma tabela
+    tem o mesmo fundo nas colunas.
+    """
+    if fundo is None or not 2 <= len(itens) <= ABAS_MAXIMO:
+        return False
+    if not all(_palavra_de_aba(_texto(item).strip()) for item in itens):
+        return False
+    altura = statistics.median(_altura_caixa(item) for item in itens)
+    limites = [_limites(item) for item in itens]
+    vaos = [depois[0] - antes[1] for antes, depois in zip(limites, limites[1:])]
+    if not all(0 < vao < VAO_ITENS * altura for vao in vaos):
+        return False
+    tons = [fundo.tom_dominante(item) for item in itens]
+    if None in tons:
+        return False
+    for k, tom in enumerate(tons):
+        outros = tons[:k] + tons[k + 1:]
+        if (
+            all(abs(tom - outro) >= ABA_FUNDO for outro in outros)
+            and max(outros) - min(outros) <= ABAS_FUNDO_IGUAL
+        ):
+            return True
+    return False
+
+
+def _linhas(itens: list, vizinhanca: Vizinhanca = Vizinhanca(), fundo=None) -> list:
     linhas = _separar_colunas([Linha(grupo) for grupo in agrupar_em_linhas(itens)])
-    return [parte for linha in linhas for parte in _separar_itens(linha, vizinhanca)]
+    return [parte for linha in linhas for parte in _separar_itens(linha, vizinhanca, fundo)]
 
 
 def _e_item(texto: str) -> bool:
@@ -353,7 +437,25 @@ def _e_hud(textos: list) -> bool:
     )
 
 
-def _separar_itens(linha: Linha, vizinhanca: Vizinhanca = Vizinhanca()) -> list:
+def _separar_itens(linha: Linha, vizinhanca: Vizinhanca = Vizinhanca(), fundo=None) -> list:
+    """Itens lado a lado da mesma linha viram linhas: pelo texto e pela posição
+    (_separar_itens_pelo_texto) e, com o print, abas encostadas pelo fundo."""
+    partes = _separar_itens_pelo_texto(linha, vizinhanca)
+    if fundo is None:
+        return partes
+    saida = []
+    for parte in partes:
+        if _abas_pelo_fundo(parte.itens, fundo):
+            saida += [
+                Linha([item], item_novo=parte.item_novo or k > 0)
+                for k, item in enumerate(parte.itens)
+            ]
+        else:
+            saida.append(parte)
+    return saida
+
+
+def _separar_itens_pelo_texto(linha: Linha, vizinhanca: Vizinhanca = Vizinhanca()) -> list:
     """Separa itens lado a lado da mesma linha: cada item vira uma linha.
 
     - HUD: rótulo e valor alternados viram um par por linha ("HP 140/140" | "DT 0.0").
@@ -801,18 +903,23 @@ def _paragrafos_do_bloco(linhas: list, margem_dir: float, altura: float, letra: 
     return [_juntar(partes) for partes in atuais]
 
 
-def montar_paragrafos(resultados, idioma: str = "") -> list:
-    """Resultados do EasyOCR -> lista de parágrafos (cada um já numa linha só).
+def montar_paragrafos(resultados, idioma: str = "", imagem=None) -> list:
+    """Resultados do OCR -> lista de parágrafos (cada um já numa linha só).
 
-    idioma é o código do texto lido (o do EasyOCR); em árabe, persa, urdu e uigur
-    a leitura vai da direita para a esquerda.
+    idioma é o código do texto lido; em árabe, persa, urdu e uigur a leitura vai da
+    direita para a esquerda. imagem é o print em tons de cinza, nas coordenadas das
+    caixas (opcional): sem ele, as abas encostadas não são separadas pelo fundo.
     """
     itens = [item for item in resultados if len(item) >= 2 and _texto(item)]
-    if (idioma or "").lower() in IDIOMAS_DA_DIREITA:
+    espelhada = (idioma or "").lower() in IDIOMAS_DA_DIREITA
+    if espelhada:
         itens = [_espelhar(item) for item in itens]
-    itens = _endireitar(_filtrar_lixo(itens))
+    filtrados = _filtrar_lixo(itens)
+    itens = _endireitar(filtrados)
+    # Caixas giradas não batem mais com a imagem: aí a regra do fundo fica de fora
+    fundo = _fundo(imagem, espelhada) if itens is filtrados else None
     vizinhanca = _vizinhanca(itens)
-    todas = _linhas(itens, vizinhanca)
+    todas = _linhas(itens, vizinhanca, fundo)
     if not todas:
         return []
 
@@ -823,5 +930,7 @@ def montar_paragrafos(resultados, idioma: str = "") -> list:
 
     paragrafos = []
     for bloco in _blocos(itens, altura, _pares_de_valor(itens, altura)):
-        paragrafos += _paragrafos_do_bloco(_linhas(bloco, vizinhanca), margem_dir, altura, letra)
+        paragrafos += _paragrafos_do_bloco(
+            _linhas(bloco, vizinhanca, fundo), margem_dir, altura, letra
+        )
     return paragrafos

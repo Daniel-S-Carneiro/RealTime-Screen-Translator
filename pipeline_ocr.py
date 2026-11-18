@@ -23,6 +23,17 @@ class Reconhecimento:
     tempos: dict = field(default_factory=dict)
 
 
+def _cinza_nas_caixas(imagem: np.ndarray, imagem_ocr: np.ndarray, modo_imagem: str):
+    """O print em tons de cinza, nas coordenadas das caixas do OCR, para a montagem do
+    texto achar a aba selecionada pelo fundo. O modo binarizado amplia o print e perde
+    os tons: aí não há imagem e essa regra fica de fora."""
+    if modo_imagem == "cinza":
+        return imagem_ocr
+    if modo_imagem == "binarizado":
+        return None
+    return ProcessadorImagem.preparar(imagem, "cinza")
+
+
 def reconhecer_texto(  # pylint: disable=too-many-arguments
     imagem: np.ndarray,
     motor_ocr: MotorOCR,
@@ -45,6 +56,7 @@ def reconhecer_texto(  # pylint: disable=too-many-arguments
         idioma_alvo=idioma,
         usar_ia=usar_ia,
         pontuacao_agressiva=pontuacao_agressiva,
+        imagem=_cinza_nas_caixas(imagem, imagem_ocr, modo_imagem),
     )
     fim_texto = time.perf_counter()
 

@@ -70,7 +70,7 @@ resolução.
 - **Teste diferencial:** `laboratorios/quebras/testar_regras.py --comparar main` aplica a
   regra sobre as caixas guardadas dos 90 prints (leituras do RapidOCR e do EasyOCR) e
   compara com a versão atual, print a print, em segundos.
-- **Testes automáticos:** 29 casos simulados em várias línguas (`tests/`). Uma regra nova
+- **Testes automáticos:** 29 casos simulados em várias línguas e 10 testes de abas com telas desenhadas (`tests/`). Uma regra nova
   não pode quebrá-los.
 - **Critério de entrada:** melhora a média, não piora a maioria dos prints e não estraga
   outra língua.
@@ -94,7 +94,7 @@ resolução.
 |---|---|
 | Acerto de letras | 95,1% |
 | Acerto de palavras | 91,1% |
-| Quebras achadas / certas | 90% / 89% (666 de 744 achadas, 79 a mais) |
+| Quebras achadas / certas | 90% / 89% (670 de 744 achadas, 79 a mais) |
 | Linhas inteiras | 80% (529 de 661) |
 | Das que não chegam inteiras | 42 com sobra (quebra perdida), 25 partidas, 65 com palavra faltando |
 
@@ -247,7 +247,30 @@ linha termina com número ("...founded in 1990" / "and later..."). Ainda não fo
 
 **Como medir.** Linhas "com sobra" nas fichas, sem quebras novas nos tipos texto e legenda.
 
-### Problema 3: abas de uma palavra encostadas
+### Problema 3: abas de uma palavra encostadas (resolvido)
+
+**Resolvido em 18/11/2026.** A aba selecionada tem fundo próprio. Numa fileira de 2 a 5
+caixas de uma palavra encostadas (vão menor que 0,8 altura), sem palavra só minúscula nem
+pontuação de frase, se uma caixa tem o tom de cinza mais comum *dentro* dela 25 níveis ou
+mais diferente das outras, e as outras têm o mesmo tom (a até 8), cada caixa vira uma
+linha. É a primeira regra que olha a imagem: o print em cinza desce pelo pipeline como
+parâmetro opcional. A ideia juntou duas respostas: a medida do fundo do Mistral e os vetos
+de texto do Grok. Foram medidas as propostas de cinco IAs:
+
+| Proposta | Certas (RapidOCR) | Certas (EasyOCR) | Erradas novas | Por que ganhou ou perdeu |
+|---|---|---|---|---|
+| Antes | 666 | 626 | — | — |
+| **Mistral + vetos do Grok** | **670** | **630** | **0** | As 3 barras do EVE nas duas leituras; igual com 15 e 25 níveis |
+| Mistral (moda dentro da caixa) | 668 | 626 | 0 | Exige a mesma altura (0,2h): o "g" de "Mining" derruba; vão até 0,6h exclui o EasyOCR |
+| Grok (faixa acima da letra, CamelCase) | 666 | 628 | 1 | Faixa cai fora da aba com as caixas altas do RapidOCR; veto de cabeçalho trava as abas; CamelCase separou "[Esc] \| Back" |
+| ChatGPT (faixas fora da caixa, sublinhado, veto de tabela) | 666 | 626 | 0 | Veto de tabela trava as abas; sem o sublinhado, separou "HP \| 129" |
+| DeepSeek (sublinhado de 0,8-1,6h, veto de tabela) | 666 | 620 | 29 | Sublinhado longe demais; sem vetos de texto, cortou frases no EasyOCR |
+| Qwen | — | — | — | Leu ao contrário: a regra mantém as abas juntas |
+
+Limite: a evidência são 3 barras de um jogo só; a diferença de 25 níveis precisa ser
+conferida em abas de outros jogos. Duas quebras de abas de uma palavra continuam
+perdidas. O teste está em `laboratorios/quebras/experimentos/abas.py`. O texto abaixo
+fica como registro do problema.
 
 **Tipo:** montagem (itens lado a lado). **Tamanho:** 6 quebras. **Prints:** mercado e
 overview do EVE.
@@ -394,7 +417,7 @@ linhas.
 ### Problema 10: outras línguas sem prints reais
 
 **Tipo:** validação. Todos os 90 prints são em inglês. O app lê 83 línguas: 43 pelo
-RapidOCR e 40 pelo EasyOCR. As regras de montagem só foram conferidas com 29 casos
+RapidOCR e 40 pelo EasyOCR. As regras de montagem só foram conferidas com 29 casos e 10 testes de abas
 simulados.
 
 **O que pesquisar:**
@@ -421,4 +444,7 @@ Para não pesquisar de novo o que já tem resposta:
 | Margem por "apoio" de 2 linhas longas sem folga até o print (Grok) | Juntou linhas de tabela que terminam no mesmo x |
 | Quebrar pares de linhas que terminam em número ou têm ":" (Gemini) | Sem exigir repetição, quebrou legendas e diálogos |
 | Lista pela geometria só (mesmo x, larguras parecidas, Copilot) | Todo parágrafo alinhado à esquerda vira lista: 119 quebras erradas |
+| Veto de "tabela embaixo" para abas (ChatGPT, Grok, DeepSeek) | Toda barra de abas fica em cima de uma lista: o veto travou as abas reais |
+| Sublinhado como sinal de barra de abas | Passa embaixo das abas e do cabeçalho de tabela; não diferencia |
+| Fundo medido fora da caixa (faixa acima ou abaixo da letra) | Com as caixas altas do RapidOCR, a faixa cai fora do retângulo da aba |
 | Qualquer linha de título quebra | Estragava falas em maiúsculas |

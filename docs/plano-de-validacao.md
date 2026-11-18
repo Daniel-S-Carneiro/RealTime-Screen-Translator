@@ -22,8 +22,9 @@ para jogos que o app nunca viu. Um conjunto que serve para ajustar não serve pa
 
 ## Ponto de partida
 
-A versão de referência é a `main` com a margem do painel estreito e as listas de rótulo
-e valor (17/11/2026), as últimas regras que entram antes da coleta. Antes delas, a
+A versão de referência é a `main` com a margem do painel estreito, as listas de rótulo
+e valor (17/11/2026) e as abas pelo fundo (18/11/2026), as últimas regras que entram antes
+da coleta. Antes delas, a
 referência era o commit `235b28e`. Nos 90 prints atuais:
 
 | Medida | Resultado |
@@ -42,7 +43,8 @@ referência era o commit `235b28e`. Nos 90 prints atuais:
 | letreiro | 79,4% | 74% |
 
 Nenhuma regra muda até a validação ser medida. A validação também vai dizer se a margem
-do painel e a regra das listas, medidas só nestes 90 prints, valem em jogos novos.
+do painel, a regra das listas e a das abas, medidas só nestes 90 prints, valem em jogos
+novos.
 
 ## Fase 1: coleta
 
@@ -61,6 +63,8 @@ grava o print e o rascunho do OCR na pasta do dia.
 - **Opcional:** um dos jogos em espanhol ou japonês, com o app configurado nessa língua.
 - **Inclua telas difíceis:** letra pequena, fundo colorido, painéis. Não escolha só as
   que parecem fáceis.
+- **Abas:** se o jogo tiver uma barra de abas (inventário, mapa, opções), inclua um print
+  dela. A regra das abas só foi medida nas abas do EVE.
 - *O que esperar:* cerca de 30 prints numa ou duas pastas de dia, sem precisar renomear.
 
 ## Fase 2: organização e descarte
@@ -106,7 +110,7 @@ referência.
   entre 92% e 95% nas letras e entre 70% e 78% nas linhas inteiras. Muito abaixo disso,
   alguma regra decorou o dataset.
 
-**3.3 Teste: testes automáticos.** Os 35 testes continuam passando.
+**3.3 Teste: testes automáticos.** Os 45 testes continuam passando.
 
 **3.4 Organização: registro.** O resultado vai para um anexo próprio,
 `docs/resultados-validacao.md`, e para o estudo de caso, sem sobrescrever os resultados
