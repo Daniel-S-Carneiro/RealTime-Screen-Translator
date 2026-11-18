@@ -21,6 +21,7 @@ import cv2
 import numpy as np
 
 from paragrafos import agrupar_em_linhas
+from quantidades import completar_quantidades, tirar_icones
 from releitura import conferir_caixas_pequenas
 
 # Códigos do idiomas.json (os mesmos do EasyOCR) que o modelo PP-OCRv6 small lê
@@ -163,8 +164,14 @@ class MotorOCR:
             if texto:
                 cantos = [[float(x), float(y)] for x, y in caixa]
                 resultados.append((cantos, texto, float(confianca)))
+        def reler(recorte):
+            return self._reler(recorte, latina)
+
         # Letreiros miúdos: o lixo que o OCR inventa não se confirma numa segunda leitura
-        return conferir_caixas_pequenas(cinza, resultados, lambda r: self._reler(r, latina))
+        resultados = conferir_caixas_pequenas(cinza, resultados, reler)
+        # Inventários: o "1" e o "×" que o detector não marcou; depois, ícones lidos como letra
+        resultados, protegidas = completar_quantidades(cinza, resultados, reler)
+        return tirar_icones(resultados, cinza.shape[1], protegidas)
 
     @staticmethod
     def _limpar(texto: str, latina: bool) -> str:

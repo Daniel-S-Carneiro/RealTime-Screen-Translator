@@ -33,12 +33,12 @@ só os 3 exemplos da pasta `base` estão no git.
 
 | Medida | Resultado |
 |---|---|
-| Acerto de letras | **95,7%** |
-| Acerto de palavras | **91,5%** |
+| Acerto de letras | **95,8%** |
+| Acerto de palavras | **91,4%** |
 | Quebras achadas | 91% |
-| Quebras certas | 90% |
-| Linhas inteiras | 80% |
-| Tempo médio por print | 1,3 s |
+| Quebras certas | 91% |
+| Linhas inteiras | 81% |
+| Tempo médio por print | 1,0 s |
 | Acerto de letras (EasyOCR na GPU, 15/11) | 89,8% |
 | Acerto de palavras (EasyOCR na GPU, 15/11) | 77,7% |
 | Quebras achadas / certas (EasyOCR na GPU, 15/11) | 74% / 86% |
@@ -52,7 +52,7 @@ A média é puxada para baixo por poucas telas muito difíceis:
 - mais da metade dos prints não erra **nenhuma letra**;
 - 78 dos 90 prints acertam 95% ou mais das letras, e 63 acertam 99% ou mais.
 
-Com a correção por contexto ligada, o acerto vai a 95,7% das letras e 91,5% das palavras, a 1,2 s por print, sem contar os ~5 s para carregar o BERT.
+Com a correção por contexto ligada, o acerto vai a 95,8% das letras e 91,5% das palavras, a 1,0 s por print, sem contar os ~5 s para carregar o BERT.
 
 ## Por tipo de tela
 
@@ -64,7 +64,7 @@ mudança mexe, coisa que a média geral esconde.
 | texto | Título com texto corrido: descrições, tomos, diário, tutorial, registro | 28 | 99,5% | 98,7% | 100% | 98% | 92% |
 | legenda | Falas, legendas e avisos curtos | 21 | 99,4% | 96,6% | 96% | 96% | 81% |
 | menu | Menus, opções de diálogo e abas | 9 | 98,8% | 95,4% | 100% | 99% | 80% |
-| ficha | Fichas, tabelas, inventários, grades e painéis lado a lado | 24 | 90,3% | 83,6% | 87% | 87% | 75% |
+| ficha | Fichas, tabelas, inventários, grades e painéis lado a lado | 24 | 90,5% | 83,2% | 87% | 87% | 76% |
 | letreiro | Letreiros, cartazes e títulos de cena | 8 | 85,9% | 72,1% | 91% | 80% | 78% |
 
 ## Por jogo
@@ -75,15 +75,15 @@ mudança mexe, coisa que a média geral esconde.
 | Doki Doki Literature Club | 3 | 100,0% | 100,0% | 100% | 100% | 100% | 91,6% | 100,0% |
 | Exemplos públicos (pasta base) | 3 | 99,9% | 99,5% | 100% | 100% | 93% | 99,3% | 99,9% |
 | Immortal Clan | 15 | 99,9% | 99,0% | 99% | 98% | 93% | 98,1% | 99,9% |
-| The Elder Scrolls III: Morrowind | 6 | 99,5% | 98,0% | 96% | 99% | 88% | 77,3% | 82,0% |
+| The Elder Scrolls III: Morrowind | 6 | 99,5% | 98,2% | 96% | 99% | 89% | 77,3% | 82,0% |
 | Mass Effect Legendary Edition | 5 | 99,3% | 91,9% | 100% | 100% | 80% | 99,4% | 99,3% |
-| Persona 4 Golden | 7 | 96,7% | 94,7% | 97% | 100% | 57% | 93,6% | 96,7% |
+| Persona 4 Golden | 7 | 97,2% | 93,0% | 97% | 100% | 57% | 93,6% | 96,7% |
 | Fallout: New Vegas | 8 | 96,0% | 91,4% | 88% | 85% | 82% | 86,1% | 87,1% |
 | Undertale | 3 | 95,0% | 86,9% | 100% | 100% | 0% | 90,2% | 95,0% |
-| EVE Online | 12 | 94,6% | 87,5% | 95% | 89% | 74% | 85,4% | 87,1% |
+| EVE Online | 12 | 94,7% | 87,7% | 95% | 90% | 75% | 85,4% | 87,1% |
 | Night in the Woods | 14 | 91,5% | 81,9% | 87% | 74% | 71% | 85,0% | 87,5% |
 | Caves of Qud | 9 | 86,6% | 83,6% | 73% | 81% | 79% | 83,7% | 86,9% |
-| **Todos** | **90** | **95,7%** | **91,5%** | **91%** | **90%** | **80%** | 89,8% | 92,2% |
+| **Todos** | **90** | **95,8%** | **91,4%** | **91%** | **91%** | **81%** | 89,8% | 92,2% |
 
 ## Print a print
 
@@ -145,7 +145,7 @@ Média: 99,9% das letras e 99,0% das palavras.
 
 ### The Elder Scrolls III: Morrowind
 
-Média: 99,5% das letras e 98,0% das palavras.
+Média: 99,5% das letras e 98,2% das palavras.
 
 | Print | Acerto de letras | Acerto de palavras | Quebras achadas | A mais | Linhas inteiras | Letras: EasyOCR na GPU, 15/11 | Letras: RapidOCR antes das colunas, 16/11 |
 |---|---|---|---|---|---|---|---|
@@ -154,7 +154,7 @@ Média: 99,5% das letras e 98,0% das palavras.
 | `morrowind_legenda` | 100,0% | 100,0% | — | 0 | 1 de 1 | 100,0% | 100,0% |
 | `morrowind_magias` | 99,8% | 98,4% | 23 de 23 | 0 | 23 de 23 | 96,3% | 99,6% |
 | `morrowind_nivel` | 97,9% | 93,5% | 11 de 12 | 0 | 8 de 11 | 69,5% | 79,8% |
-| `morrowind_status` | 99,2% | 96,7% | 28 de 28 | 0 | 26 de 28 | 31,7% | 30,1% |
+| `morrowind_status` | 99,7% | 98,3% | 28 de 28 | 0 | 27 de 28 | 31,7% | 30,1% |
 
 ### Mass Effect Legendary Edition
 
@@ -173,13 +173,13 @@ Média: 99,3% das letras e 91,9% das palavras.
 
 ### Persona 4 Golden
 
-Média: 96,7% das letras e 94,7% das palavras.
+Média: 97,2% das letras e 93,0% das palavras.
 
 | Print | Acerto de letras | Acerto de palavras | Quebras achadas | A mais | Linhas inteiras | Letras: EasyOCR na GPU, 15/11 | Letras: RapidOCR antes das colunas, 16/11 |
 |---|---|---|---|---|---|---|---|
 | `persona4_batalha` | 100,0% | 100,0% | 9 de 9 | 0 | 1 de 1 | 98,9% | 100,0% |
 | `persona4_item_obtido` | 100,0% | 100,0% | — | 0 | 1 de 1 | 95,5% | 100,0% |
-| `persona4_itens` | 82,5% | 68,3% | 13 de 13 | 0 | 2 de 12 | 69,5% | 82,5% |
+| `persona4_itens` | 86,4% | 56,1% | 13 de 13 | 0 | 2 de 12 | 69,5% | 82,5% |
 | `persona4_legenda_1` | 100,0% | 100,0% | 1 de 1 | 0 | 1 de 1 | 100,0% | 100,0% |
 | `persona4_legenda_2` | 100,0% | 100,0% | 1 de 1 | 0 | 2 de 2 | 94,1% | 100,0% |
 | `persona4_menu` | 100,0% | 100,0% | 8 de 8 | 0 | 1 de 1 | 98,5% | 100,0% |
@@ -216,7 +216,7 @@ Média: 95,0% das letras e 86,9% das palavras.
 
 ### EVE Online
 
-Média: 94,6% das letras e 87,5% das palavras.
+Média: 94,7% das letras e 87,7% das palavras.
 
 | Print | Acerto de letras | Acerto de palavras | Quebras achadas | A mais | Linhas inteiras | Letras: EasyOCR na GPU, 15/11 | Letras: RapidOCR antes das colunas, 16/11 |
 |---|---|---|---|---|---|---|---|
@@ -227,7 +227,7 @@ Média: 94,6% das letras e 87,5% das palavras.
 | `eve_menu_contexto` | 99,0% | 96,0% | 23 de 23 | 1 | 10 de 12 | 72,0% | 73,4% |
 | `eve_mercado` | 97,6% | 86,0% | 28 de 29 | 0 | 13 de 18 | 63,1% | 63,1% |
 | `eve_minijogo` | 100,0% | 100,0% | 3 de 3 | 0 | 4 de 4 | 96,7% | 100,0% |
-| `eve_overview` | 95,7% | 88,4% | 38 de 39 | 7 | 21 de 37 | 91,4% | 95,2% |
+| `eve_overview` | 96,5% | 91,0% | 38 de 39 | 4 | 23 de 37 | 91,4% | 95,2% |
 | `eve_painel_local` | 95,6% | 72,6% | 13 de 14 | 0 | 6 de 13 | 93,4% | 95,6% |
 | `eve_perfil` | 98,5% | 89,5% | 5 de 5 | 0 | 4 de 6 | 97,0% | 98,5% |
 | `eve_planos` | 100,0% | 100,0% | 6 de 6 | 0 | 7 de 7 | 100,0% | 100,0% |
