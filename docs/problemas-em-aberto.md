@@ -70,7 +70,7 @@ resolução.
 - **Teste diferencial:** `laboratorios/quebras/testar_regras.py --comparar main` aplica a
   regra sobre as caixas guardadas dos 90 prints (leituras do RapidOCR e do EasyOCR) e
   compara com a versão atual, print a print, em segundos.
-- **Testes automáticos:** 29 casos simulados em várias línguas, 17 testes com telas
+- **Testes automáticos:** 41 casos simulados em várias línguas, 17 testes com telas
   desenhadas (abas e barras de menu) e 23 com um leitor de mentira (segunda leitura,
   quantidades e ícones), em `tests/`. Uma regra nova não pode quebrá-los.
 - **Critério de entrada:** melhora a média, não piora a maioria dos prints e não estraga
@@ -95,16 +95,16 @@ resolução.
 |---|---|
 | Acerto de letras | 95,8% |
 | Acerto de palavras | 91,4% |
-| Quebras achadas / certas | 91% / 91% (679 de 744 achadas, 69 a mais) |
-| Linhas inteiras | 81% (535 de 661) |
-| Das que não chegam inteiras | 37 com sobra (quebra perdida), 22 partidas, 67 com palavra faltando ou diferente |
+| Quebras achadas / certas | 92% / 91% (681 de 744 achadas, 69 a mais) |
+| Linhas inteiras | 81% (538 de 661) |
+| Das que não chegam inteiras | 34 com sobra (quebra perdida), 22 partidas, 67 com palavra faltando ou diferente |
 
 | Tipo de tela | Prints | Acerto de letras | Linhas inteiras | Quebras a mais |
 |---|---|---|---|---|
 | texto | 28 | 99,5% | 92% | 3 |
 | legenda | 21 | 99,4% | 81% | 1 |
 | menu | 9 | 98,8% | 80% | 1 |
-| ficha | 24 | 90,5% | 76% | 59 |
+| ficha | 24 | 90,5% | 77% | 59 |
 | letreiro | 8 | 85,9% | 78% | 5 |
 
 Os 10 prints que mais perdem linhas inteiras são todos fichas e somam 57% das perdas.
@@ -503,7 +503,12 @@ reputação do Caves of Qud.
 
 **Como medir.** Linhas "faltando" nas fichas (65 no total hoje).
 
-### Problema 7: quebras verticais difíceis
+### Problema 7: quebras verticais difíceis (resolvido em parte)
+
+**Resolvido em parte em 18/11/2026.** As descrições curtas do Caves of Qud saem uma por
+linha, pela regra do menu vertical do Problema 8 (a pilha de itens curtos é a mesma forma).
+Continuam o título inclinado do Danganronpa e as frases do mesmo parágrafo separadas pela
+regra de sentença terminada.
 
 **Tipo:** montagem. **Tamanho:** cerca de 10 quebras. **Prints:**
 - título inclinado do Danganronpa;
@@ -518,7 +523,36 @@ seguidas, de tamanho parecido e bem menores que a coluna, costumam ser uma lista
 as sentenças, se a linha de cima chegou perto da margem do painel (a do problema 1, que
 agora existe no código como `_margem_local`), a quebra é visual, não de parágrafo.
 
-### Problema 8: menu em que o primeiro item é o mais largo
+### Problema 8: menu em que o primeiro item é o mais largo (resolvido)
+
+**Resolvido em 18/11/2026** com `paragrafos._quebras_de_menu`, proposta do Grok com quatro
+travas. Uma pilha de 3+ linhas seguidas, com vãos de até 0,8 altura e regulares (maior menos
+menor até 0,5), vira menu e quebra entre cada linha quando:
+- uma borda é alinhada (a até 1 altura) e a outra não, ou os centros estão a até 0,5;
+- a linha mais larga tem menos de 16 alturas;
+- alguma linha que não é a última tem menos de 0,85 da mais larga;
+- nenhuma linha começa com minúscula, termina com ponto (reticências valem), tem fim de
+  frase ou vírgula seguida de espaço no meio, nem passa de 5 palavras (em escrita sem
+  espaço, 1 palavra a cada 4 letras).
+
+Casos simulados: 38 de 41 (eram 32; os dois testes de limite conhecido do menu passaram a
+testes normais). Nos 90 prints, sem nenhuma quebra a mais: RapidOCR com linhas inteiras de
+535 para 538 (as descrições do Caves of Qud), EasyOCR de 318 para 320 (as perícias do
+Morrowind). Igual com o limiar de 0,80 a 0,95 e com 4 a 6 palavras.
+
+| Proposta | Caso simulado | Casos certos (de 41) | Linhas inteiras (RapidOCR / EasyOCR) | Por que ganhou ou perdeu |
+|---|---|---|---|---|
+| **Grok** (pilha regular, uma borda alinhada, linha antes da última < 0,85 da maior) | sim | 36 | 538 / 319 | Precisou das travas: no EasyOCR partiu uma manchete em maiúsculas e uma linha de 10 palavras |
+| Qwen (no máximo uma linha na borda de fim, até 4 palavras) | sim | 34 | 538 / 318 | Itens de largura parecida contam como duas linhas cheias e vetam o menu |
+| ChatGPT (pontuação de evidências) | sim | 29 | 536 / 317 | Quebra 5 casos de prosa que passavam |
+| DeepSeek (largura até 0,45 do print) | não | 32 | 535 / 320 | Num print só de menu, a linha mais larga é o print |
+| Mistral (largura até 0,6 da disponível; margem sem o par) | não | 32 | 535 / 318 | O mesmo problema da largura; item de menu nunca chega às 16 alturas da margem do painel |
+
+**O que continua aberto:** menu de só 2 itens com o primeiro mais largo (duas linhas não
+bastam para ver a pilha) e fala estreita em alemão sem ponto, sem vírgula e com uma linha
+do meio bem curta. Os dois ficam como teste de limite conhecido ou como risco anotado. O
+teste está em `laboratorios/quebras/experimentos/menus_verticais.py`. O texto abaixo fica
+como registro.
 
 **Tipo:** montagem. **Limite conhecido**, registrado em 2 testes automáticos como falha
 esperada.
@@ -553,7 +587,7 @@ linhas.
 ### Problema 10: outras línguas sem prints reais
 
 **Tipo:** validação. Todos os 90 prints são em inglês. O app lê 83 línguas: 43 pelo
-RapidOCR e 40 pelo EasyOCR. As regras de montagem só foram conferidas com 29 casos e 17 testes de telas desenhadas (e a releitura, com 9 testes de leitor de mentira)
+RapidOCR e 40 pelo EasyOCR. As regras de montagem só foram conferidas com 41 casos simulados e 17 testes de telas desenhadas (e a releitura e as quantidades, com 23 testes de leitor de mentira)
 simulados.
 
 **O que pesquisar:**
@@ -593,3 +627,6 @@ Para não pesquisar de novo o que já tem resposta:
 | Quantidades: procurar em toda a zona à direita dos itens (Mistral, DeepSeek) | Pega outras colunas e lê "1", "#" e ")" em fichas |
 | Trocar "×" por "x", ou pôr espaço ("× 1"), na saída | Com "x" minúsculo, a coluna parece texto corrido; com duas palavras, vira um bloco separado. Nos dois casos, as quantidades saem juntas depois dos itens |
 | Ícones: só caixas bem menores que o texto (0,55H ou 0,65H) | O "n" do EVE tem 0,61H e os outros ícones são maiores: não dispara |
+| Menu: linha "curta" medida contra a largura do print ou do painel (DeepSeek, Mistral) | Num print só de menu, a linha mais larga é a largura toda: nunca dispara |
+| Menu: pontuação de evidências sem veto de minúscula (ChatGPT) | Quebra prosa estreita: 5 casos que passavam |
+| Menu: margem do painel sem as linhas do próprio par (Mistral) | Item de menu não chega às 16 alturas da margem do painel: não muda nada |

@@ -48,7 +48,6 @@ CASOS = [
             caixa(20, 120, 100, "Salir"),
         ],
         ["Nueva partida", "Continuar", "Opciones", "Salir"],
-        limite_conhecido=True,
     ),
     Caso(
         "inglês: o mesmo menu (o 1º item é o mais largo)",
@@ -60,7 +59,6 @@ CASOS = [
             caixa(20, 120, 80, "Quit"),
         ],
         ["New game", "Continue", "Options", "Quit"],
-        limite_conhecido=True,
     ),
     Caso(
         "japonês: fala comprida quebrada em três linhas (não é menu)",
@@ -307,6 +305,138 @@ CASOS = [
             "Die Stadt hatte im Jahr 1990 rund 5000 Einwohner und wuchs bis 2005 auf 8000 "
             "Einwohner, und 2010 waren es 9000 Einwohner in der Stadt."
         ],
+        limite_conhecido=True,
+    ),
+    # Problema 7 (18/11/2026): menus em que o 1º item é o mais largo, e prosa estreita que
+    # a regra do menu não pode quebrar (casos escritos para o teste, não de print real)
+    Caso(
+        "inglês: menu centralizado, o 1º item é o mais largo",
+        "en",
+        [
+            caixa(100, 0, 200, "New game"),
+            caixa(110, 40, 180, "Continue"),
+            caixa(120, 80, 160, "Options"),
+            caixa(160, 120, 80, "Quit"),
+        ],
+        ["New game", "Continue", "Options", "Quit"],
+    ),
+    Caso(
+        "inglês: menu com os dois primeiros itens da mesma largura",
+        "en",
+        [
+            caixa(20, 0, 220, "Save game"),
+            caixa(20, 40, 220, "Load game"),
+            caixa(20, 80, 160, "Options"),
+            caixa(20, 120, 80, "Quit"),
+        ],
+        ["Save game", "Load game", "Options", "Quit"],
+    ),
+    Caso(
+        "inglês: menu com reticências no item mais largo",
+        "en",
+        [
+            caixa(20, 0, 200, "New game"),
+            caixa(20, 40, 230, "Load game..."),
+            caixa(20, 80, 160, "Options"),
+            caixa(20, 120, 80, "Quit"),
+        ],
+        ["New game", "Load game...", "Options", "Quit"],
+    ),
+    Caso(
+        "inglês: inventário sem números",
+        "en",
+        [
+            caixa(20, 0, 210, "Iron Sword"),
+            caixa(20, 40, 260, "Leather Armor"),
+            caixa(20, 80, 250, "Health Potion"),
+            caixa(20, 120, 80, "Rope"),
+        ],
+        ["Iron Sword", "Leather Armor", "Health Potion", "Rope"],
+    ),
+    Caso(
+        "inglês: menu num print com texto mais à direita",
+        "en",
+        [
+            caixa(20, 0, 200, "New game"),
+            caixa(20, 40, 180, "Continue"),
+            caixa(20, 80, 160, "Options"),
+            caixa(20, 120, 80, "Quit"),
+            caixa(900, 300, 120, "v1.0.3"),
+        ],
+        ["New game", "Continue", "Options", "Quit", "v1.0.3"],
+    ),
+    Caso(
+        "inglês: balão estreito de 4 linhas, só a última curta (NÃO é menu)",
+        "en",
+        [
+            caixa(20, 0, 440, "The old lighthouse has"),
+            caixa(20, 40, 400, "been dark for twenty"),
+            caixa(20, 80, 410, "years, but tonight it"),
+            caixa(20, 120, 260, "shines again."),
+        ],
+        ["The old lighthouse has been dark for twenty years, but tonight it shines again."],
+    ),
+    Caso(
+        "inglês: balão estreito com linhas curtas começando com nome (NÃO é menu)",
+        "en",
+        [
+            caixa(20, 0, 330, "I met Sarah and"),
+            caixa(20, 40, 260, "Tom at the"),
+            caixa(20, 80, 330, "Riverside Mill last"),
+            caixa(20, 120, 140, "night."),
+        ],
+        ["I met Sarah and Tom at the Riverside Mill last night."],
+    ),
+    Caso(
+        "alemão: fala estreita, linhas começando com substantivo (NÃO é menu)",
+        "de",
+        [
+            caixa(20, 0, 315, "Der Wächter sagt, das"),
+            caixa(20, 40, 270, "Tor bleibt bis zum"),
+            caixa(20, 80, 375, "Morgengrauen geschlossen."),
+        ],
+        ["Der Wächter sagt, das Tor bleibt bis zum Morgengrauen geschlossen."],
+    ),
+    Caso(
+        "alemão: fala estreita sem ponto no fim, linhas começando com substantivo (NÃO é menu)",
+        "de",
+        [
+            caixa(20, 0, 315, "Der Wächter sagt, die"),
+            caixa(20, 40, 195, "Brücke bleibt"),
+            caixa(20, 80, 375, "Nachtwächtern vorbehalten"),
+        ],
+        ["Der Wächter sagt, die Brücke bleibt Nachtwächtern vorbehalten"],
+    ),
+    Caso(
+        "inglês: ficha de atributos empilhada",
+        "en",
+        [
+            caixa(20, 0, 200, "Strength 72"),
+            caixa(20, 40, 230, "Intelligence 42"),
+            caixa(20, 80, 190, "Willpower 40"),
+            caixa(20, 120, 120, "Luck 40"),
+        ],
+        ["Strength 72", "Intelligence 42", "Willpower 40", "Luck 40"],
+    ),
+    Caso(
+        "inglês: menu de só 2 itens, o 1º mais largo (duas linhas não bastam para ver o menu)",
+        "en",
+        [
+            caixa(20, 0, 200, "New game"),
+            caixa(20, 40, 180, "Continue"),
+        ],
+        ["New game", "Continue"],
+        limite_conhecido=True,
+    ),
+    Caso(
+        "japonês: fala estreita de 3 linhas (a regra de menu sem espaço corta as curtas)",
+        "ja",
+        [
+            caixa(20, 0, 300, "夜になると森の奥から"),
+            caixa(20, 40, 240, "不思議な歌が"),
+            caixa(20, 80, 270, "聞こえてくる。"),
+        ],
+        ["夜になると森の奥から不思議な歌が聞こえてくる。"],
         limite_conhecido=True,
     ),
 ]

@@ -24,28 +24,29 @@ para jogos que o app nunca viu. Um conjunto que serve para ajustar não serve pa
 
 A versão de referência é a `main` com a margem do painel estreito, as listas de rótulo
 e valor (17/11/2026), as abas pelo fundo, a barra de menu numa caixa só, a segunda
-leitura das caixas pequenas e as quantidades e ícones (18/11/2026), as últimas regras que
-entram antes da coleta. Antes delas, a
+leitura das caixas pequenas, as quantidades e ícones e o menu vertical (18/11/2026), as
+últimas regras que entram antes da coleta. Antes delas, a
 referência era o commit `235b28e`. Nos 90 prints atuais:
 
 | Medida | Resultado |
 |---|---|
 | Acerto de letras | 95,8% |
 | Acerto de palavras | 91,4% |
-| Quebras achadas / certas | 91% / 91% (69 a mais) |
-| Linhas inteiras | 81% (535 de 661) |
+| Quebras achadas / certas | 92% / 91% (69 a mais) |
+| Linhas inteiras | 81% (538 de 661) |
 
 | Tipo de tela | Acerto de letras | Linhas inteiras |
 |---|---|---|
 | texto | 99,5% | 92% |
 | legenda | 99,4% | 81% |
 | menu | 98,8% | 80% |
-| ficha | 90,5% | 76% |
+| ficha | 90,5% | 77% |
 | letreiro | 85,9% | 78% |
 
 Nenhuma regra muda até a validação ser medida. A validação também vai dizer se a margem
-do painel, a regra das listas, a das abas, a da barra de menu, a segunda leitura e a das
-quantidades e ícones, medidas só nestes 90 prints, valem em jogos novos.
+do painel, a regra das listas, a das abas, a da barra de menu, a segunda leitura, a das
+quantidades e ícones e a do menu vertical, medidas só nestes 90 prints, valem em jogos
+novos.
 
 ## Fase 1: coleta
 
@@ -136,7 +137,7 @@ referência.
   entre 92% e 95% nas letras e entre 70% e 78% nas linhas inteiras. Muito abaixo disso,
   alguma regra decorou o dataset.
 
-**3.3 Teste: testes automáticos.** Os 75 testes continuam passando.
+**3.3 Teste: testes automáticos.** Os 87 testes continuam passando.
 
 **3.4 Organização: registro.** O resultado vai para um anexo próprio,
 `docs/resultados-validacao.md`, e para o estudo de caso, sem sobrescrever os resultados
@@ -191,20 +192,22 @@ caso, anexos, README), commit, PR e `main`.
 
 | Jogo ou caso | O que não será mais tentado | Por quê |
 |---|---|---|
-| Doki Doki: barra "History Skip Auto Save Load Settings" | Separar os itens | O OCR lê a barra numa caixa só, e o espaço entre os itens é igual ao espaço normal de outras fontes |
-| EVE: abas de uma palavra encostadas | Separar pelas caixas | Sem uma caixa de duas palavras na linha, não há sinal; só voltaria com uma ideia pelo desenho da tela |
 | Night in the Woods: letreiro miúdo da banca | Ler o letreiro | Texto pequeno e borrado vira lixo; é limite do OCR |
 | Caves of Qud: resumo do personagem | Acertar a ordem | As duas ordens fazem sentido; o gabarito não muda para agradar o app |
-| Persona 4: quantidades do inventário | Ler as quantidades | O OCR não lê esses números pequenos |
 | Danganronpa: título inclinado | Acertar as quebras do título | O texto inclinado mistura as linhas |
-| Caves of Qud: descrições curtas sem pontuação | Separar as frases | Nenhum sinal as distingue de uma frase que continua |
 | Correção de palavras (SymSpell, KenLM, JamSpell, LanguageTool, LLM, BERT por padrão) | Tudo | Teto de cerca de 1% das palavras |
 | Tratar a imagem (inverter, suavizar, binarizar, ampliar o print todo, CLAHE, nitidez) | Tudo | Todos perderam para a imagem em cinza |
 | Outros motores (OCR do Windows, modelos maiores, Tesseract, combinar motores) | Tudo | O RapidOCR v6 small ganhou de todos |
 | Margem por bloco no "cabia" | A regra, do jeito testado | Perdeu nas duas versões testadas |
 
+Três casos que estavam nesta lista foram resolvidos depois, com propostas de outras IAs
+medidas nos 90 prints (17 e 18/11): a barra do Doki Doki (pelo espaço medido na tinta), as
+abas do EVE (pelo fundo da aba selecionada) e as quantidades do Persona (relendo a célula
+que o detector pulou). Os detalhes estão em [problemas em aberto](problemas-em-aberto.md).
+
 Ainda **não** foram abandonados:
 - o diálogo e a subida de nível do Morrowind, a grade e o overview do EVE e a reputação do
   Caves of Qud: entram na fase das fichas;
-- o menu em que o primeiro item é o mais largo: é o limite conhecido nos testes;
+- o menu de só 2 itens em que o primeiro é o mais largo: é limite conhecido nos testes (o
+  de 3 ou mais, e as descrições curtas do Caves of Qud, foram resolvidos em 18/11);
 - as quebras verticais difíceis, com prioridade baixa.
