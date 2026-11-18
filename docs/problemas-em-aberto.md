@@ -18,7 +18,7 @@ fichas de personagem, inventários, letreiros.
 |---|---|---|
 | Captura | `mss` tira o print da área | `janela_overlay.py` |
 | Imagem | Só converte para tons de cinza | `capturador.py` |
-| OCR | RapidOCR com os modelos PP-OCRv6 small do PaddleOCR, no ONNX Runtime, na CPU. O detector lê o print no tamanho original (`limit_type=max`, até 2016 px). Caixas com confiança abaixo de 0,7 são descartadas. Em língua latina, caracteres chineses lidos em ícones são apagados. Escritas que o modelo não lê (cirílico, árabe, coreano, devanágari, tailandês…) vão para o EasyOCR | `ocr_engine.py` |
+| OCR | RapidOCR com os modelos PP-OCRv6 small do PaddleOCR, no ONNX Runtime, na CPU. O detector lê o print no tamanho original (`limit_type=max`, até 2016 px). Caixas com confiança abaixo de 0,7 são descartadas. Em língua latina, caracteres chineses lidos em ícones são apagados. Depois, as caixas pequenas de menor confiança são relidas e o lixo que não se confirma sai (`releitura.py`); nos inventários, a célula de quantidade que o detector pulou é relida, e ícones lidos como letra saem pela forma (`quantidades.py`). Escritas que o modelo não lê (cirílico, árabe, coreano, devanágari, tailandês…) vão para o EasyOCR | `ocr_engine.py` |
 | Montagem | Transforma as caixas em parágrafos: linhas, blocos, colunas, itens e quebras | `paragrafos.py` |
 | Correção | Separa palavras grudadas; só em inglês, corrige letras confundidas e apóstrofos | `processador_texto.py` |
 | Tradução | Um parágrafo por item enviado ao tradutor | `motores_traducao.py` |
@@ -70,8 +70,9 @@ resolução.
 - **Teste diferencial:** `laboratorios/quebras/testar_regras.py --comparar main` aplica a
   regra sobre as caixas guardadas dos 90 prints (leituras do RapidOCR e do EasyOCR) e
   compara com a versão atual, print a print, em segundos.
-- **Testes automáticos:** 29 casos simulados em várias línguas e 17 testes com telas desenhadas, de abas e de barras de menu (`tests/`). Uma regra nova
-  não pode quebrá-los.
+- **Testes automáticos:** 29 casos simulados em várias línguas, 17 testes com telas
+  desenhadas (abas e barras de menu) e 23 com um leitor de mentira (segunda leitura,
+  quantidades e ícones), em `tests/`. Uma regra nova não pode quebrá-los.
 - **Critério de entrada:** melhora a média, não piora a maioria dos prints e não estraga
   outra língua.
 
@@ -92,18 +93,18 @@ resolução.
 
 | Medida | Resultado |
 |---|---|
-| Acerto de letras | 95,7% |
-| Acerto de palavras | 91,5% |
-| Quebras achadas / certas | 91% / 90% (679 de 744 achadas, 72 a mais) |
-| Linhas inteiras | 80% (532 de 661) |
-| Das que não chegam inteiras | 39 com sobra (quebra perdida), 25 partidas, 65 com palavra faltando |
+| Acerto de letras | 95,8% |
+| Acerto de palavras | 91,4% |
+| Quebras achadas / certas | 91% / 91% (679 de 744 achadas, 69 a mais) |
+| Linhas inteiras | 81% (535 de 661) |
+| Das que não chegam inteiras | 37 com sobra (quebra perdida), 22 partidas, 67 com palavra faltando ou diferente |
 
 | Tipo de tela | Prints | Acerto de letras | Linhas inteiras | Quebras a mais |
 |---|---|---|---|---|
 | texto | 28 | 99,5% | 92% | 3 |
 | legenda | 21 | 99,4% | 81% | 1 |
 | menu | 9 | 98,8% | 80% | 1 |
-| ficha | 24 | 90,3% | 75% | 62 |
+| ficha | 24 | 90,5% | 76% | 59 |
 | letreiro | 8 | 85,9% | 78% | 5 |
 
 Os 10 prints que mais perdem linhas inteiras são todos fichas e somam 57% das perdas.
@@ -433,7 +434,53 @@ também piorou (7,87% → 9,30%).
 **Como medir.** Acerto de letras nos letreiros, sem piorar os outros tipos e sem passar de
 algumas centenas de milissegundos por print.
 
-### Problema 6: números pequenos e ícones perto do texto
+### Problema 6: números pequenos e ícones perto do texto (resolvido em parte)
+
+**Resolvido em parte em 18/11/2026**, com duas regras novas em `quantidades.py`, ligadas
+no motor de OCR logo depois da segunda leitura dos letreiros:
+- **Quantidades (proposta do Grok).** Uma coluna de quantidade são 2+ caixas só de
+  número ou de "×" (até 2,5 alturas de largura, 0,6+ de altura), cada uma com o item mais
+  perto à esquerda a 1+ altura de distância. Colunas a menos de 1,5 altura uma da outra
+  viram um campo (o "×" e o número). Cada linha da coluna de itens que ficou sem
+  quantidade tem o recorte do campo (15% de margem) relido só pelo reconhecedor, se houver
+  um traço de tinta de 0,4+ altura; a leitura entra se for número ou "× N" com confiança
+  0,7, no lugar dos pedaços da célula. No máximo 8 recortes por print.
+- **Ícones (proposta do Qwen).** Saem: uma coluna de 3+ caixas de até 2 glifos com letra
+  e não-letra misturadas (ou alturas 1,5x diferentes); um glifo solto (não dígito) fora
+  de 0,6 a 1,5 altura do texto, sem vizinho do mesmo tamanho na linha; e até 2 glifos,
+  abaixo de 0,7 altura, encostados na borda do print e sem vizinho. As caixas de um campo
+  de quantidade não são tocadas (sozinha, a regra tirava um "X" do Persona).
+
+As 8 linhas do inventário do Persona saem com "× N" (eram 0), o "Level 6" do Morrowind
+aparece, e os 5 ícones do overview do EVE saem do texto. No benchmark completo, só
+mudaram esses três prints: erro de letras de 4,27% para 4,21%, linhas inteiras de 532
+para 535, quebras a mais de 72 para 69. O erro de palavras subiu de 8,50% para 8,59%
+porque o app escreve "×1" e o gabarito, "x 1". Três
+ajustes à proposta do Grok vieram da medição: o item de cada quantidade é o mais perto à
+esquerda (pegando o primeiro da linha, os dois painéis do Morrowind se misturavam e
+saíam "Class 30" e "Endurance 20"); uma célula com outro texto não é relida ("Reputation:
+-475" virava "-475 75"); e a leitura nova passa pelo corte de 0,7 (entrava um "3" com
+0,12). O resultado é o mesmo com o vão mínimo de 0,5 a 1,5 altura.
+
+| Proposta | Linhas certas do Persona (de 8) | Ícones do EVE (de 5) | Nos outros prints |
+|---|---|---|---|
+| **Grok** (campo inteiro relido; micro < 0,55H) | **8** | 0 | + "Level 6" no Morrowind |
+| **Qwen** (âncoras de um token; coluna misturada, glifo solto, borda) | 1, mais um "7" no lugar do "1" | **5** | Um "20" a mais no Morrowind |
+| Mistral (zona à direita dos itens; pontos) | 6 | 0 | "1" errado em 6 linhas do Morrowind, lixo no Fallout |
+| ChatGPT (células previstas; coluna de ícones <= 0,65H) | 3, mais um "7" no lugar do "5" | 0 | Nada muda |
+| DeepSeek (componentes de Otsu a até 2h; confiança >= 0,9 + forma) | 0 | 0 | Dígitos de lixo em 10 prints |
+
+**Correção dos dados.** Os três "0" do Caves of Qud em x 828 a 844, listados antes como
+ícones, são os valores de "Reputation: 0" e estão no gabarito. O ChatGPT e o Qwen
+desconfiaram disso, e a regra do Grok protege números.
+
+**O que continua aberto:** o "D" do Qud (1,45 altura, dentro da faixa do glifo solto) e
+"po" / "on" na borda direita (0,85 e 0,80 altura; com o limite em 0,9 sai só o "po", em
+1,2 a regra tira texto real do EVE); o "HP" / "SP" claro do primeiro personagem do
+Persona; e a quantidade à esquerda do item, em línguas da direita para a esquerda (as do
+RapidOCR são todas da esquerda para a direita). O teste está em
+`laboratorios/quebras/experimentos/quantidades.py`. O texto abaixo fica como registro.
+
 
 **Tipo:** leitura. **Prints:** inventário do Persona 4, overview e skills do EVE,
 reputação do Caves of Qud.
@@ -542,3 +589,7 @@ Para não pesquisar de novo o que já tem resposta:
 | Separar itens numa caixa por um limite fixo de vão (0,35h) | A fala de cinco jogos tem vão maior que o da barra do Doki Doki (0,4) |
 | Separar itens pelo "buraco" grande da barra do Doki Doki | O buraco era um erro de medida: palavras de outra cor que o Otsu jogava no fundo |
 | Qualquer linha de título quebra | Estragava falas em maiúsculas |
+| Quantidades: reler só a célula do "×" (ChatGPT) | O "×" sozinho sai com confiança de 0,5; junto com o número, de 0,74 a 0,99 |
+| Quantidades: procurar em toda a zona à direita dos itens (Mistral, DeepSeek) | Pega outras colunas e lê "1", "#" e ")" em fichas |
+| Trocar "×" por "x", ou pôr espaço ("× 1"), na saída | Com "x" minúsculo, a coluna parece texto corrido; com duas palavras, vira um bloco separado. Nos dois casos, as quantidades saem juntas depois dos itens |
+| Ícones: só caixas bem menores que o texto (0,55H ou 0,65H) | O "n" do EVE tem 0,61H e os outros ícones são maiores: não dispara |

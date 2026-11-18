@@ -23,28 +23,29 @@ para jogos que o app nunca viu. Um conjunto que serve para ajustar não serve pa
 ## Ponto de partida
 
 A versão de referência é a `main` com a margem do painel estreito, as listas de rótulo
-e valor (17/11/2026), as abas pelo fundo, a barra de menu numa caixa só e a segunda
-leitura das caixas pequenas (18/11/2026), as últimas regras que entram antes da coleta. Antes delas, a
+e valor (17/11/2026), as abas pelo fundo, a barra de menu numa caixa só, a segunda
+leitura das caixas pequenas e as quantidades e ícones (18/11/2026), as últimas regras que
+entram antes da coleta. Antes delas, a
 referência era o commit `235b28e`. Nos 90 prints atuais:
 
 | Medida | Resultado |
 |---|---|
-| Acerto de letras | 95,7% |
-| Acerto de palavras | 91,5% |
-| Quebras achadas / certas | 91% / 90% (72 a mais) |
-| Linhas inteiras | 80% (532 de 661) |
+| Acerto de letras | 95,8% |
+| Acerto de palavras | 91,4% |
+| Quebras achadas / certas | 91% / 91% (69 a mais) |
+| Linhas inteiras | 81% (535 de 661) |
 
 | Tipo de tela | Acerto de letras | Linhas inteiras |
 |---|---|---|
 | texto | 99,5% | 92% |
 | legenda | 99,4% | 81% |
 | menu | 98,8% | 80% |
-| ficha | 90,3% | 75% |
+| ficha | 90,5% | 76% |
 | letreiro | 85,9% | 78% |
 
 Nenhuma regra muda até a validação ser medida. A validação também vai dizer se a margem
-do painel, a regra das listas, a das abas, a da barra de menu e a segunda leitura, medidas
-só nestes 90 prints, valem em jogos novos.
+do painel, a regra das listas, a das abas, a da barra de menu, a segunda leitura e a das
+quantidades e ícones, medidas só nestes 90 prints, valem em jogos novos.
 
 ## Fase 1: coleta
 
@@ -67,7 +68,7 @@ grava o print e o rascunho do OCR na pasta do dia.
   dela. A regra das abas só foi medida nas abas do EVE.
 - *O que esperar:* cerca de 30 prints numa ou duas pastas de dia, sem precisar renomear.
 
-**1.3 Coleta: um tipo de jogo para cada regra nova (18/11/2026).** As quatro regras que
+**1.3 Coleta: um tipo de jogo para cada regra nova (18/11/2026).** As regras que
 entraram por último foram medidas em um ou dois jogos cada. Cada jogo novo deve testar uma
 delas (os títulos são exemplos; qualquer jogo do mesmo tipo serve):
 
@@ -78,6 +79,7 @@ delas (os títulos são exemplos; qualquer jogo do mesmo tipo serve):
 | Jogo com inventário em abas | Stardew Valley, Terraria, Fallout 4, Path of Exile | Abas pelo fundo | 2 telas com a barra de abas (uma aba selecionada), 2 inventários, 1 fala, 1 descrição de item |
 | Jogo 3D com placas no cenário | Firewatch, Life is Strange, Persona 5, Cyberpunk 2077 | Letreiros (Problema 5) | 3 placas ou letreiros (pequenos, de longe, inclinados), 2 legendas, 1 menu |
 | Estratégia ou simulação | Civilization VI, Stellaris, Crusader Kings III, Football Manager | Tabelas, painéis, menus | 2 tabelas, 2 painéis de informação, 1 menu, 1 texto de enciclopédia |
+| JRPG com inventário em lista (se der) | Final Fantasy X, Dragon Quest XI, Octopath Traveler, Persona 5 | Quantidades e ícones (Problema 6) | 3 inventários ou lojas com a quantidade à direita ("× 3"), de preferência com um item destacado; 1 menu; 2 falas |
 
 Opcional, e de grande valor: um sexto jogo em espanhol ou japonês, com o app configurado
 na língua, com 2 legendas, 2 menus e 2 fichas.
@@ -134,7 +136,7 @@ referência.
   entre 92% e 95% nas letras e entre 70% e 78% nas linhas inteiras. Muito abaixo disso,
   alguma regra decorou o dataset.
 
-**3.3 Teste: testes automáticos.** Os 61 testes continuam passando.
+**3.3 Teste: testes automáticos.** Os 75 testes continuam passando.
 
 **3.4 Organização: registro.** O resultado vai para um anexo próprio,
 `docs/resultados-validacao.md`, e para o estudo de caso, sem sobrescrever os resultados

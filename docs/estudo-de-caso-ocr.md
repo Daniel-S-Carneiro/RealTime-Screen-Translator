@@ -14,7 +14,8 @@
 > PaddleOCR, levou a 92,2% das letras e 88% das palavras, em cerca de 1 s por print.
 > Ler fichas e grades coluna por coluna levou a 95,1% das letras e 91,1% das palavras,
 > e separar os itens de menu lado a lado e as linhas de aviso e título levou o app a
-> achar 89% das quebras de linha.
+> achar 89% das quebras de linha. Uma segunda leitura de recortes pequenos, que tira o
+> lixo dos letreiros e completa as quantidades dos inventários, levou a 95,8% das letras.
 > Este texto conta o que fiz, onde errei e o que mudou.
 
 ---
@@ -1059,6 +1060,62 @@ seria lido sem detector.
 O que sobra nos letreiros são as letras trocadas que as duas leituras erram igual
 ("SOCIAL SECUPITY", "ADIMANISTRATION"), e parte do lixo da banca.
 
+### Quantidades e ícones: reler a célula que o detector pulou
+
+No inventário do Persona 4, nenhuma das 8 linhas chegava inteira ao tradutor: "Medicine
+x 1" saía "Medicine", "Soul Drop x 5" saía "Soul Drop X", "Peach Seed x 6" saía "Peach
+Seed 6". O "1" do jogo é um traço fino e inclinado, e o detector do OCR não marca caixa
+nenhuma em volta dele; o "×" e o número quase nunca saíam juntos. A segunda leitura dos
+letreiros não alcançava isso, porque ela só relê caixas que existem. No mesmo problema
+entrou o caso contrário: ícones lidos como letra com confiança alta, que a segunda
+leitura confirma porque o reconhecedor os lê igual duas vezes ("n", "0", "△" e o "i" do
+botão de informação no overview do EVE).
+
+| Proposta | Linhas certas do Persona (de 8) | Ícones do EVE (de 5) | Nos outros prints |
+|---|---|---|---|
+| **Grok** | **8** | 0 | Recuperou o "Level 6" do Morrowind |
+| **Qwen** | 1, mais um "7" no lugar do "1" | **5** | Um "20" a mais no Morrowind |
+| Mistral | 6 | 0 | "1" errado em 6 linhas do Morrowind, lixo no Fallout |
+| ChatGPT | 3, mais um "7" no lugar do "5" | 0 | Nada muda |
+| DeepSeek | 0 | 0 | Dígitos de lixo em 10 prints |
+
+Entraram duas peças, de IAs diferentes, num módulo novo (`quantidades.py`), logo depois
+da segunda leitura. A do Grok acha a coluna de quantidade (2+ caixas só de número ou de
+"×", cada uma com um item à esquerda) e, em cada linha da coluna de itens que ficou sem
+quantidade, relê o recorte do campo inteiro só pelo reconhecedor. A do Qwen tira, pela
+forma, os ícones: uma coluna de glifos soltos com letra e não-letra misturadas, um glifo
+solto bem maior ou menor que o texto, um pedaço baixo na borda do print. As caixas de um
+campo de quantidade ficam protegidas: sozinha, a regra dos ícones tirava um "X" do
+Persona.
+
+A proposta do Grok precisou de três ajustes, todos achados lendo o texto que saía, não o
+número:
+- o item de cada quantidade passou a ser o mais perto à esquerda. Com o primeiro da
+  linha, os dois painéis do Morrowind se misturavam e saíam "Class 30" e "Endurance 20";
+- uma célula com outro texto não é relida: "Reputation: -475" virava "-475 75";
+- a leitura nova passa pelo corte de confiança de 0,7 do OCR: entrava um "3" com 0,12.
+
+Ler o campo inteiro foi o detalhe que fez a diferença. Sozinho, o "×" sai com confiança
+de 0,5; com o número ao lado, de 0,74 a 0,99. O ChatGPT relia cada célula separada e por
+isso completou só 3 linhas. Uma ideia que parecia arrumação piorou: trocar o "×" por
+"x" na saída. Com "x" minúsculo, a montagem tomou a coluna por texto corrido e juntou as
+8 quantidades numa linha no fim. Pôr espaço entre o "×" e o número ("× 1"), como no
+gabarito, também piorou: com duas palavras na caixa, a montagem separou a coluna das
+quantidades num bloco depois de todos os itens. Fica o que o OCR lê ("×1", "X5").
+
+A pergunta que mandei às IAs tinha um erro meu. Listei três "0" do Caves of Qud como
+ícones, e eles são os valores de "Reputation: 0", que estão no gabarito. O ChatGPT e o
+Qwen desconfiaram, e a regra do Grok protege números; uma regra que seguisse a pergunta
+ao pé da letra apagaria texto certo.
+
+No benchmark completo, só mudaram os três prints do problema, todos para melhor: erro de
+letras de 4,27% para 4,21%, linhas inteiras de 532 para 535, quebras a mais de 72 para
+69. O erro de palavras subiu de 8,50% para 8,59%, e isso é formato: o gabarito escreve
+"x 1" e o app escreve "×1". Por isso as 8 linhas do Persona, certas, ainda não contam
+como inteiras. São no máximo 8 recortes relidos por print, e só nos prints com coluna de
+quantidade (16 nos 90). Continuam o "D" e o
+"po" / "on" do Qud, e o "HP" / "SP" claro do primeiro personagem do Persona.
+
 ## 8. De onde vem o erro que sobrou
 
 Medindo de novo do mesmo jeito, com as palavras em ordem alfabética:
@@ -1067,12 +1124,12 @@ Medindo de novo do mesmo jeito, com as palavras em ordem alfabética:
 - **Poucas telas concentram o erro.** Os 10 piores prints somam 84% de todo o erro de
   letras. Sem eles, o acerto médio seria de 99,1%.
 - **O que sobra de leitura** são as letras trocadas dos letreiros miúdos (o lixo da
-  banca do Night in the Woods caiu de 105% para 52% de erro com a segunda leitura), as
-  quantidades que o OCR não lê no inventário do Persona, ícones lidos como letra e alguns
-  espaços comidos ("resteasy"). Separar as
-  palavras grudadas pelo dicionário do SymSpell quebrou nomes de jogo ("Dragonbind",
-  "Garrus") e ficou de fora.
-- **Quebras:** o app acha 680 das 744 quebras dos gabaritos. Das 64 que perde, 3 são
+  banca do Night in the Woods caiu de 105% para 52% de erro com a segunda leitura), dois
+  ícones e pedaços de borda do Caves of Qud e alguns espaços comidos ("resteasy"). As
+  quantidades do inventário do Persona já saem inteiras. Separar as palavras grudadas
+  pelo dicionário do SymSpell quebrou nomes de jogo ("Dragonbind", "Garrus") e ficou de
+  fora.
+- **Quebras:** o app acha 679 das 744 quebras dos gabaritos. Das 65 que perde, 3 são
   itens lado a lado que saem juntos:
   - 1 vem numa caixa só do OCR (as 10 da barra do Doki Doki já se separam);
   - 2 são abas de uma palavra só e encostadas que a regra do fundo ainda não pega (as
@@ -1087,11 +1144,13 @@ Medindo de novo do mesmo jeito, com as palavras em ordem alfabética:
 Para olhar esse erro mais de perto, o benchmark ganhou duas medidas:
 
 - **Linhas inteiras.** Cada linha do gabarito com duas palavras ou mais é uma unidade que
-  o tradutor deveria receber inteira. Das 661, 529 (80,0%) saem inteiras e sozinhas
-  (eram 519 antes da margem do painel e 524 antes das listas). Das que não saem:
-  - 42 (6,4%) saem junto de outra linha, numa quebra perdida (eram 47);
-  - 25 (3,8%) saem cortadas ou com outra região no meio (eram 30);
-  - 65 (9,8%) têm alguma palavra que o OCR não leu.
+  o tradutor deveria receber inteira. Das 661, 535 (80,9%) saem inteiras e sozinhas
+  (eram 519 antes da margem do painel, 524 antes das listas e 532 antes das
+  quantidades). Das que não saem:
+  - 37 (5,6%) saem junto de outra linha, numa quebra perdida (eram 47);
+  - 22 (3,3%) saem cortadas ou com outra região no meio (eram 30);
+  - 67 (10,1%) têm alguma palavra que o OCR não leu ou leu diferente (as quantidades do
+    Persona saem "×1", e o gabarito diz "x 1").
 
   Montagem e leitura pesam quase o mesmo no que ainda chega errado ao tradutor.
 - **Tipo de tela.** Cada print ganhou um tipo, em
@@ -1103,16 +1162,16 @@ Para olhar esse erro mais de perto, o benchmark ganhou duas medidas:
   | Texto (descrições, tomos, diário, tutorial) | 28 | 99,5% | 92% |
   | Legenda (falas e avisos) | 21 | 99,4% | 81% |
   | Menu (opções, abas, diálogos com escolhas) | 9 | 98,8% | 80% |
-  | Ficha (tabelas, inventários, grades, painéis) | 24 | 90,3% | 75% (era 72%) |
-  | Letreiro (placas, cartazes, títulos de cena) | 8 | 79,4% | 74% |
+  | Ficha (tabelas, inventários, grades, painéis) | 24 | 90,5% | 76% (era 72%) |
+  | Letreiro (placas, cartazes, títulos de cena) | 8 | 85,9% (era 79,4%) | 78% (era 74%) |
 
-  As fichas concentram o erro de montagem: 63 das 79 quebras a mais (eram 69 das 85).
+  As fichas concentram o erro de montagem: 59 das 69 quebras a mais (eram 69 das 85).
   Os letreiros concentram o erro de leitura.
 
 As regras também passaram a ter **testes automáticos**, em `tests/`. São os 29 casos
-simulados em várias línguas, 17 testes com telas desenhadas (abas e barras de menu) e as métricas do
-benchmark. Rodam em menos de um segundo, sem
-prints e sem OCR. Cada regra nova seguiu os mesmos passos:
+simulados em várias línguas, 17 testes com telas desenhadas (abas e barras de menu), 23
+com um leitor de mentira (segunda leitura, quantidades e ícones) e as métricas do
+benchmark. Rodam em menos de um segundo, sem prints e sem OCR. Cada regra nova seguiu os mesmos passos:
 1. achar um caso reproduzível;
 2. medir o sinal em todos os prints antes de escrever a regra;
 3. comparar com a versão anterior sobre as caixas guardadas, print a print, nas leituras
@@ -1124,9 +1183,10 @@ prints e sem OCR. Cada regra nova seguiu os mesmos passos:
 jogos novos, está no [plano de validação](plano-de-validacao.md). Cada problema que
 continua aberto, com dados reais e o que já foi tentado, está em [problemas em
 aberto](problemas-em-aberto.md). Em resumo:
-1. **Números pequenos e ícones perto do texto** (Problema 6): as quantidades do
-   inventário do Persona e os ícones lidos como letra. O lixo dos letreiros, as abas
-   encostadas e a barra do Doki Doki já foram resolvidos.
+1. **O que sobrou dos ícones** (Problema 6): o "D" e os pedaços "po" / "on" na borda
+   do Caves of Qud, e o "HP" / "SP" claro do Persona. As quantidades do inventário, os
+   ícones do EVE, o lixo dos letreiros, as abas encostadas e a barra do Doki Doki já
+   foram resolvidos.
 2. **Medir o RapidOCR nas outras escritas:** ele tem modelos de cerca de 8 MB para
    cirílico, árabe, coreano, devanágari e tailandês, que poderiam substituir o EasyOCR
    nessas línguas, se lerem melhor.
@@ -1221,6 +1281,12 @@ aberto](problemas-em-aberto.md). Em resumo:
     letra miúda". Separado em troca, falta e sobra, o erro mostrou que 65% era texto a
     mais, e que 5 dos 8 prints já estavam perfeitos. A solução virou "não mandar lixo",
     que é mais simples, mais barata e não precisou de nenhum modelo novo.
+28. **Confira no gabarito antes de chamar algo de erro.** Na pergunta sobre ícones, listei
+    três "0" do Qud como ícones; eram valores reais. Duas IAs desconfiaram. Se a regra
+    tivesse seguido a pergunta, apagaria texto certo.
+29. **O reconhecedor lê melhor com contexto.** O "×" sozinho saía com confiança de 0,5;
+    junto com o número, de 0,74 a 0,99. Reler o campo inteiro completou as 8 linhas;
+    reler cada célula separada, só 3.
 
 ## Como reproduzir
 
