@@ -16,6 +16,9 @@
 > e separar os itens de menu lado a lado e as linhas de aviso e título levou o app a
 > achar 89% das quebras de linha. Uma segunda leitura de recortes pequenos, que tira o
 > lixo dos letreiros e completa as quantidades dos inventários, levou a 95,8% das letras.
+> Oito problemas que eu não sabia resolver foram mandados a outras IAs; medidas nos mesmos
+> prints, as respostas levaram as linhas que chegam inteiras ao tradutor de 78,5% para
+> 81,5% e as quebras de linha achadas de 89% para 92%.
 > Este texto conta o que fiz, onde errei e o que mudou.
 
 ---
@@ -1216,6 +1219,29 @@ Ficam como limite conhecido, nos testes, os dois casos em que as cinco IAs disse
 haver regra segura: itens de largura parecida e itens com minúscula no mesmo passo de uma
 frase.
 
+### O balanço das oito perguntas às outras IAs
+
+As regras de "A margem de um painel estreito" até aqui saíram de oito problemas que mandei
+a outras IAs entre 17 e 19/11/2026, sempre com a mesma régua: cada proposta medida nos 90
+prints, nas duas leituras e nos casos simulados, antes de entrar no app.
+
+| Medida (90 prints, RapidOCR) | Antes (17/11) | Depois (19/11) |
+|---|---|---|
+| Acerto de letras | 95,1% | 95,8% |
+| Acerto de palavras | 91,1% | 91,4% |
+| Quebras achadas / certas | 89,0% / 88,6% | 91,9% / 90,8% |
+| Quebras a mais | 85 | 69 |
+| Linhas inteiras | 519 (78,5%) | 539 (81,5%) |
+| Fichas: linhas inteiras | 72% | 77% |
+| Letreiros: acerto de letras | 79,4% | 85,9% |
+
+Texto corrido, legendas e menus ficaram iguais em todas as rodadas. O Grok entrou em 7
+dos 8 problemas, mas a melhor resposta não veio sempre dele: o ChatGPT ganhou o primeiro e
+trouxe a peça que faltava no último, o Mistral trouxe a medida que resolveu as abas, e o
+Qwen, as travas do menu. Em quatro problemas, a regra que entrou junta peças de duas IAs.
+O relatório completo, com o placar por IA, o que decidiu cada rodada e o que aprendi sobre
+o método, está em [Oito problemas, cinco IAs e uma régua](consulta-outras-ias.md).
+
 ## 8. De onde vem o erro que sobrou
 
 Medindo de novo do mesmo jeito, com as palavras em ordem alfabética:
@@ -1400,6 +1426,10 @@ aberto](problemas-em-aberto.md). Em resumo:
     separa a lista, mas a fala ao lado tem o mesmo desenho ao contrário: as linhas do
     parágrafo coladas, os títulos afastados. Quem impede o erro ali são as travas de
     largura e de pontuação, não o passo.
+33. **Saiba quando parar de perguntar.** As duas primeiras perguntas às IAs renderam 5
+    linhas inteiras cada; a última, 1. Quando o que sobra de um tipo de erro é 2 quebras em
+    470, a próxima medida que vale a pena não é outra regra, é testar as que já existem em
+    jogos que o app nunca viu.
 
 ## Como reproduzir
 
@@ -1408,8 +1438,9 @@ O benchmark e as instruções para montar o dataset estão em
 repositório (só os 3 exemplos da pasta `base`), então o resultado completo só sai com o
 dataset local. Os números de cada print estão nos anexos [com o
 RapidOCR](resultados-benchmark.md) e [com o EasyOCR](resultados-benchmark-easyocr.md), e a
-comparação dos motores, em [comparacao-motores-ocr.md](comparacao-motores-ocr.md). Na
-pasta do projeto:
+comparação dos motores, em [comparacao-motores-ocr.md](comparacao-motores-ocr.md). A
+consulta às outras IAs, rodada a rodada, está em
+[consulta-outras-ias.md](consulta-outras-ias.md). Na pasta do projeto:
 
 ```
 env\Scripts\python.exe benchmark\benchmark.py --detalhes
