@@ -2,7 +2,9 @@
 
 *Anexo do [estudo de caso](estudo-de-caso-ocr.md). Rodadas de 17 a 19/11/2026. Cada
 problema, com os dados reais e a tabela de cada proposta, está em [problemas em
-aberto](problemas-em-aberto.md).*
+aberto](problemas-em-aberto.md). A numeração aqui é a do arquivo de perguntas às IAs; nos
+problemas em aberto, o 7 e o 8 estão trocados (lá, o Problema 7 é o das quebras verticais,
+que inclui os itens em duas linhas, e o 8 é o do menu vertical).*
 
 ## Resumo
 
@@ -46,6 +48,11 @@ comecei as perguntas. "Depois" é o de 19/11, com as regras dos oito problemas.
 O ganho foi todo em fichas e letreiros, que eram os tipos de tela onde estava o erro.
 Texto corrido, legendas e menus já estavam bons e não pioraram em nenhuma rodada. Essa era
 a condição de entrada de qualquer regra.
+
+As linhas inteiras não mostram tudo. As regras das abas e da barra de menu renderam 14
+quebras certas e nenhuma linha inteira, porque a medida só conta linhas do gabarito com
+duas palavras ou mais, e cada aba ou item de menu é uma palavra só. Para essas duas, a
+medida que conta é a das quebras. (Observação do Grok na avaliação de 19/11.)
 
 ## Rodada a rodada
 
@@ -173,10 +180,29 @@ que resolveu as abas, e o Qwen trouxe as travas do menu.
   "SP" claros do Persona).
 - **Limites conhecidos**, registrados como testes que falham de propósito: menu de só 2
   itens, itens de largura parecida e itens com minúscula no mesmo passo de uma frase. As
-  cinco IAs disseram que não há regra segura para eles.
+  cinco IAs disseram que não há regra segura para eles. Isso não prova que não exista uma:
+  mostra que, com o material que mandei, nenhuma proposta sobreviveu. Eles ficam abertos,
+  à espera de um print real que os exija.
 - **Validação:** as regras dos oito problemas foram medidas só nestes 90 prints, a maioria
   em um ou dois jogos. O [plano de validação](plano-de-validacao.md) diz como medi-las em
   jogos novos.
+
+## O que as avaliações de 19/11 acrescentaram
+
+Depois do balanço, pedi ao ChatGPT e ao Grok uma avaliação do projeto inteiro. Os dois
+concordaram: congelar as regras, não abrir outra rodada e ir para a validação com jogos
+novos. O que entrou a partir das avaliações, sem mudar nenhuma regra do app:
+- a versão de referência marcada com a tag `referencia-validacao-2026-11-19`, e a
+  [referência da validação](referencia-validacao.md), com uma linha por regra, o estado
+  dela e o que a reprovaria num jogo novo;
+- a medida de letras sem ordem no benchmark, que põe as linhas lidas na ordem do gabarito
+  antes de comparar. Nos 90 prints, ela dá 97,0% contra 95,8%, e só mudam 4 fichas com
+  dois painéis. O portão de letras da validação passou a usar essa medida;
+- o fluxo da coleta corrigido: prints movidos para `validacao/`, gabarito escrito antes de
+  abrir o rascunho do app, um manifesto com a regra que cada print testa;
+- um jogo em outra língua na coleta, porque os 90 prints são todos em inglês;
+- o tempo p95 por print como indicador fixo: 2,5 s, contra 0,8 s de média. O que pesa é a
+  quantidade de texto; a segunda leitura e as quantidades somam 23 ms na mediana.
 
 ## Onde estão os detalhes
 

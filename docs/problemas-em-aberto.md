@@ -586,7 +586,8 @@ Morrowind). Igual com o limiar de 0,80 a 0,95 e com 4 a 6 palavras.
 
 | Proposta | Caso simulado | Casos certos (de 41) | Linhas inteiras (RapidOCR / EasyOCR) | Por que ganhou ou perdeu |
 |---|---|---|---|---|
-| **Grok** (pilha regular, uma borda alinhada, linha antes da última < 0,85 da maior) | sim | 36 | 538 / 319 | Precisou das travas: no EasyOCR partiu uma manchete em maiúsculas e uma linha de 10 palavras |
+| **Grok + travas** (a regra que entrou) | sim | **38** | **538 / 320** | Nenhuma quebra a mais nas duas leituras |
+| Grok, regra crua (pilha regular, uma borda alinhada, linha antes da última < 0,85 da maior) | sim | 36 | 538 / 319 | Precisou das travas: no EasyOCR partiu uma manchete em maiúsculas e uma linha de 10 palavras |
 | Qwen (no máximo uma linha na borda de fim, até 4 palavras) | sim | 34 | 538 / 318 | Itens de largura parecida contam como duas linhas cheias e vetam o menu |
 | ChatGPT (pontuação de evidências) | sim | 29 | 536 / 317 | Quebra 5 casos de prosa que passavam |
 | DeepSeek (largura até 0,45 do print) | não | 32 | 535 / 320 | Num print só de menu, a linha mais larga é o print |

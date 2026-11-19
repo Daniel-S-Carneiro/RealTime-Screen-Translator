@@ -19,6 +19,12 @@ que copiavam o pipeline e usavam uma imagem só.
 
 Imagens sem `.txt` aparecem como `[PENDENTE]` e ficam fora da conta.
 
+**Na validação com jogos novos é diferente** (veja o
+[plano de validação](../docs/plano-de-validacao.md)): os prints são **movidos** (não
+copiados) da pasta do dia para `dataset/validacao/`, e o gabarito é escrito olhando só a
+imagem, **sem abrir o rascunho**. Corrigir o rascunho seria olhar o resultado do app antes
+da prova. O rascunho fica na pasta do dia.
+
 ### Como a pasta é organizada
 
 ```
@@ -26,6 +32,7 @@ dataset/
 ├── base/          os 3 exemplos que vêm com o repositório
 ├── 2026-11-02/    uma pasta por dia de coleta
 ├── 2026-11-14/
+├── validacao/     os prints de jogos novos, medidos à parte (--periodo validacao)
 └── _fora/         prints guardados que não entram no teste
 ```
 
@@ -97,6 +104,12 @@ O relatório vai para `relatorios/benchmark/benchmark_<data>.csv`.
 - **CER** (taxa de erro de caracteres): quantas letras precisariam ser
   corrigidas, dividido pelo tamanho do gabarito. 2% = 2 letras erradas a cada 100.
   Quanto menor, melhor.
+- **sem ordem** (coluna `cer_sem_ordem` no CSV): o CER depois de pôr as linhas lidas
+  na ordem do gabarito. Cada linha vai para a posição do trecho do gabarito com que ela
+  mais se parece, e o lixo vai para o fim. Letra trocada, texto que falta e texto a mais
+  continuam contando; só a ordem entre as linhas sai da conta, porque uma tela com dois
+  painéis pode ter duas ordens certas. Nunca passa do CER. É a medida do portão de
+  letras da validação.
 - **WER** (taxa de erro de palavras): o mesmo, contando palavras.
 - **quebras**: o app manda ao tradutor um parágrafo por linha (`paragrafos.py`).
   Em cada imagem, `quebras 7/8 (1 a mais)` quer dizer que ele achou 7 das 8
