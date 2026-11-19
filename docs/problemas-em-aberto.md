@@ -95,9 +95,9 @@ resolução.
 |---|---|
 | Acerto de letras | 95,8% |
 | Acerto de palavras | 91,4% |
-| Quebras achadas / certas | 92% / 91% (681 de 744 achadas, 69 a mais) |
-| Linhas inteiras | 81% (538 de 661) |
-| Das que não chegam inteiras | 34 com sobra (quebra perdida), 22 partidas, 67 com palavra faltando ou diferente |
+| Quebras achadas / certas | 92% / 91% (684 de 744 achadas, 69 a mais) |
+| Linhas inteiras | 82% (539 de 661) |
+| Das que não chegam inteiras | 33 com sobra (quebra perdida), 22 partidas, 67 com palavra faltando ou diferente |
 
 | Tipo de tela | Prints | Acerto de letras | Linhas inteiras | Quebras a mais |
 |---|---|---|---|---|
@@ -505,8 +505,9 @@ reputação do Caves of Qud.
 
 ### Problema 7: quebras verticais difíceis (resolvido em parte)
 
-**Resolvido em parte em 18/11/2026.** As descrições curtas do Caves of Qud saem uma por
+**Resolvido em parte em 18 e 19/11/2026.** As descrições curtas do Caves of Qud saem uma por
 linha, pela regra do menu vertical do Problema 8 (a pilha de itens curtos é a mesma forma).
+A lista de tópicos do diálogo do Morrowind sai um tópico por linha desde 19/11 (abaixo).
 Continuam o título inclinado do Danganronpa e as frases do mesmo parágrafo separadas pela
 regra de sentença terminada.
 
@@ -522,6 +523,48 @@ regra de sentença terminada.
 seguidas, de tamanho parecido e bem menores que a coluna, costumam ser uma lista. Para
 as sentenças, se a linha de cima chegou perto da margem do painel (a do problema 1, que
 agora existe no código como `_margem_local`), a quebra é visual, não de parágrafo.
+
+**Lista de tópicos do Morrowind (resolvida em 19/11/2026).** A coluna de tópicos à direita
+do diálogo saía "Advancement Disappearance of th Dwarves" / "duties join the Mages Guild" /
+"Mages Guíld Requirements". Dois tópicos ocupam duas linhas, e alguns começam com
+minúscula ("duties", "rules"), o que a regra do menu veta. As duas linhas de um tópico
+ficam coladas (caixas sobrepostas, passo de 15 e 18 px), e entre tópicos o passo é de 22 a
+26 px. Entrou `paragrafos._itens_quebrados`, com duas partes:
+- **a proposta do Grok:** numa pilha com 2+ itens em duas linhas, cada um com as caixas
+  sobrepostas em 0,1 altura e a linha de baixo na mesma borda e com até 0,85 da largura da
+  de cima, o maior passo dentro de um item até 0,85 da mediana dos passos entre itens e
+  menor que todos eles, os passos entre itens regulares (até 0,5 altura de diferença), a
+  coluna alinhada e com menos de 16 alturas, 2+ linhas curtas antes da última, nenhuma linha
+  com fim de frase, vírgula no meio ou mais de 5 palavras: junta as linhas de cada item e
+  quebra entre os itens, mesmo antes de minúscula;
+- **o modo fraco do ChatGPT:** com um item em duas linhas só (sobreposto, ou com passo até
+  0,75 da mediana), junta o item e deixa a regra do menu decidir, com o veto da minúscula.
+
+Medida: no RapidOCR, as quebras perdidas entre uma linha e a de baixo caíram de 4 para 2
+(de 470), as quebras a mais continuaram 15 (de 215 pares) e as linhas inteiras foram de 538
+para 539. No EasyOCR, saem certos o Morrowind e o Pip-Boy ("Mercenary's Grenade" / "Rifle"),
+e as linhas inteiras vão de 320 para 321. Nos casos simulados, de 53 para 57 (de 67),
+nenhum pior.
+
+Caixas sobrepostas são comuns: 44 pilhas dos 90 prints têm 2+ pares assim. Com as três
+condições do Grok sobram 7, e só a lista do Morrowind passa todas as travas. O diálogo do
+Morrowind tem o mesmo desenho ao contrário (as linhas da fala coladas, os títulos
+afastados) e fica de fora pela largura e pela pontuação.
+
+| Proposta | Morrowind (RapidOCR / EasyOCR) | Casos certos (de 67) | O que aconteceu |
+|---|---|---|---|
+| Antes | não / não | 53 | — |
+| **Grok** (2+ pares sobrepostos, sobra mais curta) | sim / sim | 55 | Nada mais muda nos 90 prints |
+| **Grok + modo fraco do ChatGPT** (entrou) | sim / sim | 57 | Mais o Pip-Boy no EasyOCR, o item único em duas linhas e a lista em árabe |
+| ChatGPT (dois ritmos, no bloco inteiro) | não / não | 57 | O bloco tem "58/100" e "Persuasion" em cima da lista; nas pilhas pelo vão acerta, mas junta duas perícias da ficha no EasyOCR |
+| Qwen (duas classes de passo, âncora, menu sem minúscula) | sim / não | 55 | O item único em duas linhas falha na trava de vãos regulares dele; a parte B partiu um caso alemão e um cartaz |
+| Mistral (passo colado e degrau) | sim / sim | 55 | Acerta o Pip-Boy no RapidOCR, mas parte fala estreita em alemão e perde 2 linhas no Immortal Clan (EasyOCR) |
+| DeepSeek (k-means nos passos) | não / sim | 57 | O passo do "Persuasion" vira sozinho o grupo alto; dispara em fichas e numa fala japonesa simulada |
+
+Ficam como teste de limite conhecido, porque as cinco IAs concordaram que não há regra
+segura: itens de largura parecida ("Health Potion" / "Mana Potion" / "Antidote" /
+"Elixir") e itens com minúscula no mesmo passo de uma frase. O menu de só 2 itens continua
+no Problema 8. O teste está em `laboratorios/quebras/experimentos/topicos.py`.
 
 ### Problema 8: menu em que o primeiro item é o mais largo (resolvido)
 
@@ -587,7 +630,7 @@ linhas.
 ### Problema 10: outras línguas sem prints reais
 
 **Tipo:** validação. Todos os 90 prints são em inglês. O app lê 83 línguas: 43 pelo
-RapidOCR e 40 pelo EasyOCR. As regras de montagem só foram conferidas com 41 casos simulados e 17 testes de telas desenhadas (e a releitura e as quantidades, com 23 testes de leitor de mentira)
+RapidOCR e 40 pelo EasyOCR. As regras de montagem só foram conferidas com 52 casos simulados e 17 testes de telas desenhadas (e a releitura e as quantidades, com 23 testes de leitor de mentira)
 simulados.
 
 **O que pesquisar:**
@@ -630,3 +673,7 @@ Para não pesquisar de novo o que já tem resposta:
 | Menu: linha "curta" medida contra a largura do print ou do painel (DeepSeek, Mistral) | Num print só de menu, a linha mais larga é a largura toda: nunca dispara |
 | Menu: pontuação de evidências sem veto de minúscula (ChatGPT) | Quebra prosa estreita: 5 casos que passavam |
 | Menu: margem do painel sem as linhas do próprio par (Mistral) | Item de menu não chega às 16 alturas da margem do painel: não muda nada |
+| Item em duas linhas: k-means de 2 grupos nos passos (DeepSeek) | Um passo fora da lista (o botão acima dela) vira sozinho o grupo alto; dispara em fichas e numa fala japonesa simulada |
+| Item em duas linhas: passo colado sem trava de largura nem de palavras (Mistral) | Parte fala estreita em alemão com um ou dois passos curtos |
+| Item em duas linhas: continuação medida contra a altura da letra (ChatGPT) | Juntou duas perícias da ficha do Morrowind no EasyOCR; o passo do Pip-Boy é 0,92 da altura e não pega |
+| Derrubar o veto da minúscula pela margem do próprio bloco (Qwen) | Fala com quebra manual: a 1ª palavra de baixo cabe antes da margem. Partiu um caso alemão e um cartaz do Night in the Woods |

@@ -24,8 +24,8 @@ para jogos que o app nunca viu. Um conjunto que serve para ajustar não serve pa
 
 A versão de referência é a `main` com a margem do painel estreito, as listas de rótulo
 e valor (17/11/2026), as abas pelo fundo, a barra de menu numa caixa só, a segunda
-leitura das caixas pequenas, as quantidades e ícones e o menu vertical (18/11/2026), as
-últimas regras que entram antes da coleta. Antes delas, a
+leitura das caixas pequenas, as quantidades e ícones e o menu vertical (18/11/2026) e os
+itens em duas linhas (19/11/2026), as últimas regras que entram antes da coleta. Antes delas, a
 referência era o commit `235b28e`. Nos 90 prints atuais:
 
 | Medida | Resultado |
@@ -33,7 +33,7 @@ referência era o commit `235b28e`. Nos 90 prints atuais:
 | Acerto de letras | 95,8% |
 | Acerto de palavras | 91,4% |
 | Quebras achadas / certas | 92% / 91% (69 a mais) |
-| Linhas inteiras | 81% (538 de 661) |
+| Linhas inteiras | 82% (539 de 661) |
 
 | Tipo de tela | Acerto de letras | Linhas inteiras |
 |---|---|---|
@@ -45,8 +45,8 @@ referência era o commit `235b28e`. Nos 90 prints atuais:
 
 Nenhuma regra muda até a validação ser medida. A validação também vai dizer se a margem
 do painel, a regra das listas, a das abas, a da barra de menu, a segunda leitura, a das
-quantidades e ícones e a do menu vertical, medidas só nestes 90 prints, valem em jogos
-novos.
+quantidades e ícones, a do menu vertical e a dos itens em duas linhas, medidas só nestes
+90 prints, valem em jogos novos.
 
 ## Fase 1: coleta
 
@@ -76,7 +76,7 @@ delas (os títulos são exemplos; qualquer jogo do mesmo tipo serve):
 | Tipo de jogo | Exemplos | O que testa | Os 6 prints |
 |---|---|---|---|
 | Visual novel feita em Ren'Py | Katawa Shoujo, Butterfly Soup (grátis), Slay the Princess | Barra de menu numa caixa só | 3 falas com a barra de menu embaixo (de preferência com um item apagado ou destacado), menu principal, preferências, tela de salvar |
-| RPG com diálogo em painel e ficha | Disco Elysium, Pillars of Eternity, Baldur's Gate 3, Skyrim | Margem do painel estreito, listas de rótulo e valor | 2 diálogos longos no painel, 2 fichas de atributos, 1 inventário, 1 diário |
+| RPG com diálogo em painel e ficha | Disco Elysium, Pillars of Eternity, Baldur's Gate 3, Skyrim | Margem do painel estreito, listas de rótulo e valor, listas com item em duas linhas | 2 diálogos longos no painel (de preferência com uma lista de tópicos ou de respostas ao lado), 2 fichas de atributos, 1 inventário, 1 diário |
 | Jogo com inventário em abas | Stardew Valley, Terraria, Fallout 4, Path of Exile | Abas pelo fundo | 2 telas com a barra de abas (uma aba selecionada), 2 inventários, 1 fala, 1 descrição de item |
 | Jogo 3D com placas no cenário | Firewatch, Life is Strange, Persona 5, Cyberpunk 2077 | Letreiros (Problema 5) | 3 placas ou letreiros (pequenos, de longe, inclinados), 2 legendas, 1 menu |
 | Estratégia ou simulação | Civilization VI, Stellaris, Crusader Kings III, Football Manager | Tabelas, painéis, menus | 2 tabelas, 2 painéis de informação, 1 menu, 1 texto de enciclopédia |
@@ -137,7 +137,7 @@ referência.
   entre 92% e 95% nas letras e entre 70% e 78% nas linhas inteiras. Muito abaixo disso,
   alguma regra decorou o dataset.
 
-**3.3 Teste: testes automáticos.** Os 87 testes continuam passando.
+**3.3 Teste: testes automáticos.** Os 98 testes continuam passando.
 
 **3.4 Organização: registro.** O resultado vai para um anexo próprio,
 `docs/resultados-validacao.md`, e para o estudo de caso, sem sobrescrever os resultados
@@ -209,5 +209,6 @@ Ainda **não** foram abandonados:
 - o diálogo e a subida de nível do Morrowind, a grade e o overview do EVE e a reputação do
   Caves of Qud: entram na fase das fichas;
 - o menu de só 2 itens em que o primeiro é o mais largo: é limite conhecido nos testes (o
-  de 3 ou mais, e as descrições curtas do Caves of Qud, foram resolvidos em 18/11);
+  de 3 ou mais, e as descrições curtas do Caves of Qud, foram resolvidos em 18/11; a lista
+  de tópicos do diálogo do Morrowind, em 19/11);
 - as quebras verticais difíceis, com prioridade baixa.

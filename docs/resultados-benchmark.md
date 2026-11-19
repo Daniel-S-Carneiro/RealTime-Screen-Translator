@@ -1,6 +1,6 @@
 # Resultados do benchmark com o RapidOCR, print a print
 
-*Anexo do [estudo de caso](estudo-de-caso-ocr.md). Benchmark de 18/11/2026, com o app
+*Anexo do [estudo de caso](estudo-de-caso-ocr.md). Benchmark de 19/11/2026, com o app
 lendo o texto com o RapidOCR (modelos PP-OCRv6 small do PaddleOCR, na CPU)
 e a correção por contexto desligada, o padrão.
 As colunas de "antes" trazem o acerto de letras em benchmarks anteriores: **EasyOCR na GPU, 15/11**; **RapidOCR antes das colunas, 16/11**.
@@ -37,8 +37,8 @@ só os 3 exemplos da pasta `base` estão no git.
 | Acerto de palavras | **91,4%** |
 | Quebras achadas | 92% |
 | Quebras certas | 91% |
-| Linhas inteiras | 81% |
-| Tempo médio por print | 0,9 s |
+| Linhas inteiras | 82% |
+| Tempo médio por print | 1,0 s |
 | Acerto de letras (EasyOCR na GPU, 15/11) | 89,8% |
 | Acerto de palavras (EasyOCR na GPU, 15/11) | 77,7% |
 | Quebras achadas / certas (EasyOCR na GPU, 15/11) | 74% / 86% |
@@ -52,7 +52,7 @@ A média é puxada para baixo por poucas telas muito difíceis:
 - mais da metade dos prints não erra **nenhuma letra**;
 - 78 dos 90 prints acertam 95% ou mais das letras, e 63 acertam 99% ou mais.
 
-Com a correção por contexto ligada, o acerto vai a 95,8% das letras e 91,5% das palavras, a 0,9 s por print, sem contar os ~5 s para carregar o BERT.
+Com a correção por contexto ligada, o acerto vai a 95,8% das letras e 91,5% das palavras, a 1,0 s por print, sem contar os ~5 s para carregar o BERT.
 
 ## Por tipo de tela
 
@@ -64,7 +64,7 @@ mudança mexe, coisa que a média geral esconde.
 | texto | Título com texto corrido: descrições, tomos, diário, tutorial, registro | 28 | 99,5% | 98,7% | 100% | 98% | 92% |
 | legenda | Falas, legendas e avisos curtos | 21 | 99,4% | 96,6% | 96% | 96% | 81% |
 | menu | Menus, opções de diálogo e abas | 9 | 98,8% | 95,4% | 100% | 99% | 80% |
-| ficha | Fichas, tabelas, inventários, grades e painéis lado a lado | 24 | 90,5% | 83,2% | 87% | 87% | 77% |
+| ficha | Fichas, tabelas, inventários, grades e painéis lado a lado | 24 | 90,5% | 83,2% | 88% | 88% | 77% |
 | letreiro | Letreiros, cartazes e títulos de cena | 8 | 85,9% | 72,1% | 91% | 80% | 78% |
 
 ## Por jogo
@@ -75,7 +75,7 @@ mudança mexe, coisa que a média geral esconde.
 | Doki Doki Literature Club | 3 | 100,0% | 100,0% | 100% | 100% | 100% | 91,6% | 100,0% |
 | Exemplos públicos (pasta base) | 3 | 99,9% | 99,5% | 100% | 100% | 93% | 99,3% | 99,9% |
 | Immortal Clan | 15 | 99,9% | 99,0% | 99% | 98% | 93% | 98,1% | 99,9% |
-| The Elder Scrolls III: Morrowind | 6 | 99,5% | 98,2% | 96% | 99% | 89% | 77,3% | 82,0% |
+| The Elder Scrolls III: Morrowind | 6 | 99,5% | 98,2% | 99% | 99% | 90% | 77,3% | 82,0% |
 | Mass Effect Legendary Edition | 5 | 99,3% | 91,9% | 100% | 100% | 80% | 99,4% | 99,3% |
 | Persona 4 Golden | 7 | 97,2% | 93,0% | 97% | 100% | 57% | 93,6% | 96,7% |
 | Fallout: New Vegas | 8 | 96,0% | 91,4% | 88% | 85% | 82% | 86,1% | 87,1% |
@@ -83,7 +83,7 @@ mudança mexe, coisa que a média geral esconde.
 | EVE Online | 12 | 94,7% | 87,7% | 95% | 90% | 75% | 85,4% | 87,1% |
 | Night in the Woods | 14 | 91,5% | 81,9% | 87% | 74% | 71% | 85,0% | 87,5% |
 | Caves of Qud | 9 | 86,6% | 83,6% | 75% | 81% | 82% | 83,7% | 86,9% |
-| **Todos** | **90** | **95,8%** | **91,4%** | **92%** | **91%** | **81%** | 89,8% | 92,2% |
+| **Todos** | **90** | **95,8%** | **91,4%** | **92%** | **91%** | **82%** | 89,8% | 92,2% |
 
 ## Print a print
 
@@ -150,7 +150,7 @@ Média: 99,5% das letras e 98,2% das palavras.
 | Print | Acerto de letras | Acerto de palavras | Quebras achadas | A mais | Linhas inteiras | Letras: EasyOCR na GPU, 15/11 | Letras: RapidOCR antes das colunas, 16/11 |
 |---|---|---|---|---|---|---|---|
 | `morrowind_avisos` | 100,0% | 100,0% | 2 de 2 | 0 | 3 de 3 | 89,6% | 100,0% |
-| `morrowind_dialogo` | 99,9% | 99,2% | 23 de 26 | 1 | 9 de 14 | 76,6% | 82,7% |
+| `morrowind_dialogo` | 99,9% | 99,2% | 26 de 26 | 1 | 10 de 14 | 76,6% | 82,7% |
 | `morrowind_legenda` | 100,0% | 100,0% | — | 0 | 1 de 1 | 100,0% | 100,0% |
 | `morrowind_magias` | 99,8% | 98,4% | 23 de 23 | 0 | 23 de 23 | 96,3% | 99,6% |
 | `morrowind_nivel` | 97,9% | 93,5% | 11 de 12 | 0 | 8 de 11 | 69,5% | 79,8% |

@@ -1168,6 +1168,54 @@ EasyOCR, "Major Skills" e "Minor Skills" do Morrowind passaram a sair com um ite
 Ficam como limite conhecido, nos testes: menu de só 2 itens (duas linhas não bastam para
 ver a pilha) e uma fala estreita em japonês, que uma regra antiga de menu sem espaço corta.
 
+### Listas em que um item quebrou em duas linhas
+
+Depois do menu vertical, sobrava pouco entre uma linha e a de baixo: nos 90 prints, o app
+perdia 4 de 470 quebras e punha 15 a mais em 215 pares. Duas das perdidas estavam na lista
+de tópicos do diálogo do Morrowind, que saía "Advancement Disappearance of th Dwarves" /
+"duties join the Mages Guild" / "Mages Guíld Requirements". A regra do menu não pegava a
+lista por dois motivos: alguns tópicos começam com minúscula ("duties", "rules"), o que
+ela veta para proteger a prosa, e dois tópicos ocupam duas linhas.
+
+O sinal estava na posição das linhas. As duas linhas de um tópico ficam coladas, com as
+caixas sobrepostas e passo de 15 e 18 px; entre um tópico e o seguinte, o passo é de 22 a
+26 px. Sozinho, o passo não separa prosa de lista: numa frase quebrada, o passo entre as
+linhas é igual ao de uma quebra de verdade. Mandei às IAs o caso, os limites da regra do
+menu e o que não podia piorar, e medi as cinco propostas em 67 casos simulados e nos 90
+prints, nas duas leituras:
+
+| Proposta | Morrowind (RapidOCR / EasyOCR) | Casos certos (de 67) | O que aconteceu |
+|---|---|---|---|
+| Antes | não / não | 53 | — |
+| **Grok** | **sim / sim** | 55 | Nada mais muda nos 90 prints |
+| ChatGPT | não / não | 57 | Olha o bloco inteiro, e no print o botão "Persuasion" fica em cima da lista |
+| Qwen | sim / não | 55 | A parte que tira o veto da minúscula partiu um caso alemão e um cartaz |
+| Mistral | sim / sim | 55 | Sem trava de largura, partiu fala estreita em alemão |
+| DeepSeek | não / sim | 57 | O passo do "Persuasion" ficou sozinho num dos dois grupos do k-means |
+
+Entrou a do Grok. Numa pilha com dois ou mais itens em duas linhas (caixas sobrepostas, a
+linha de baixo na mesma borda e mais curta), com passos regulares entre os itens e
+maiores que os de dentro, e com as travas de texto do menu menos a da minúscula, as linhas
+de cada item se juntam e os itens se separam. Um item só em duas linhas não prova que a
+pilha é uma lista; para ele entrou o "modo fraco" do ChatGPT: o item se junta e a regra do
+menu decide, com o veto da minúscula.
+
+Resultado: no RapidOCR, as quebras perdidas entre linhas caíram de 4 para 2, sem nenhuma
+a mais, e as linhas inteiras foram de 538 para 539. No EasyOCR, saíram certos também o
+Morrowind e a arma do Pip-Boy ("Mercenary's Grenade" / "Rifle"). Nos casos, 57 de 67, nenhum
+pior. No benchmark completo só mudou o diálogo do Morrowind; letras e palavras ficaram
+iguais.
+
+O teste que o Grok e o Mistral pediram antes de adotar mostrou por que as travas importam.
+Caixas sobrepostas são comuns: 44 pilhas nos 90 prints têm duas ou mais. Com as três
+condições do Grok sobram 7, e só a lista do Morrowind passa em todas. A fala do mesmo
+diálogo tem o desenho ao contrário: as linhas de um parágrafo coladas e os títulos
+afastados. Ela fica de fora pela largura e pela pontuação, não pelo passo.
+
+Ficam como limite conhecido, nos testes, os dois casos em que as cinco IAs disseram não
+haver regra segura: itens de largura parecida e itens com minúscula no mesmo passo de uma
+frase.
+
 ## 8. De onde vem o erro que sobrou
 
 Medindo de novo do mesmo jeito, com as palavras em ordem alfabética:
@@ -1181,7 +1229,7 @@ Medindo de novo do mesmo jeito, com as palavras em ordem alfabética:
   quantidades do inventário do Persona já saem inteiras. Separar as palavras grudadas
   pelo dicionário do SymSpell quebrou nomes de jogo ("Dragonbind", "Garrus") e ficou de
   fora.
-- **Quebras:** o app acha 681 das 744 quebras dos gabaritos. Das 63 que perde, 3 são
+- **Quebras:** o app acha 684 das 744 quebras dos gabaritos. Das 60 que perde, 3 são
   itens lado a lado que saem juntos:
   - 1 vem numa caixa só do OCR (as 10 da barra do Doki Doki já se separam);
   - 2 são abas de uma palavra só e encostadas que a regra do fundo ainda não pega (as
@@ -1189,17 +1237,18 @@ Medindo de novo do mesmo jeito, com as palavras em ordem alfabética:
 
   O resto são linhas de cima e de baixo que ainda saem juntas, como títulos inclinados e
   frases do mesmo parágrafo separadas, e quebras nas telas em que a ordem não bate com o
-  gabarito. As descrições curtas sem pontuação do Caves of Qud já saem uma por linha.
+  gabarito. As descrições curtas sem pontuação do Caves of Qud e a lista de tópicos do
+  diálogo do Morrowind já saem uma por linha.
 - **Ordem ambígua:** o resumo do Caves of Qud ainda erra 65% só por ordem, mas ali as duas
   ordens fazem sentido.
 
 Para olhar esse erro mais de perto, o benchmark ganhou duas medidas:
 
 - **Linhas inteiras.** Cada linha do gabarito com duas palavras ou mais é uma unidade que
-  o tradutor deveria receber inteira. Das 661, 538 (81,4%) saem inteiras e sozinhas
-  (eram 519 antes da margem do painel, 524 antes das listas, 532 antes das quantidades e
-  535 antes do menu vertical). Das que não saem:
-  - 34 (5,1%) saem junto de outra linha, numa quebra perdida (eram 47);
+  o tradutor deveria receber inteira. Das 661, 539 (81,5%) saem inteiras e sozinhas
+  (eram 519 antes da margem do painel, 524 antes das listas, 532 antes das quantidades,
+  535 antes do menu vertical e 538 antes dos itens em duas linhas). Das que não saem:
+  - 33 (5,0%) saem junto de outra linha, numa quebra perdida (eram 47);
   - 22 (3,3%) saem cortadas ou com outra região no meio (eram 30);
   - 67 (10,1%) têm alguma palavra que o OCR não leu ou leu diferente (as quantidades do
     Persona saem "×1", e o gabarito diz "x 1").
@@ -1220,7 +1269,7 @@ Para olhar esse erro mais de perto, o benchmark ganhou duas medidas:
   As fichas concentram o erro de montagem: 59 das 69 quebras a mais (eram 69 das 85).
   Os letreiros concentram o erro de leitura.
 
-As regras também passaram a ter **testes automáticos**, em `tests/`. São os 41 casos
+As regras também passaram a ter **testes automáticos**, em `tests/`. São os 52 casos
 simulados em várias línguas, 17 testes com telas desenhadas (abas e barras de menu), 23
 com um leitor de mentira (segunda leitura, quantidades e ícones) e as métricas do
 benchmark. Rodam em menos de um segundo, sem prints e sem OCR. Cada regra nova seguiu os mesmos passos:
@@ -1245,7 +1294,7 @@ aberto](problemas-em-aberto.md). Em resumo:
 3. **Repensar o pacote de GPU:** com o RapidOCR, a placa só acelera as línguas que ficaram
    no EasyOCR.
 4. **Menu de só 2 itens** com o primeiro mais largo, que ainda sai junto (o de 3 ou mais
-   já se separa).
+   já se separa), e menu de itens com largura parecida.
 5. **Coletar prints reais em outras línguas**, começando por japonês e árabe.
 
 ## 9. O que aprendi
@@ -1343,6 +1392,14 @@ aberto](problemas-em-aberto.md). Em resumo:
     largo e, separado, as descrições curtas sem pontuação do Caves of Qud. A regra do menu
     resolveu os dois, porque os dois são uma pilha de itens curtos. Antes de abrir um
     problema novo, vale rodar a última regra nele.
+31. **Mande o entorno, não só o caso.** Mandei às IAs as 10 linhas da lista de tópicos do
+    Morrowind. No print, o botão "Persuasion" fica logo acima, e duas propostas que
+    acertavam a lista recortada não disparavam no print inteiro. A pergunta é um recorte;
+    a medição tem que ser no print.
+32. **Procure o sinal onde a regra não devia disparar.** O passo menor dentro de um tópico
+    separa a lista, mas a fala ao lado tem o mesmo desenho ao contrário: as linhas do
+    parágrafo coladas, os títulos afastados. Quem impede o erro ali são as travas de
+    largura e de pontuação, não o passo.
 
 ## Como reproduzir
 
