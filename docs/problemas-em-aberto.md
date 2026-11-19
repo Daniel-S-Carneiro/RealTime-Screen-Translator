@@ -3,7 +3,8 @@
 *Escrito em 17/11/2026 para quem for pesquisar soluções, pessoa ou modelo de IA. Cada
 problema traz os dados reais, o que já foi tentado e como medir uma solução. Os próximos
 passos estão no [plano de validação](plano-de-validacao.md), e a história completa, no
-[estudo de caso](estudo-de-caso-ocr.md).*
+[estudo de caso](estudo-de-caso-ocr.md). O balanço das rodadas com outras IAs, com o antes
+e depois e o placar de cada uma, está em [consulta-outras-ias.md](consulta-outras-ias.md).*
 
 ## 1. Contexto para quem não conhece o projeto
 
