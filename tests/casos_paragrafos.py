@@ -26,6 +26,49 @@ class Caso:
     esperado: list
     limite_conhecido: bool = False
 
+def coluna(itens, x=20, passo=40, dentro=24):
+    """Lista alinhada à esquerda em x, com 14 px por letra. Um item em tupla quebrou em duas
+    linhas: entre elas o passo é `dentro` (caixas sobrepostas); entre os itens, `passo`."""
+    caixas, y = [], 0
+    for item in itens:
+        partes = item if isinstance(item, tuple) else (item,)
+        for k, parte in enumerate(partes):
+            caixas.append(caixa(x, y, 14 * len(parte), parte))
+            y += dentro if k < len(partes) - 1 else passo
+    return caixas
+
+
+# Geometria da lista de tópicos do diálogo do Morrowind (x, topo, largura, altura), com
+# outros nomes: dois tópicos quebram em duas linhas e alguns começam com minúscula
+TOPICOS = [
+    (1170, 122, 105, 22, "Training"),
+    (1170, 146, 149, 23, "Lost caravan of the"),
+    (1170, 164, 71, 20, "Traders"),
+    (1170, 186, 52, 22, "errands"),
+    (1170, 211, 118, 22, "join the Fighters"),
+    (1170, 226, 47, 22, "Guild"),
+    (1170, 250, 99, 23, "Fighters Guild"),
+    (1170, 275, 110, 22, "Promotions"),
+    (1170, 298, 43, 23, "orders"),
+    (1170, 324, 79, 20, "Northmoor"),
+]
+TOPICOS_ESPERADOS = [
+    "Training", "Lost caravan of the Traders", "errands", "join the Fighters Guild",
+    "Fighters Guild", "Promotions", "orders", "Northmoor",
+]
+
+
+def topicos(por_palavra=False):
+    """A lista de tópicos numa caixa por linha (RapidOCR) ou por palavra (EasyOCR)."""
+    if not por_palavra:
+        return [caixa(x, y, w, t, altura=a) for x, y, w, a, t in TOPICOS]
+    caixas = []
+    for x, y, _, a, texto in TOPICOS:
+        for palavra in texto.split():
+            caixas.append(caixa(x, y, 9 * len(palavra), palavra, altura=a))
+            x += 9 * (len(palavra) + 1)
+    return caixas
+
 
 CASOS = [
     Caso(
@@ -437,6 +480,123 @@ CASOS = [
             caixa(20, 80, 270, "聞こえてくる。"),
         ],
         ["夜になると森の奥から不思議な歌が聞こえてくる。"],
+        limite_conhecido=True,
+    ),
+    # Problema 8 (19/11/2026): listas em que um item quebrou em duas linhas, com o passo
+    # menor dentro do item, e prosa estreita com passos curtos que não pode virar lista
+    Caso(
+        "inglês: tópicos com minúscula e dois tópicos em duas linhas (caixas sobrepostas)",
+        "en",
+        topicos(),
+        TOPICOS_ESPERADOS,
+    ),
+    Caso(
+        "inglês: os mesmos tópicos, uma caixa por palavra",
+        "en",
+        topicos(por_palavra=True),
+        TOPICOS_ESPERADOS,
+    ),
+    Caso(
+        "inglês: menu com um item em duas linhas (passo menor dentro do item)",
+        "en",
+        coluna(["Apprentices", ("Disappearance of the", "Traders"), "Northmoor", "Promotions"]),
+        ["Apprentices", "Disappearance of the Traders", "Northmoor", "Promotions"],
+    ),
+    Caso(
+        "inglês: lista cujo 1º item quebra em duas linhas",
+        "en",
+        coluna([("Lost caravan of the", "Traders"), "Training", "Northmoor", "Promotions",
+                ("Return the stolen", "amulet"), "Ranks"]),
+        ["Lost caravan of the Traders", "Training", "Northmoor", "Promotions",
+         "Return the stolen amulet", "Ranks"],
+    ),
+    Caso(
+        "inglês: lista em que todo item quebra em duas linhas",
+        "en",
+        coluna([("Lost caravan of the", "Traders"), ("Return the stolen", "amulet"),
+                ("Find the missing", "courier"), ("Clear the old", "mine")]),
+        ["Lost caravan of the Traders", "Return the stolen amulet", "Find the missing courier",
+         "Clear the old mine"],
+    ),
+    Caso(
+        "árabe: lista alinhada à direita com um item em duas linhas",
+        "ar",
+        [
+            caixa(502, 0, 98, "البداية"),
+            caixa(376, 40, 224, "قصة الملك القديم"),
+            caixa(516, 64, 84, "والجبل"),
+            caixa(488, 104, 112, "الخيارات"),
+            caixa(488, 144, 112, "المساعدة"),
+            caixa(516, 184, 84, "الخروج"),
+        ],
+        ["البداية", "قصة الملك القديم والجبل", "الخيارات", "المساعدة", "الخروج"],
+    ),
+    Caso(
+        "alemão: fala estreita de 6 linhas sem ponto, com um passo curto (NÃO é lista)",
+        "de",
+        [
+            caixa(20, 0, 280, "Der alte Wächter sagt"),
+            caixa(20, 40, 252, "dass die Brücke im"),
+            caixa(20, 80, 196, "Winter nur den"),
+            caixa(20, 108, 224, "Händlern aus dem"),
+            caixa(20, 148, 224, "Norden und ihren"),
+            caixa(20, 188, 252, "Wagen offen bleibt"),
+        ],
+        [
+            "Der alte Wächter sagt dass die Brücke im Winter nur den Händlern aus dem Norden "
+            "und ihren Wagen offen bleibt"
+        ],
+    ),
+    Caso(
+        "alemão: a mesma fala com dois passos curtos (NÃO é lista)",
+        "de",
+        [
+            caixa(20, 0, 280, "Der alte Wächter sagt"),
+            caixa(20, 26, 252, "dass die Brücke im"),
+            caixa(20, 66, 196, "Winter nur den"),
+            caixa(20, 106, 224, "Händlern aus dem"),
+            caixa(20, 132, 224, "Norden und ihren"),
+            caixa(20, 172, 252, "Wagen offen bleibt"),
+        ],
+        [
+            "Der alte Wächter sagt dass die Brücke im Winter nur den Händlern aus dem Norden "
+            "und ihren Wagen offen bleibt"
+        ],
+    ),
+    Caso(
+        "inglês: fala estreita com o desenho de uma lista de tópicos, mas com ponto (NÃO é lista)",
+        "en",
+        [
+            caixa(20, 0, 308, "Everyone in the harbor"),
+            caixa(20, 24, 126, "remembers"),
+            caixa(20, 64, 182, "unfortunately"),
+            caixa(20, 104, 224, "the storm of the"),
+            caixa(20, 128, 84, "winter"),
+            caixa(20, 168, 182, "when the lamp"),
+            caixa(20, 208, 126, "went out."),
+        ],
+        [
+            "Everyone in the harbor remembers unfortunately the storm of the winter when the "
+            "lamp went out."
+        ],
+    ),
+    Caso(
+        "inglês: menu de itens com larguras parecidas (nenhuma linha bem mais curta)",
+        "en",
+        [
+            caixa(20, 0, 260, "Health Potion"),
+            caixa(20, 40, 230, "Mana Potion"),
+            caixa(20, 80, 230, "Antidote"),
+            caixa(20, 120, 120, "Elixir"),
+        ],
+        ["Health Potion", "Mana Potion", "Antidote", "Elixir"],
+        limite_conhecido=True,
+    ),
+    Caso(
+        "inglês: itens com minúscula e o mesmo passo (iguais a uma frase quebrada)",
+        "en",
+        coluna(["Training", "errands", "join the Guild", "orders", "Northmoor"]),
+        ["Training", "errands", "join the Guild", "orders", "Northmoor"],
         limite_conhecido=True,
     ),
 ]

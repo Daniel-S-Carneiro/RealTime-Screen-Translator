@@ -18,7 +18,8 @@ de ficha, grade e tabela também viram blocos: a faixa vazia entre elas pode ser
 estreita, mas se repete em várias linhas seguidas. Dentro de uma linha, itens lado a
 lado (menu, abas, botões) viram linhas separadas. Uma pilha de linhas curtas com cara de
 item (menu vertical, lista de características) quebra em cada linha, mesmo quando o
-primeiro item é o mais largo.
+primeiro item é o mais largo. Numa lista em que um item quebrou em duas linhas, as duas
+ficam mais perto uma da outra do que os itens entre si: elas são juntadas.
 
 As regras valem para qualquer língua de origem. Em árabe, persa, urdu e uigur as
 caixas são espelhadas, para a leitura ir da direita para a esquerda. Em chinês,
@@ -134,6 +135,22 @@ MENU_PALAVRAS = 5  # por item; em escrita sem espaço, 1 palavra a cada 4 letras
 FIM_DE_ITEM = ".!?。！？؟"  # mas "Load game..." é item de menu
 FIM_NO_MEIO = re.compile(r"[.!?;][\s\"]|[。！？；](?=.)")  # frase que acaba no meio da linha
 VIRGULA_NO_MEIO = re.compile(r",\s+\S|[，、](?=.)")  # oração no meio da linha ("1,409" não)
+
+# Lista em que um item quebrou em duas linhas (tópicos do diálogo do Morrowind: "Disappearance
+# of th" / "Dwarves"; arma do Fallout: "Mercenary's Grenade" / "Rifle"). As duas linhas do
+# item ficam coladas (caixas sobrepostas; passo de 15 e 18 px contra 22 a 26 entre itens) e
+# a de baixo é a sobra, mais curta. Os itens podem começar com minúscula ("duties"), o que a
+# regra do menu veta. A prosa não tem esse degrau no passo: os pares de uma frase quebrada
+# ficam a 0,9-1,1 da mediana do bloco.
+TOPICO_SOBREPOSICAO = 0.1  # as caixas das duas linhas do item se sobrepõem tanto (em alturas)
+TOPICO_BORDA = 0.5  # a sobra começa na mesma borda (em alturas)
+TOPICO_SOBRA = 0.85  # e tem até isso da largura da linha de cima
+TOPICO_PASSO = 0.85  # passo dentro do item, contra a mediana dos passos entre itens
+TOPICO_PASSO_FRACO = 0.75  # um item quebrado só, sem caixas sobrepostas: passo ainda menor
+TOPICO_PASSO_REGULAR = 0.5  # maior passo entre itens menos o menor (em alturas)
+TOPICOS_QUEBRADOS = 2  # itens em duas linhas para dispensar a regra do menu
+TOPICOS_INTEIROS = 3  # passos entre itens, no mínimo
+TOPICO_CURTAS = 2  # linhas antes da última bem mais curtas que a mais larga (MENU_CURTA)
 
 # Abas de uma palavra encostadas ("Browse | Quickbar", "General | Mining | WarpTo"): o vão
 # é o de um espaço e o texto não as distingue de uma frase lida palavra a palavra. A aba
@@ -1126,11 +1143,143 @@ def _quebras_de_menu(linhas: list, altura: float) -> set:
     return quebras
 
 
+def _pilhas_por_vao(linhas: list, altura: float) -> list:
+    """Trechos (início, fim) de linhas seguidas com vão de até MENU_VAO, sem exigir que os
+    vãos sejam regulares: dentro de um item quebrado o vão é negativo."""
+    trechos = []
+    inicio = 0
+    while inicio < len(linhas):
+        fim = inicio
+        while (fim + 1 < len(linhas)
+               and linhas[fim + 1].topo - linhas[fim].base <= MENU_VAO * altura):
+            fim += 1
+        if fim > inicio:
+            trechos.append((inicio, fim))
+        inicio = fim + 1
+    return trechos
+
+
+def _sobra_de_item(cima: Linha, baixo: Linha, altura: float) -> bool:
+    """A de baixo começa na mesma borda e é mais curta: o resto de um item que quebrou."""
+    return (
+        abs(baixo.esq - cima.esq) <= TOPICO_BORDA * altura
+        and baixo.dir - baixo.esq <= TOPICO_SOBRA * (cima.dir - cima.esq)
+    )
+
+
+def _parece_topico(texto: str) -> bool:
+    """Como _parece_item, mas aceita minúscula no começo ("duties", "rules") e não aceita
+    reticências: sem o veto da minúscula, a pontuação é a proteção da prosa."""
+    return not (
+        texto[-1:] in FIM_DE_ITEM
+        or texto.endswith("…")
+        or FIM_NO_MEIO.search(texto)
+        or VIRGULA_NO_MEIO.search(texto)
+        or (not SEM_ESPACO.match(texto) and len(texto.split()) > MENU_PALAVRAS)
+    )
+
+
+def _topicos(pilha: list, altura: float) -> set:
+    """Pares (k, k + 1) da pilha que são um item em duas linhas, se a pilha é uma lista com
+    TOPICOS_QUEBRADOS itens assim (caixas sobrepostas) e passos regulares entre os outros.
+
+    Proposta do Grok (Problema 8, 19/11/2026). Fica de fora a coluna larga, com fim de frase
+    ou vírgula no meio, com linhas de mais de MENU_PALAVRAS palavras ou sem linhas curtas.
+    """
+    def amplitude(valores):
+        return max(valores) - min(valores)
+
+    colados = {
+        k
+        for k, (cima, baixo) in enumerate(zip(pilha, pilha[1:]))
+        if cima.base - baixo.topo >= TOPICO_SOBREPOSICAO * altura
+        and _sobra_de_item(cima, baixo, altura)
+    }
+    passos = [baixo.topo - cima.topo for cima, baixo in zip(pilha, pilha[1:])]
+    entre = [passo for k, passo in enumerate(passos) if k not in colados]
+    if len(colados) < TOPICOS_QUEBRADOS or len(entre) < TOPICOS_INTEIROS:
+        return set()
+    dentro = max(passos[k] for k in colados)
+    larguras = [linha.dir - linha.esq for linha in pilha]
+    lista = (
+        dentro <= TOPICO_PASSO * statistics.median(entre)
+        and dentro < min(entre)
+        and amplitude(entre) <= TOPICO_PASSO_REGULAR * altura
+        and amplitude([linha.esq for linha in pilha]) <= MENU_ALINHADA * altura
+        and max(larguras) < MENU_LARGURA * altura
+        and sum(1 for w in larguras[:-1] if w < MENU_CURTA * max(larguras)) >= TOPICO_CURTAS
+        and all(_parece_topico(linha.texto) for linha in pilha)
+    )
+    return colados if lista else set()
+
+
+def _menu_com_item_quebrado(pilha: list, altura: float) -> tuple:
+    """Menu em que um item quebrou em duas linhas ("Mercenary's Grenade" / "Rifle"): junta
+    as linhas coladas e devolve (quebras, juntas) se a regra do menu confirmar nos itens.
+
+    É o "modo fraco" do ChatGPT (Problema 8): um par colado só não prova que a pilha é uma
+    lista, então a regra do menu decide, com o veto da minúscula.
+    """
+    passos = [baixo.topo - cima.topo for cima, baixo in zip(pilha, pilha[1:])]
+    mediana = statistics.median(passos)
+    colados = {
+        k
+        for k, (cima, baixo) in enumerate(zip(pilha, pilha[1:]))
+        if passos[k] <= TOPICO_PASSO * mediana
+        and (cima.base - baixo.topo >= TOPICO_SOBREPOSICAO * altura
+             or passos[k] <= TOPICO_PASSO_FRACO * mediana)
+        and _sobra_de_item(cima, baixo, altura)
+    }
+    if not colados:
+        return set(), set()
+    itens, primeiras = [], []  # linha lógica de cada item e a 1ª linha dele na pilha
+    for k, linha in enumerate(pilha):
+        if k - 1 in colados:
+            itens[-1] = Linha(itens[-1].itens + linha.itens)
+        else:
+            itens.append(linha)
+            primeiras.append(k)
+    primeiras.append(len(pilha))
+    quebras, juntas = set(), set()
+    for inicio, fim in _pilhas(itens, altura):
+        if not _e_menu(itens[inicio : fim + 1], altura):
+            continue
+        for item in range(inicio, fim + 1):
+            ultima = primeiras[item + 1] - 1
+            juntas.update(range(primeiras[item], ultima))
+            if item < fim:
+                quebras.add(ultima)
+    return quebras, juntas
+
+
+def _itens_quebrados(linhas: list, altura: float) -> tuple:
+    """(quebras, juntas): índices i em que linhas[i + 1] começa outro item de uma lista, ou
+    continua o item de cima, que quebrou em duas linhas. As junções valem mais que as outras
+    regras (o "caberia" e a minúscula separavam o item)."""
+    quebras, juntas = set(), set()
+    for inicio, fim in _pilhas_por_vao(linhas, altura):
+        pilha = linhas[inicio : fim + 1]
+        colados = _topicos(pilha, altura)
+        if colados:
+            juntas.update(inicio + k for k in colados)
+            quebras.update(inicio + k for k in range(len(pilha) - 1) if k not in colados)
+            continue
+        if len(pilha) > MENU_MINIMO:
+            de_menu, coladas = _menu_com_item_quebrado(pilha, altura)
+            quebras.update(inicio + k for k in de_menu)
+            juntas.update(inicio + k for k in coladas)
+    return quebras, juntas
+
+
 def _paragrafos_do_bloco(linhas: list, margem_dir: float, altura: float, letra: float) -> list:
     """Junta as linhas de um bloco em parágrafos."""
-    de_lista = _quebras_de_lista(linhas, altura) | _quebras_de_menu(linhas, altura)
+    de_itens, juntas = _itens_quebrados(linhas, altura)
+    de_lista = _quebras_de_lista(linhas, altura) | _quebras_de_menu(linhas, altura) | de_itens
     atuais = [[linhas[0].texto]]
     for indice, (anterior, seguinte) in enumerate(zip(linhas, linhas[1:])):
+        if indice in juntas:
+            atuais[-1].append(seguinte.texto)
+            continue
         margem = _margem_local(linhas, indice, margem_dir, altura)
         if indice in de_lista or _comeca_paragrafo(anterior, seguinte, margem, altura, letra):
             atuais.append([seguinte.texto])
