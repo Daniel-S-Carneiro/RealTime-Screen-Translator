@@ -48,6 +48,12 @@ Medidas nos 90 prints da referência, com o RapidOCR (benchmark de 19/11/2026,
 | menu | 98,8% | 98,8% | 80% |
 | texto | 99,5% | 99,5% | 92% |
 
+**O portão vale para os jogos em inglês** (`--periodo validacao`). O jogo em japonês ou
+espanhol fica numa pasta própria (`--periodo outra-lingua --idioma ja` ou `es`) e é medido
+à parte, sem passar nem reprovar: é a primeira medida do app fora do inglês e não tem
+referência nos 90 prints. Uma leitura mais fraca do japonês não diz nada sobre as regras
+de montagem terem decorado o dataset.
+
 **Por que o portão de letras usa a medida sem ordem.** Uma tela com dois painéis pode ter
 duas ordens de leitura certas. No resumo de personagem do Caves of Qud, as duas ordens
 fazem sentido, e mesmo assim a medida de sempre dá 65% de erro. Na validação, um painel

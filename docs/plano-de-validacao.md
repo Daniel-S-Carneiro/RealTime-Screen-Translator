@@ -62,15 +62,19 @@ grava o print e o rascunho do OCR na pasta do dia.
   `benchmark/dataset/AAAA-MM-DD/`.
 
 **1.2 Coleta: os prints.**
-- **Quantidade:** 5 jogos novos, que ainda não estão no dataset, com cerca de 6 prints
-  cada: uns 30 no total.
+- **Quantidade:** 5 jogos novos em inglês, que ainda não estão no dataset, com cerca de
+  6 prints cada: uns 30 no total. Mais um jogo em outra língua (abaixo).
 - **Por jogo:** 2 fichas ou inventários, 2 legendas ou falas, 1 menu e 1 texto longo.
 - **Variedade:** de preferência estilos diferentes entre si, como estratégia, RPG 3D,
   indie em pixel art, visual novel e roguelike.
-- **Outra língua:** um dos jogos em japonês ou espanhol, com o app configurado nessa
-  língua. Os 90 prints são todos em inglês, e as regras de escrita sem espaço e de árabe só
-  foram vistas em casos simulados; as avaliações do ChatGPT e do Grok de 19/11 puseram isso
-  no topo. O japonês testa mais regras diferentes; o espanhol é mais fácil de achar.
+- **Outra língua:** um jogo a mais, em japonês ou espanhol, com os mesmos 6 prints. Os
+  90 prints são todos em inglês, e as regras de escrita sem espaço e de árabe só foram
+  vistas em casos simulados; as avaliações do ChatGPT e do Grok de 19/11 puseram isso no
+  topo. O japonês testa mais regras diferentes; o espanhol é mais fácil de achar e dá um
+  gabarito mais seguro. O próprio jogo fica nessa língua, e no app a **Origem** (nas
+  Configurações) também: com a origem em Inglês, o app apaga os caracteres japoneses do que
+  lê. Se só der para 5 jogos, ficam 4 em inglês e 1 em outra língua. Esse jogo é medido à
+  parte (veja 3.1).
 - **Inclua telas difíceis:** letra pequena, fundo colorido, painéis. Não escolha só as
   que parecem fáceis.
 - **Abas:** se o jogo tiver uma barra de abas (inventário, mapa, opções), inclua um print
@@ -90,7 +94,7 @@ delas (os títulos são exemplos; qualquer jogo do mesmo tipo serve):
 | Estratégia ou simulação | Civilization VI, Stellaris, Crusader Kings III, Football Manager | Tabelas, painéis, menus | 2 tabelas, 2 painéis de informação, 1 menu, 1 texto de enciclopédia |
 | JRPG com inventário em lista (se der) | Final Fantasy X, Dragon Quest XI, Octopath Traveler, Persona 5 | Quantidades e ícones (Problema 6) | 3 inventários ou lojas com a quantidade à direita ("× 3"), de preferência com um item destacado; 1 menu; 2 falas |
 
-O jogo em outra língua (veja 1.2) pode ser um sexto jogo, com 2 legendas, 2 menus e 2
+O jogo em outra língua (veja 1.2) entra além desses, com 2 legendas, 2 menus e 2
 fichas.
 
 **1.4 Coleta: voltar a jogos que já estão no dataset (opcional).** Não serve para a
@@ -115,6 +119,10 @@ para o benchmark poder medir só eles (`--periodo validacao`). Os nomes seguem o
   regra que ele testa (aba, barra de menu, placa, ficha, quantidade, lista, outra língua)
   e se o gabarito foi escrito antes de olhar o resultado do app. Sem isso, na fase 4 não
   dá para saber qual regra falhou.
+- Os prints do jogo em outra língua vão para uma pasta própria,
+  `benchmark/dataset/outra-lingua/`, porque o benchmark mede uma língua por vez
+  (`--periodo outra-lingua --idioma ja`, ou `es`). O nome não começa com "validacao" de
+  propósito: assim, `--periodo validacao` mede só os jogos em inglês.
 - *O que esperar:* uma pasta só, com nomes que dizem o jogo e o tipo de tela, e o
   manifesto preenchido.
 
@@ -157,6 +165,12 @@ painel lido na outra ordem, quando as duas fazem sentido, não é regra que deco
 dataset. A medida de sempre continua registrada ao lado. Os motivos estão na [referência
 da validação](referencia-validacao.md).
 
+**O jogo em outra língua fica fora do portão.** Ele é a primeira medida do app fora do
+inglês e não tem referência nos 90 prints. Se entrasse no portão, uma leitura mais fraca do
+japonês poderia reprovar regras que nada têm a ver com a língua. Ele é medido e registrado
+à parte, com as mesmas medidas, sem passar nem reprovar. Os números dele viram a referência
+para a próxima vez.
+
 **Abas e barra de menu são provisórias.** Foram medidas em um jogo cada. Se o jogo novo não
 tiver o sinal, a regra não dispara, e isso não a reprova. Se ela cortar errado, a decisão
 é estreitar ou desligar, nunca reajustar os limites em cima da validação.
@@ -174,7 +188,7 @@ referência.
 
 **3.4 Organização: registro.** O resultado vai para um anexo próprio,
 `docs/resultados-validacao.md`, e para o estudo de caso, sem sobrescrever os resultados
-antigos.
+antigos. O jogo em outra língua tem uma seção separada nesse anexo.
 
 A validação vale **uma vez**. Depois que os erros dela forem usados para ajustar regras,
 ela passa a fazer parte do conjunto de ajuste (cerca de 120 prints), e uma próxima
