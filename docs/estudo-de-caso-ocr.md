@@ -1136,7 +1136,8 @@ exatamente.
 | Proposta | Resolve o caso? | Casos certos (de 41) | Linhas inteiras (RapidOCR / EasyOCR) | O que aconteceu |
 |---|---|---|---|---|
 | Antes | não | 32 | 535 / 318 | — |
-| **Grok** | **sim** | 36 | 538 / 319 | No EasyOCR, partiu uma manchete em maiúsculas e uma linha de 10 palavras (+8 quebras erradas) |
+| **Grok + travas** (entrou) | **sim** | **38** | **538 / 320** | Nenhuma quebra a mais nas duas leituras |
+| Grok, regra crua | sim | 36 | 538 / 319 | No EasyOCR, partiu uma manchete em maiúsculas e uma linha de 10 palavras (+8 quebras erradas) |
 | Qwen | sim | 34 | 538 / 318 | Só os dois menus simulados: o perfil "no máximo uma linha cheia" falha com itens de largura parecida |
 | ChatGPT | sim | 29 | 536 / 317 | A pontuação de evidências quebra 5 casos de prosa que passavam |
 | DeepSeek | não | 32 | 535 / 320 | Mede a linha "curta" contra a largura do print; num print só de menu, a mais larga é o print |
@@ -1294,6 +1295,13 @@ Para olhar esse erro mais de perto, o benchmark ganhou duas medidas:
 
   As fichas concentram o erro de montagem: 59 das 69 quebras a mais (eram 69 das 85).
   Os letreiros concentram o erro de leitura.
+
+- **Letras sem ordem** (19/11/2026). O CER depois de pôr as linhas lidas na ordem do
+  gabarito: letra trocada, texto que falta e lixo continuam contando, só a ordem entre as
+  linhas sai da conta. Nos 90 prints, dá 97,0% contra 95,8%, e só mudam 4 fichas com dois
+  painéis (o resumo do Caves of Qud vai de 65% para 11% de erro). Ela entrou por sugestão
+  do ChatGPT e do Grok, para a validação com jogos novos não confundir uma ordem de leitura
+  diferente, e igualmente certa, com uma regra que decorou o dataset.
 
 As regras também passaram a ter **testes automáticos**, em `tests/`. São os 52 casos
 simulados em várias línguas, 17 testes com telas desenhadas (abas e barras de menu), 23

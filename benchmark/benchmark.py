@@ -37,6 +37,7 @@ warnings.filterwarnings("ignore")
 import cv2
 import numpy as np
 from Levenshtein import distance
+from rapidfuzz import fuzz
 
 from capturador import MODO_IMAGEM_PADRAO, MODOS_IMAGEM
 from ocr_engine import MotorOCR
@@ -44,6 +45,9 @@ from pipeline_ocr import reconhecer_texto
 
 EXTENSOES_IMAGEM = (".png", ".jpg", ".jpeg", ".bmp", ".webp")
 QUEBRA = "¶"  # marca de quebra de parágrafo na comparação das quebras
+# Linha lida que se parece menos que isso (0-100) com qualquer trecho do gabarito é lixo:
+# vai para o fim na medida sem ordem e continua contando como erro
+PARECIDA = 50
 
 # "producao" usa exatamente os padrões do app; as outras mudam uma coisa de cada vez
 CONFIGURACOES = {"producao": {}}
@@ -63,6 +67,29 @@ def normalizar(texto: str) -> str:
 def taxa_erro_caracteres(gabarito: str, lido: str) -> float:
     """CER: edições de caractere necessárias / tamanho do gabarito."""
     return distance(gabarito, lido) / max(len(gabarito), 1)
+
+
+def cer_sem_ordem(gabarito: str, lido: str) -> float:
+    """CER com as linhas lidas na ordem do gabarito: a ordem entre as linhas não conta.
+
+    Cada linha lida vai para a posição do trecho do gabarito com que ela mais se parece
+    (o lixo vai para o fim). Letra trocada, texto que falta e texto a mais continuam
+    contando; só a ordem entre linhas sai da conta, porque uma tela com dois painéis pode
+    ter duas ordens de leitura certas. Nunca passa do CER de sempre.
+    """
+    alvo = normalizar(gabarito)
+    partes = [normalizar(linha) for linha in lido.splitlines() if linha.strip()]
+
+    def posicao(parte):
+        alinhamento = fuzz.partial_ratio_alignment(parte, alvo)
+        if alinhamento is None or alinhamento.score < PARECIDA:
+            return len(alvo)
+        return alinhamento.dest_start
+
+    reordenado = " ".join(sorted(partes, key=posicao))
+    return min(
+        taxa_erro_caracteres(alvo, normalizar(lido)), taxa_erro_caracteres(alvo, reordenado)
+    )
 
 
 def taxa_erro_palavras(gabarito: str, lido: str) -> float:
@@ -262,6 +289,7 @@ def medir(imagem, gabarito: str, motor: MotorOCR, nome: str, args) -> dict:
     return {
         "configuracao": nome,
         "cer": round(cer * 100, 2),
+        "cer_sem_ordem": round(cer_sem_ordem(gabarito, execucoes[-1].texto) * 100, 2),
         "wer": round(wer * 100, 2),
         "quebras_certas": certas,
         "quebras_postas": postas,
@@ -280,7 +308,7 @@ def medir(imagem, gabarito: str, motor: MotorOCR, nome: str, args) -> dict:
 
 
 def _medias(medidas: list) -> str:
-    """CER, WER, quebras, linhas inteiras e tempo de um grupo de medições, já formatados.
+    """CER, CER sem ordem, WER, quebras, linhas inteiras e tempo de um grupo de medições.
 
     Quebras achadas: das quebras dos gabaritos, quantas o pipeline pôs.
     Quebras certas: das quebras que o pipeline pôs, quantas estão nos gabaritos.
@@ -295,6 +323,7 @@ def _medias(medidas: list) -> str:
     )
     return (
         f"{statistics.mean(m['cer'] for m in medidas):8.2f}%"
+        f" {statistics.mean(m['cer_sem_ordem'] for m in medidas):8.2f}%"
         f" {statistics.mean(m['wer'] for m in medidas):8.2f}%"
         f" {achadas:15.0%} {acertadas:6.0%} {inteiras:15.0%}"
         f" {statistics.mean(m['tempo_total'] for m in medidas):10.2f}s"
@@ -305,7 +334,8 @@ def imprimir_resumo(linhas: list, args, total_imagens: int, motor_ocr: str) -> N
     """Média de cada configuração e a imagem em que ela mais errou; depois, por pasta."""
     print(f"\nRESUMO ({total_imagens} imagens, idioma {args.idioma}, OCR: {motor_ocr})")
     cabecalho = (
-        f"{'CER médio':>9} {'WER médio':>9} {'quebras achadas':>15} {'certas':>6}"
+        f"{'CER médio':>9} {'sem ordem':>9} {'WER médio':>9}"
+        f" {'quebras achadas':>15} {'certas':>6}"
         f" {'linhas inteiras':>15} {'tempo médio':>11}"
     )
     print(f"  {'configuração':<26} {cabecalho}  pior imagem")

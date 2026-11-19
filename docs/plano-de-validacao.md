@@ -1,7 +1,9 @@
 # Plano dos próximos testes: validação com jogos novos
 
 *Escrito em 17/11/2026, depois das regras de colunas, itens lado a lado, quebras verticais
-e da base de testes. Os problemas que continuam em aberto estão em
+e da base de testes; atualizado em 19/11/2026 com as avaliações do ChatGPT e do Grok. O que
+fica congelado, a régua e o que reprovaria cada regra estão na [referência da
+validação](referencia-validacao.md). Os problemas que continuam em aberto estão em
 [problemas-em-aberto.md](problemas-em-aberto.md).*
 
 Em dois dias entraram mais de dez regras novas de montagem do texto, todas medidas nos
@@ -25,23 +27,26 @@ para jogos que o app nunca viu. Um conjunto que serve para ajustar não serve pa
 A versão de referência é a `main` com a margem do painel estreito, as listas de rótulo
 e valor (17/11/2026), as abas pelo fundo, a barra de menu numa caixa só, a segunda
 leitura das caixas pequenas, as quantidades e ícones e o menu vertical (18/11/2026) e os
-itens em duas linhas (19/11/2026), as últimas regras que entram antes da coleta. Antes delas, a
+itens em duas linhas (19/11/2026), as últimas regras que entram antes da coleta. Ela está
+marcada com a tag `referencia-validacao-2026-11-19` (commit `81b612e`). Antes delas, a
 referência era o commit `235b28e`. Nos 90 prints atuais:
 
 | Medida | Resultado |
 |---|---|
+| Acerto de letras sem ordem (as linhas lidas na ordem do gabarito) | 97,0% |
 | Acerto de letras | 95,8% |
 | Acerto de palavras | 91,4% |
 | Quebras achadas / certas | 92% / 91% (69 a mais) |
 | Linhas inteiras | 82% (539 de 661) |
+| Tempo por print (média / p95) | 0,8 s / 2,5 s |
 
-| Tipo de tela | Acerto de letras | Linhas inteiras |
-|---|---|---|
-| texto | 99,5% | 92% |
-| legenda | 99,4% | 81% |
-| menu | 98,8% | 80% |
-| ficha | 90,5% | 77% |
-| letreiro | 85,9% | 78% |
+| Tipo de tela | Letras sem ordem | Letras | Linhas inteiras |
+|---|---|---|---|
+| texto | 99,5% | 99,5% | 92% |
+| legenda | 99,4% | 99,4% | 81% |
+| menu | 98,8% | 98,8% | 80% |
+| ficha | 95,2% | 90,5% | 77% |
+| letreiro | 85,9% | 85,9% | 78% |
 
 Nenhuma regra muda até a validação ser medida. A validação também vai dizer se a margem
 do painel, a regra das listas, a das abas, a da barra de menu, a segunda leitura, a das
@@ -62,7 +67,10 @@ grava o print e o rascunho do OCR na pasta do dia.
 - **Por jogo:** 2 fichas ou inventários, 2 legendas ou falas, 1 menu e 1 texto longo.
 - **Variedade:** de preferência estilos diferentes entre si, como estratégia, RPG 3D,
   indie em pixel art, visual novel e roguelike.
-- **Opcional:** um dos jogos em espanhol ou japonês, com o app configurado nessa língua.
+- **Outra língua:** um dos jogos em japonês ou espanhol, com o app configurado nessa
+  língua. Os 90 prints são todos em inglês, e as regras de escrita sem espaço e de árabe só
+  foram vistas em casos simulados; as avaliações do ChatGPT e do Grok de 19/11 puseram isso
+  no topo. O japonês testa mais regras diferentes; o espanhol é mais fácil de achar.
 - **Inclua telas difíceis:** letra pequena, fundo colorido, painéis. Não escolha só as
   que parecem fáceis.
 - **Abas:** se o jogo tiver uma barra de abas (inventário, mapa, opções), inclua um print
@@ -82,8 +90,8 @@ delas (os títulos são exemplos; qualquer jogo do mesmo tipo serve):
 | Estratégia ou simulação | Civilization VI, Stellaris, Crusader Kings III, Football Manager | Tabelas, painéis, menus | 2 tabelas, 2 painéis de informação, 1 menu, 1 texto de enciclopédia |
 | JRPG com inventário em lista (se der) | Final Fantasy X, Dragon Quest XI, Octopath Traveler, Persona 5 | Quantidades e ícones (Problema 6) | 3 inventários ou lojas com a quantidade à direita ("× 3"), de preferência com um item destacado; 1 menu; 2 falas |
 
-Opcional, e de grande valor: um sexto jogo em espanhol ou japonês, com o app configurado
-na língua, com 2 legendas, 2 menus e 2 fichas.
+O jogo em outra língua (veja 1.2) pode ser um sexto jogo, com 2 legendas, 2 menus e 2
+fichas.
 
 **1.4 Coleta: voltar a jogos que já estão no dataset (opcional).** Não serve para a
 validação, que só vale com jogos novos. Serve para os problemas que continuam abertos, e
@@ -99,7 +107,16 @@ os prints vão para a pasta do dia, como os outros 90, não para `validacao/`:
 **2.1 Organização: pasta de validação.** Os prints vão para `benchmark/dataset/validacao/`,
 para o benchmark poder medir só eles (`--periodo validacao`). Os nomes seguem o padrão
 `<jogo>_<tipo>_<n>`.
-- *O que esperar:* uma pasta só, com nomes que dizem o jogo e o tipo de tela.
+- Os prints são **movidos** da pasta do dia, não copiados: o benchmark varre todas as
+  pastas, e uma cópia contaria duas vezes.
+- O `.rascunho.txt` de cada print (o que o app leu na hora da coleta) **fica para trás**,
+  na pasta do dia, e não é aberto antes do gabarito (veja 2.3).
+- Cada print ganha uma linha em `validacao/manifesto.csv`: o jogo, o tipo de tela, a
+  regra que ele testa (aba, barra de menu, placa, ficha, quantidade, lista, outra língua)
+  e se o gabarito foi escrito antes de olhar o resultado do app. Sem isso, na fase 4 não
+  dá para saber qual regra falhou.
+- *O que esperar:* uma pasta só, com nomes que dizem o jogo e o tipo de tela, e o
+  manifesto preenchido.
 
 **2.2 Descarte: o que sai do teste.** Vai para `_fora/`, sem gabarito:
 - letra de música, ou texto completo de terceiros (poema, carta inteira, página de livro);
@@ -117,7 +134,10 @@ gabarito.
 - texto cortado pelo próprio jogo entra como aparece.
 
 Os gabaritos são escritos **antes** de olhar o resultado do app, para não ajustar o
-gabarito ao que o app faz.
+gabarito ao que o app faz: olhando só o `.png`, sem abrir o `.rascunho.txt` e sem rodar o
+benchmark. Nos 90 prints, o rascunho era corrigido (é o que o
+[README do benchmark](../benchmark/README.md) ensina); na validação, isso seria olhar a
+resposta antes da prova.
 - *O que esperar:* um `.txt` por print. Prints em outra língua com gabarito incerto são
   sinalizados.
 
@@ -127,17 +147,30 @@ gabarito ao que o app faz.
 ## Fase 3: teste de validação, sem mudar nada
 
 **3.1 Teste: critério fixado antes de medir.** As regras "valem para jogos novos" se:
-- o acerto de letras for de **93% ou mais** e as linhas inteiras, de **75% ou mais**;
-- nenhum tipo de tela ficar mais de **5 pontos** abaixo do mesmo tipo nos 90 prints.
+- o acerto de letras sem ordem for de **93% ou mais** e as linhas inteiras, de **75% ou
+  mais**;
+- nenhum tipo de tela ficar mais de **5 pontos** abaixo do mesmo tipo nos 90 prints, nas
+  letras sem ordem e nas linhas inteiras.
+
+O portão de letras usa a medida sem ordem desde 19/11/2026, decidido antes da coleta: um
+painel lido na outra ordem, quando as duas fazem sentido, não é regra que decorou o
+dataset. A medida de sempre continua registrada ao lado. Os motivos estão na [referência
+da validação](referencia-validacao.md).
+
+**Abas e barra de menu são provisórias.** Foram medidas em um jogo cada. Se o jogo novo não
+tiver o sinal, a regra não dispara, e isso não a reprova. Se ela cortar errado, a decisão
+é estreitar ou desligar, nunca reajustar os limites em cima da validação.
 
 **3.2 Teste: benchmark da validação** (`benchmark.py --periodo validacao`), com a versão de
 referência.
 - *O que esperar:* as mesmas medidas da régua, por jogo e por tipo de tela. A expectativa
   é ficar um pouco abaixo dos 90 prints, que foram usados para ajustar as regras: algo
-  entre 92% e 95% nas letras e entre 70% e 78% nas linhas inteiras. Muito abaixo disso,
-  alguma regra decorou o dataset.
+  entre 93% e 96% nas letras sem ordem e entre 70% e 78% nas linhas inteiras. Muito abaixo
+  disso, alguma regra decorou o dataset. O tempo por print (média e p95) também é
+  registrado.
 
-**3.3 Teste: testes automáticos.** Os 98 testes continuam passando.
+**3.3 Teste: testes automáticos.** Os 102 testes continuam passando, e o `git diff` da
+[referência da validação](referencia-validacao.md) sai vazio.
 
 **3.4 Organização: registro.** O resultado vai para um anexo próprio,
 `docs/resultados-validacao.md`, e para o estudo de caso, sem sobrescrever os resultados
@@ -179,10 +212,14 @@ caso, anexos, README), commit, PR e `main`.
 
 ## Fase 6: alvos depois da validação, nesta ordem
 
-1. **Fichas:** 75% das linhas inteiras e 63 das 79 quebras a mais.
-2. **Letreiros:** 79,4% das letras. A ideia que restou é super-resolução só nas caixas
-   pequenas; ampliar o print inteiro piorou, mas ampliar só as caixas pequenas não foi
-   testado.
+1. **Fichas:** 77% das linhas inteiras e 59 das 69 quebras a mais. Só vira regra o
+   desenho que se repetir nas fichas dos jogos novos.
+2. **Letreiros:** 85,9% das letras. Sobram letras que as duas leituras erram igual
+   ("SECUPITY"). A ideia que restou é super-resolução só nas caixas pequenas (FSRCNN ou
+   ESPCN, modelos leves do OpenCV): ampliar o print inteiro piorou, mas ampliar só as
+   caixas pequenas não foi testado. Roda no laboratório, sobre as caixas guardadas, com o
+   critério escrito antes: letras dos letreiros sobem, nenhum outro tipo desce, poucas
+   centenas de milissegundos a mais.
 3. **Pacote de GPU:** uma decisão de produto, já que agora a placa só ajuda nas línguas do
    EasyOCR.
 4. **Modelos do RapidOCR para outras escritas**, se vierem prints em outra língua.
