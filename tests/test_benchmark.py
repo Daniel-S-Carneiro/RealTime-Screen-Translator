@@ -4,9 +4,9 @@ import sys
 import unittest
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "benchmark"))
-# pylint: disable=wrong-import-position,import-error,no-name-in-module
-from benchmark import (  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+# pylint: disable=wrong-import-position
+from benchmark.benchmark import (  # noqa: E402
     acerto_quebras, cer_sem_ordem, linhas_inteiras, normalizar, taxa_erro_caracteres,
 )
 
