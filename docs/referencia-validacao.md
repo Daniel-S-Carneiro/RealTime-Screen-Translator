@@ -60,6 +60,12 @@ espanhol fica numa pasta própria (`--periodo outra-lingua --idioma ja` ou `es`)
 referência nos 90 prints. Uma leitura mais fraca do japonês não diz nada sobre as regras
 de montagem terem decorado o dataset.
 
+**A validação tem duas rodadas.** O portão acima é o da rodada 1: Katawa Shoujo, Butterfly
+Soup, Disco Elysium, Path of Exile e Firewatch. Os outros 8 jogos da lista do [plano de
+validação](plano-de-validacao.md) formam a rodada 2 (`--periodo segunda-validacao`), que
+fica guardada para provar as correções e é medida uma vez, com o ponto de congelamento que
+existir depois delas.
+
 **Por que o portão de letras usa a medida sem ordem.** Uma tela com dois painéis pode ter
 duas ordens de leitura certas. No resumo de personagem do Caves of Qud, as duas ordens
 fazem sentido, e mesmo assim a medida de sempre dá 65% de erro. Na validação, um painel
@@ -109,7 +115,7 @@ um print novo que o exija, a suíte deixou de medir o que devia.
    acima.
 2. Cada erro novo é classificado em leitura, sobra, partida ou ordem. Erro que aparece
    num jogo só não vira regra.
-3. A partir daí, os prints da validação passam a ser conjunto de ajuste. Uma próxima prova
-   pede prints novos.
+3. A partir daí, os prints da rodada 1 passam a ser conjunto de ajuste. A próxima prova é
+   a rodada 2, com jogos que nenhuma correção viu.
 4. Reorganizar o código (dividir o `paragrafos.py`, por exemplo) só depois, sem mudar
    constante nenhuma e com o benchmark idêntico ao da tag, print a print.

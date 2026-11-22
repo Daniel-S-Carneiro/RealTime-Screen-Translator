@@ -65,9 +65,11 @@ grava o print e o rascunho do OCR na pasta do dia.
   `benchmark/dataset/AAAA-MM-DD/`.
 
 **1.2 Coleta: os prints.**
-- **Quantidade:** 5 jogos novos em inglês, que ainda não estão no dataset, com cerca de
-  6 prints cada: uns 30 no total. Mais um jogo em outra língua (abaixo).
-- **Por jogo:** 2 fichas ou inventários, 2 legendas ou falas, 1 menu e 1 texto longo.
+- **Quantidade:** 5 jogos novos em inglês na rodada 1 (veja 1.4), que ainda não estão no
+  dataset, com cerca de 6 prints cada. Mais um jogo em outra língua (abaixo).
+- **Por jogo:** 2 fichas ou inventários, 2 legendas ou falas, 1 menu e 1 texto longo. Nos
+  3 jogos que faltam da rodada 1, 3 ou 4 fichas ou inventários: Katawa Shoujo e Butterfly
+  Soup trouxeram 10 prints cada, quase só falas e menus.
 - **Variedade:** de preferência estilos diferentes entre si, como estratégia, RPG 3D,
   indie em pixel art, visual novel e roguelike.
 - **Outra língua:** um jogo a mais, em japonês ou espanhol, com os mesmos 6 prints. Os
@@ -82,7 +84,8 @@ grava o print e o rascunho do OCR na pasta do dia.
   que parecem fáceis.
 - **Abas:** se o jogo tiver uma barra de abas (inventário, mapa, opções), inclua um print
   dela. A regra das abas só foi medida nas abas do EVE.
-- *O que esperar:* cerca de 30 prints numa ou duas pastas de dia, sem precisar renomear.
+- *O que esperar:* na rodada 1, cerca de 38 prints em inglês (os 20 já coletados e uns 18
+  dos 3 jogos que faltam) e 6 na outra língua, sem precisar renomear.
 
 **1.3 Coleta: um tipo de jogo para cada regra nova (18/11/2026).** As regras que
 entraram por último foram medidas em um ou dois jogos cada. Cada jogo novo deve testar uma
@@ -100,7 +103,28 @@ delas (os títulos são exemplos; qualquer jogo do mesmo tipo serve):
 O jogo em outra língua (veja 1.2) entra além desses, com 2 legendas, 2 menus e 2
 fichas.
 
-**1.4 Coleta: voltar a jogos que já estão no dataset (opcional).** Não serve para a
+**1.4 Coleta: os jogos em duas rodadas (22/11/2026).** Uma validação só vale uma vez:
+quando os erros dela corrigem uma regra, aqueles prints viram material de ajuste. Por isso
+os 14 jogos escolhidos ficam divididos, e a segunda parte é a prova das correções.
+
+| Rodada | Jogos | Quando |
+|---|---|---|
+| **1** | Katawa Shoujo e Butterfly Soup (feitos), Disco Elysium, Path of Exile e Firewatch, em inglês; Stardew Valley em japonês ou espanhol, medido à parte | Agora |
+| **2** | Slay the Princess, Pillars of Eternity, Baldur's Gate 3, Skyrim, Terraria, Fallout 4, Life is Strange e Cyberpunk 2077 | Só depois de a rodada 1 ser medida e os erros dela corrigidos |
+
+- O Path of Exile é o jogo das abas na rodada 1 porque tem abas com texto; as do Stardew
+  Valley e do Terraria são quase só ícones.
+- A rodada 2 fica em `benchmark/dataset/segunda-validacao/` e é medida com
+  `--periodo segunda-validacao`. O nome não começa com "validacao" de propósito: assim,
+  `--periodo validacao` continua medindo só a rodada 1.
+- Nenhum print da rodada 2 é aberto, recebe gabarito ou é usado numa correção antes de a
+  rodada 1 estar corrigida.
+- A rodada 2 é medida uma vez, com o ponto de congelamento que existir depois das correções
+  e com os mesmos portões.
+- Baldur's Gate 3 e Cyberpunk 2077 são pesados para a MX350. Se não rodarem, ficam de fora,
+  sem prejuízo para a rodada.
+
+**1.5 Coleta: voltar a jogos que já estão no dataset (opcional).** Não serve para a
 validação, que só vale com jogos novos. Serve para os problemas que continuam abertos, e
 os prints vão para a pasta do dia, como os outros 90, não para `validacao/`:
 - Persona 4: 2 telas de inventário com quantidades ("x 5"), para o Problema 6;
@@ -191,11 +215,13 @@ referência.
 
 **3.4 Organização: registro.** O resultado vai para um anexo próprio,
 `docs/resultados-validacao.md`, e para o estudo de caso, sem sobrescrever os resultados
-antigos. O jogo em outra língua tem uma seção separada nesse anexo.
+antigos. O jogo em outra língua tem uma seção separada nesse anexo. O resultado também
+sai por jogo, porque Katawa Shoujo e Butterfly Soup têm 10 prints cada e os outros, cerca
+de 6.
 
 A validação vale **uma vez**. Depois que os erros dela forem usados para ajustar regras,
-ela passa a fazer parte do conjunto de ajuste (cerca de 120 prints), e uma próxima
-validação precisa de prints novos.
+ela passa a fazer parte do conjunto de ajuste (cerca de 130 prints), e a próxima prova é
+a rodada 2 (veja 1.4).
 
 ## Fase 4: laboratório
 
@@ -210,7 +236,7 @@ para o cache. A partir daí, cada teste de regra leva segundos.
 
 **4.3 Laboratório: corrigir, um erro por vez.**
 1. Achar um caso reproduzível.
-2. Medir o sinal nos cerca de 120 prints antes de escrever a regra.
+2. Medir o sinal nos cerca de 130 prints antes de escrever a regra.
 3. Fazer o teste diferencial contra a `main` (`laboratorios/quebras/testar_regras.py
    --comparar main`), nas leituras dos dois motores.
 4. Olhar o resultado por tipo de tela.
