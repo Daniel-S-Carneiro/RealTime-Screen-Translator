@@ -28,7 +28,10 @@ A versão de referência é a `main` com a margem do painel estreito, as listas 
 e valor (17/11/2026), as abas pelo fundo, a barra de menu numa caixa só, a segunda
 leitura das caixas pequenas, as quantidades e ícones e o menu vertical (18/11/2026) e os
 itens em duas linhas (19/11/2026), as últimas regras que entram antes da coleta. Ela está
-marcada com a tag `referencia-validacao-2026-11-19` (commit `81b612e`). Antes delas, a
+marcada com a tag `referencia-validacao-2026-11-22`, o ponto de congelamento: as regras de 19/11 mais
+a correção da troca de língua de 22/11, com o mesmo resultado nos 90 prints. Se alguma
+coisa falhar, o app volta para essa tag (o comando está na [referência da
+validação](referencia-validacao.md)). Antes delas, a
 referência era o commit `235b28e`. Nos 90 prints atuais:
 
 | Medida | Resultado |
@@ -183,7 +186,7 @@ referência.
   disso, alguma regra decorou o dataset. O tempo por print (média e p95) também é
   registrado.
 
-**3.3 Teste: testes automáticos.** Os 102 testes continuam passando, e o `git diff` da
+**3.3 Teste: testes automáticos.** Os 106 testes continuam passando, e o `git diff` da
 [referência da validação](referencia-validacao.md) sai vazio.
 
 **3.4 Organização: registro.** O resultado vai para um anexo próprio,

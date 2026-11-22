@@ -527,7 +527,9 @@ def _barra_de_menu(item, itens: list, fundo: Fundo) -> list:
     ):
         return []
     medida = fundo.espacos(item)
-    referencia = _espaco_da_fala(item, itens, fundo) if medida else None
+    if medida is None:
+        return []
+    referencia = _espaco_da_fala(item, itens, fundo)
     if referencia is None:
         return []
     menor = min(medida[0])
@@ -835,7 +837,7 @@ def _separar_por_titulo(itens: list, altura: float, pares: set) -> list:
     return [itens]
 
 
-def _lados(itens: list, corte: float) -> tuple:
+def _lados(itens: list, corte: float) -> tuple[list, list]:
     """As caixas inteiras à esquerda e as inteiras à direita do x = corte."""
     return (
         [item for item in itens if _limites(item)[1] <= corte],
@@ -1063,7 +1065,9 @@ def _quebras_de_lista(linhas: list, altura: float) -> set:
     trecho = []
     for indice, linha in enumerate(linhas + [None]):
         campo = linha is not None and _e_campo(linha, altura)
-        if campo and trecho and _empilhadas(linhas[trecho[-1]], linha, altura):
+        if linha is not None and campo and trecho and _empilhadas(
+            linhas[trecho[-1]], linha, altura
+        ):
             trecho.append(indice)
             continue
         if len(trecho) >= CAMPOS_SEGUIDOS:

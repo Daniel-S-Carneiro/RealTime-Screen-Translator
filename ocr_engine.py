@@ -15,7 +15,7 @@ o app abre sem carregar o PyTorch.
 # pylint: disable=import-outside-toplevel,no-member
 
 import re
-from typing import List, Optional
+from typing import Any, List, Optional
 
 import cv2
 import numpy as np
@@ -83,8 +83,10 @@ class MotorOCR:
 
     def __init__(self, idiomas: Optional[List[str]] = None) -> None:
         self.idiomas_atuais = idiomas if idiomas else ["en", "pt"]
-        self.rapidocr = None
-        self.easyocr = None
+        # Any: o tipo da saída do RapidOCR depende de use_det e use_rec, e cada caminho só usa
+        # o motor que _carregar criou para a língua atual
+        self.rapidocr: Any = None
+        self.easyocr: Any = None
         self.nome = ""
         self._carregar()
 
@@ -108,13 +110,19 @@ class MotorOCR:
         )
 
     def alterar_idioma(self, novo_idioma: str) -> None:
-        """Altera dinamicamente o idioma."""
+        """Altera dinamicamente o idioma. Se a língua nova não carregar (o EasyOCR baixa o
+        modelo na primeira vez), a anterior continua valendo e o erro sobe para quem chamou."""
         if novo_idioma in self.idiomas_atuais:
             return
 
         print(f"Carregando a leitura de texto para: {novo_idioma}")
+        anteriores, nome_anterior = self.idiomas_atuais, self.nome
         self.idiomas_atuais = [novo_idioma]
-        self._carregar()
+        try:
+            self._carregar()
+        except Exception:
+            self.idiomas_atuais, self.nome = anteriores, nome_anterior
+            raise
 
     def extrair_texto(self, caminho_imagem: str) -> str:
         """Lê uma imagem e retorna o texto bruto, com as caixas separadas por espaço."""
@@ -130,7 +138,9 @@ class MotorOCR:
         """
         if usa_rapidocr(self.idiomas_atuais):
             if isinstance(imagem, str):
-                imagem = cv2.imread(imagem)
+                caminho, imagem = imagem, cv2.imread(imagem)
+                if imagem is None:
+                    raise FileNotFoundError(f"Imagem não encontrada: {caminho}")
             return ordenar_por_linhas(self._ler_rapidocr(imagem))
 
         resultados = self.easyocr.readtext(
