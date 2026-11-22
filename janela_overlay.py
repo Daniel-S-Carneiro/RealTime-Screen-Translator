@@ -338,8 +338,14 @@ class OverlayTradutor(QWidget):
             self.paginas.addWidget(self.widget_config)
 
     def salvar_configuracoes(self, novo_origem, novo_destino, motor, credenciais) -> None:
-        """Aplica os novos idiomas e o motor de tradução selecionados."""
-        self.ocr.alterar_idioma(novo_origem)
+        """Aplica os novos idiomas e o motor de tradução selecionados.
+
+        Se a língua de origem não carregar, o resto é aplicado com a língua anterior e a
+        tela de configurações fica aberta, com o aviso.
+        """
+        carregou = self._trocar_lingua_de_origem(novo_origem)
+        if not carregou:
+            novo_origem = self.idioma_atual
         self.tradutor.origem = novo_origem
         self.tradutor.destino = novo_destino
         self.tradutor.configurar(motor, credenciais)
@@ -348,7 +354,21 @@ class OverlayTradutor(QWidget):
             self.label_texto.setText(
                 f"Idioma: {novo_origem} → {novo_destino} | Tradutor: {MOTORES[motor].nome_curto}"
             )
-        self.voltar_para_traducao()
+        if carregou:
+            self.voltar_para_traducao()
+
+    def _trocar_lingua_de_origem(self, codigo: str) -> bool:
+        """Carrega a língua no OCR. Se falhar, a anterior continua e a tela avisa."""
+        try:
+            self.ocr.alterar_idioma(codigo)
+            return True
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            log_debug(f"[ERRO] Não carregou a língua {codigo}: {str(e)}")
+            if DEBUG_MODE:
+                traceback.print_exc()
+            if self.widget_config:
+                self.widget_config.avisar_lingua_nao_carregada(self.idioma_atual)
+            return False
 
     def mousePressEvent(self, event) -> None:
         """Captura o clique inicial do mouse para arrastar."""

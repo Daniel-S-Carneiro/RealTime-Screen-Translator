@@ -1,32 +1,38 @@
 # Referência da validação
 
 *O que fica congelado durante a validação com jogos novos, como ela é medida e o que
-reprovaria cada regra. Vale da tag `referencia-validacao-2026-11-19` até o resultado da
+reprovaria cada regra. Vale da tag `referencia-validacao-2026-11-22` até o resultado da
 validação estar escrito em `docs/resultados-validacao.md`. O passo a passo da coleta está
 no [plano de validação](plano-de-validacao.md).*
 
 ## O que está congelado
 
-A tag `referencia-validacao-2026-11-19` marca o commit `81b612e`, com as regras dos PRs
-até o #24. Até a validação ser medida, nenhuma regra e nenhuma constante muda nestes
-arquivos:
+A tag `referencia-validacao-2026-11-22` é o **ponto de congelamento**. Ela tem as regras de 19/11
+(tag `referencia-validacao-2026-11-19`) mais a correção da troca de língua e os ajustes de
+anotação pedidos pelo Pylance, de 22/11. Nenhum resultado mudou: o benchmark dos 90 prints
+saiu igual ao de 19/11, print a print.
 
-`capturador.py`, `ocr_engine.py`, `releitura.py`, `quantidades.py`, `pipeline_ocr.py`,
-`paragrafos.py` e `processador_texto.py`.
-
-O teste é este comando, que precisa sair vazio:
+Até a validação ser medida, **nenhum arquivo `.py` da raiz do projeto muda**. O teste é
+este comando, que precisa sair vazio:
 
 ```
-git diff referencia-validacao-2026-11-19 -- capturador.py ocr_engine.py releitura.py quantidades.py pipeline_ocr.py paragrafos.py processador_texto.py
+git diff referencia-validacao-2026-11-22 -- ":(glob)*.py"
+```
+
+**Se alguma coisa falhar, volta para este ponto.** Este comando descarta as mudanças nos
+arquivos `.py` da raiz e devolve os da tag:
+
+```
+git restore --source=referencia-validacao-2026-11-22 -- ":(glob)*.py"
 ```
 
 Podem mudar: a régua (`benchmark/benchmark.py` só ganha medidas novas, sem mudar as que
-existem), os testes e a documentação.
+existem), os testes, a documentação e os prints e gabaritos da validação.
 
 ## A régua
 
-Medidas nos 90 prints da referência, com o RapidOCR (benchmark de 19/11/2026,
-`relatorios/benchmark/benchmark_20261119_171647.csv`, fora do git). Para medir só esses
+Medidas nos 90 prints da referência, com o RapidOCR (benchmark do ponto de congelamento,
+`relatorios/benchmark/benchmark_20261122_111940.csv`, fora do git). Para medir só esses
 90 de novo: `benchmark.py --configs producao --periodo base,2026-11-02..2026-11-15`.
 
 | Medida | O que conta | Referência (90 prints) | Portão da validação |

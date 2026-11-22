@@ -256,7 +256,7 @@ class SecaoGpu(QWidget):
         self.atualizar()
 
 
-class JanelaConfiguracao(QWidget):
+class JanelaConfiguracao(QWidget):  # pylint: disable=too-many-instance-attributes
     """Componente isolado para a interface de configurações."""
 
     # Leva o resultado do botão "Testar" (feito em outra thread) de volta para a interface
@@ -292,6 +292,7 @@ class JanelaConfiguracao(QWidget):
         self.campos_motor: dict[str, tuple] = {}  # campo -> (linha, QLineEdit)
         self.btn_testar = QPushButton("Testar")
         self.label_teste = QLabel()
+        self.label_aviso_origem = QLabel()
         self.secao_uso = SecaoUso()
 
         # Dados Padrão (Top 10)
@@ -360,6 +361,10 @@ class JanelaConfiguracao(QWidget):
         self.combo_origem = self._criar_combo()
         self._selecionar_por_texto(self.combo_origem, "Inglês")
         layout.addLayout(self._envolver_em_layout("Origem:", self.combo_origem))
+        self.label_aviso_origem.setWordWrap(True)
+        self.label_aviso_origem.setStyleSheet("color: #FFB74D; font-size: 12px; border: none;")
+        self.label_aviso_origem.hide()
+        layout.addWidget(self.label_aviso_origem)
 
         self.combo_destino = self._criar_combo()
         self._selecionar_por_texto(self.combo_destino, "Português")
@@ -389,6 +394,7 @@ class JanelaConfiguracao(QWidget):
 
     def _salvar(self) -> None:
         """Grava o motor e as chaves no config do usuário e aplica tudo no app."""
+        self.label_aviso_origem.hide()
         motor = self.combo_motor.currentData()
         salvar_config(motor, self.credenciais)
         uso_motores.definir_trava(self.secao_uso.check_trava.isChecked())
@@ -476,6 +482,17 @@ class JanelaConfiguracao(QWidget):
         # Fechada, a tela não consulta nada: o showEvent atualiza o uso quando ela abrir
         if self.isVisible():
             self.secao_uso.mostrar(motor, self.credenciais)
+
+    def avisar_lingua_nao_carregada(self, codigo_atual: str) -> None:
+        """A língua nova não carregou: a Origem volta para a que o app continua lendo."""
+        indice = self.combo_origem.findData(codigo_atual)
+        if indice >= 0:
+            self.combo_origem.setCurrentIndex(indice)
+        self.label_aviso_origem.setText(
+            "Não foi possível carregar essa língua. Na primeira vez, ela precisa de internet "
+            f"para baixar o modelo. O app continua lendo {self.combo_origem.currentText()}."
+        )
+        self.label_aviso_origem.show()
 
     def _guardar_campo(self, campo: str, valor: str) -> None:
         """Guarda o que o usuário digitou na chave/região do motor escolhido."""

@@ -39,8 +39,9 @@ class TelaCarregamento(QWidget):
 
         fundo = QFrame(self)
         fundo.setObjectName("fundo")
-        QVBoxLayout(self).addWidget(fundo)
-        self.layout().setContentsMargins(0, 0, 0, 0)
+        layout_janela = QVBoxLayout(self)
+        layout_janela.addWidget(fundo)
+        layout_janela.setContentsMargins(0, 0, 0, 0)
 
         imagem = QLabel()
         imagem.setPixmap(icone.pixmap(56, 56))
