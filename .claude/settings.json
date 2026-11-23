@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR/env/Scripts/python.exe\" \"$CLAUDE_PROJECT_DIR/ferramentas/verificar_codigo.py\" --gancho",
+            "timeout": 60,
+            "statusMessage": "Conferindo com Pylint e Pyright"
+          }
+        ]
+      }
+    ]
+  }
+}

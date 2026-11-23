@@ -1314,6 +1314,12 @@ benchmark. Rodam em menos de um segundo, sem prints e sem OCR. Cada regra nova s
 4. rodar os testes;
 5. rodar o benchmark completo.
 
+Desde 23/11, todo script criado ou editado também passa pelo **Pylint e pelo Pylance**. A
+regra veio de um defeito real que só o Pylance viu: uma falha ao carregar o motor de outra
+língua deixava o app preso, com todas as leituras dando erro. O caso, os 32 alertas
+classificados e o funcionamento da regra estão em
+[verificacao-de-codigo.md](verificacao-de-codigo.md).
+
 **Próximos passos.** O passo a passo da próxima rodada, começando por uma validação com
 jogos novos, está no [plano de validação](plano-de-validacao.md). Cada problema que
 continua aberto, com dados reais e o que já foi tentado, está em [problemas em
@@ -1438,6 +1444,11 @@ aberto](problemas-em-aberto.md). Em resumo:
     linhas inteiras cada; a última, 1. Quando o que sobra de um tipo de erro é 2 quebras em
     470, a próxima medida que vale a pena não é outra regra, é testar as que já existem em
     jogos que o app nunca viu.
+34. **Cada verificação só enxerga o caminho que percorre.** O benchmark media leituras em
+    que o motor tinha carregado, e os testes nunca simulavam uma falha ao carregar. O
+    Pylance, olhando só os tipos, achou o `None` que travava o app. De 32 alertas, 1 era
+    defeito real: pouco, mas nenhuma outra ferramenta o tinha visto, e conferir um arquivo
+    custa segundos.
 
 ## Como reproduzir
 
