@@ -248,6 +248,8 @@ para o cache. A partir daí, cada teste de regra leva segundos.
 - melhora a média;
 - não piora a maioria dos prints;
 - passa nos testes automáticos;
+- passa no Pylint e no Pylance, sem alerta sem explicação
+  ([regra](verificacao-de-codigo.md));
 - não estraga a leitura do EasyOCR.
 
 **5.2 Produção: entrada no app.** Benchmark completo, documentos atualizados (estudo de

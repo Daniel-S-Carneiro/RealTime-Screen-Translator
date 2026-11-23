@@ -1,0 +1,7 @@
+{
+  "private": true,
+  "description": "Pyright (motor do Pylance) para ferramentas/verificar_codigo.py",
+  "dependencies": {
+    "pyright": "1.1.414"
+  }
+}

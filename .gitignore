@@ -49,3 +49,9 @@ relatorios/
 
 # Rascunho do post do LinkedIn (só vai a público quando for publicado)
 docs/post-linkedin.md
+
+# Pyright instalado localmente (a versão fica em ferramentas/package.json)
+ferramentas/node_modules/
+
+# Preferências pessoais do Claude Code
+.claude/settings.local.json

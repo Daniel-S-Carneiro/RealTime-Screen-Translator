@@ -105,6 +105,16 @@ The text layout rules (paragraphs, columns, menus) have automated tests with sim
 env\Scripts\python.exe -m unittest -v
 ```
 
+### Check the code
+
+Every script that is created or edited goes through Pylint and Pyright, the engine behind Pylance. This command checks the whole codebase. Pyright is installed once with `npm ci --prefix ferramentas`:
+
+```bash
+env\Scripts\python.exe ferramentas\verificar_codigo.py
+```
+
+The rule, and the real bug that led to it, are in [docs/verificacao-de-codigo.md](docs/verificacao-de-codigo.md) (in Portuguese).
+
 ### Build the installer
 
 The installer is built from a separate environment, `env_build`, with the CPU version of PyTorch (the one on PyPI), so the CUDA libraries stay out of it:

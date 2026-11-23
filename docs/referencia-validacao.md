@@ -27,7 +27,13 @@ git restore --source=referencia-validacao-2026-11-22 -- ":(glob)*.py"
 ```
 
 Podem mudar: a régua (`benchmark/benchmark.py` só ganha medidas novas, sem mudar as que
-existem), os testes, a documentação e os prints e gabaritos da validação.
+existem), os testes, a documentação, as ferramentas em `ferramentas/` e os prints e
+gabaritos da validação.
+
+Todo script criado ou editado passa pelo Pylint e pelo Pylance
+([regra completa](verificacao-de-codigo.md)). **Um alerta num `.py` congelado é só
+relatado.** Corrigir exige decisão do dono do projeto, novo ponto de congelamento e os 90
+prints idênticos, como foi feito na correção da troca de língua.
 
 ## A régua
 
