@@ -109,11 +109,16 @@ os 14 jogos escolhidos ficam divididos, e a segunda parte é a prova das correç
 
 | Rodada | Jogos | Quando |
 |---|---|---|
-| **1** | Katawa Shoujo e Butterfly Soup (feitos), Disco Elysium, Path of Exile e Firewatch, em inglês; Stardew Valley em japonês ou espanhol, medido à parte | Agora |
+| **1** | Katawa Shoujo, Butterfly Soup, Disco Elysium e Path of Exile (feitos) e The Big Con, em inglês; Stardew Valley em japonês ou espanhol, medido à parte | Agora |
 | **2** | Slay the Princess, Pillars of Eternity, Baldur's Gate 3, Skyrim, Terraria, Fallout 4, Life is Strange e Cyberpunk 2077 | Só depois de a rodada 1 ser medida e os erros dela corrigidos |
 
 - O Path of Exile é o jogo das abas na rodada 1 porque tem abas com texto; as do Stardew
   Valley e do Terraria são quase só ícones.
+- O The Big Con entrou no lugar do Firewatch (24/11/2026). O Firewatch se passa quase todo
+  na floresta e quase não tem placas, e a rodada 1 tinha só 1 letreiro em 40 prints. O The
+  Big Con é 2D, em inglês, num shopping cheio de fachadas e vitrines, com letreiros
+  coloridos, tortos e de fontes variadas. É comparável aos letreiros dos 90 prints, que
+  são quase todos do Night in the Woods. Nele, a prioridade é uns 6 letreiros e 2 textos.
 - A rodada 2 fica em `benchmark/dataset/segunda-validacao/` e é medida com
   `--periodo segunda-validacao`. O nome não começa com "validacao" de propósito: assim,
   `--periodo validacao` continua medindo só a rodada 1.

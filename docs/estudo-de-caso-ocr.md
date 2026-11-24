@@ -1243,6 +1243,27 @@ Qwen, as travas do menu. Em quatro problemas, a regra que entrou junta peças de
 O relatório completo, com o placar por IA, o que decidiu cada rodada e o que aprendi sobre
 o método, está em [Oito problemas, cinco IAs e uma régua](consulta-outras-ias.md).
 
+### A validação com jogos novos: não passou
+
+Em 24/11/2026, medi as regras congeladas, uma vez, em 50 prints de 5 jogos que elas nunca
+tinham visto: Katawa Shoujo, Butterfly Soup, Disco Elysium, Path of Exile e The Big Con. O
+portão tinha sido fixado antes da coleta, e **não passou**:
+
+| Medida | Portão | Validação | 90 prints |
+|---|---|---|---|
+| Letras sem ordem | 93% ou mais | 92,3% | 97,0% |
+| Linhas inteiras | 75% ou mais | 66% | 81,5% |
+
+As letras só caíram por causa dos letreiros do The Big Con, com letra em arco, cursiva e
+torta. Sem esse jogo, os outros 40 prints dão 97,4%, o mesmo nível de antes. Já as linhas
+inteiras caíram em todos os tipos de tela, principalmente nas fichas e nos menus do Disco
+Elysium e do Path of Exile. É o sinal de que parte das regras de montagem se ajustou aos
+90 prints mais do que parecia. Depois da primeira medida, corrigi 14 gabaritos que
+quebravam as frases como na tela, contra a regra do README. As linhas inteiras foram de
+65% para 66%, e o veredito não mudou. Os números completos, por tipo de tela e por jogo,
+as duas medidas lado a lado e a primeira medida em espanhol (Stardew Valley, fora do
+portão) estão em [Resultados da validação](resultados-validacao.md).
+
 ## 8. De onde vem o erro que sobrou
 
 Medindo de novo do mesmo jeito, com as palavras em ordem alfabética:
@@ -1449,6 +1470,16 @@ aberto](problemas-em-aberto.md). Em resumo:
     Pylance, olhando só os tipos, achou o `None` que travava o app. De 32 alertas, 1 era
     defeito real: pouco, mas nenhuma outra ferramenta o tinha visto, e conferir um arquivo
     custa segundos.
+35. **Um gabarito fora da regra esconde o erro de verdade.** Nas falas em espanhol, o app
+    leu 99,7% das letras e só 2 de 17 linhas saíram inteiras. O gabarito estava quebrado
+    como na tela, contra a regra do README, e isso fez parecer que o app tinha juntado
+    todas as falas. Com o gabarito certo, o erro real apareceu: metade das falas sai
+    cortada ou incompleta. Conferir os gabaritos contra a regra antes de medir teria
+    mostrado isso de primeira.
+36. **Um portão fixado antes não negocia.** Sem os letreiros do The Big Con, as letras
+    passariam com folga. Mas o portão foi escrito antes da coleta e conta todos os prints,
+    e é por isso que o resultado vale: um portão ajustado depois de ver os números não
+    prova nada.
 
 ## Como reproduzir
 
