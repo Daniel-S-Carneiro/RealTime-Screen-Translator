@@ -234,6 +234,28 @@ CASOS = [
         ["Sua habilidade subiu para 66.", "O item não tem carga suficiente."],
     ),
     Caso(
+        "inglês: frase que termina no fim da linha, no meio de um parágrafo (linhas coladas)",
+        "en",
+        [
+            caixa(20, 0, 880, "My parents are here. It's been a few days since I've last seen"),
+            caixa(20, 32, 890, "them. Is this supposed to be some kind of special occasion?"),
+            caixa(20, 64, 240, "It's not a party."),
+        ],
+        [
+            "My parents are here. It's been a few days since I've last seen them. Is this "
+            "supposed to be some kind of special occasion? It's not a party."
+        ],
+    ),
+    Caso(
+        "inglês: título de letra grande colado ao subtítulo (alturas 1,45x) continua quebrando",
+        "en",
+        [
+            caixa(20, 0, 700, "A Next Generation Legend!", altura=58),
+            caixa(20, 45, 700, "Stand Tall, Galactic Hero!", altura=40),
+        ],
+        ["A Next Generation Legend!", "Stand Tall, Galactic Hero!"],
+    ),
+    Caso(
         "inglês: HUD alternando rótulo e valor",
         "en",
         [caixa(20, 0, 50, "HP"), caixa(80, 0, 110, "140/140"), caixa(210, 0, 40, "DT"),

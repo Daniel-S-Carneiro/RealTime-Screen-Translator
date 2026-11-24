@@ -100,6 +100,12 @@ FIM_DE_SENTENCA = re.compile(r"[.!?]$")
 # Última palavra de uma fala, sozinha na linha de baixo: "llegada.", "quieres.", "want."
 # (24/11/2026). Tópico de menu de uma palavra ("duties", "rules") não tem pontuação.
 PALAVRA_FINAL = re.compile(r"[.!?…。！？][\"'”’»)\]]*$")
+# Frase que termina no fim da linha não quebra o parágrafo se a linha de baixo encosta na
+# de cima (proposta do Mistral, 24/11/2026). O vão é o passo menos a altura da linha de
+# cima, em alturas de letra. Nos 140 prints, as emendas vão até 0,10 e os avisos, títulos
+# e respostas separadas começam em 0,24.
+FIM_COLADO = 0.18
+FIM_FONTE = 1.4  # alturas tão diferentes (título de fonte grande) quebram mesmo coladas
 TITULO_PALAVRAS = 5  # um título tem até 5 palavras
 
 # Margem do "caberia" num painel estreito sem borda visível (o diálogo do Morrowind, o
@@ -977,14 +983,29 @@ def _menu_de_palavras(anterior: Linha, seguinte: Linha) -> bool:
     )
 
 
+def _linhas_coladas(anterior: Linha, seguinte: Linha, altura: float) -> bool:
+    """A de baixo encosta na de cima, com letra do mesmo tamanho: linhas de um parágrafo.
+
+    Avisos, títulos e respostas separadas têm um respiro entre as caixas.
+    """
+    vao = (seguinte.topo - anterior.topo - anterior.altura) / altura
+    menor = max(min(anterior.altura, seguinte.altura), 1.0)
+    return vao < FIM_COLADO and max(anterior.altura, seguinte.altura) / menor < FIM_FONTE
+
+
 def _comeca_paragrafo(
     anterior: Linha, seguinte: Linha, margem_dir: float, altura: float, letra: float
 ) -> bool:
     if seguinte.item_novo:
         return True
     # Sentença terminada e a de baixo não continua com minúscula: avisos seguidos
-    # ("...increased to 66." / "Item does not have enough charge.")
-    if FIM_DE_SENTENCA.search(anterior.texto) and not seguinte.texto[:1].islower():
+    # ("...increased to 66." / "Item does not have enough charge."), a não ser que as
+    # linhas estejam coladas, como num parágrafo ("...special occasion?" / "It's not...")
+    if (
+        FIM_DE_SENTENCA.search(anterior.texto)
+        and not seguinte.texto[:1].islower()
+        and not _linhas_coladas(anterior, seguinte, altura)
+    ):
         return True
     # Título em cima e texto começando com minúscula embaixo ("Wood Technique Chant" /
     # "swept by the wind..."): sem isto, a regra da minúscula juntava os dois
