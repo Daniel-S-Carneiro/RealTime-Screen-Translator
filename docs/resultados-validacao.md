@@ -162,8 +162,9 @@ espanhol.
 
 ## Próximos passos
 
-1. Fase 4 do plano: classificar cada linha perdida em leitura, sobra, partida ou ordem, por
-   jogo e por tipo de tela. Um erro que aparece num jogo só não vira regra.
+1. Fase 4 do plano: classificar cada linha perdida, por jogo e por tipo de tela. Feito em
+   24/11: [Por que as linhas se perderam](classificacao-linhas-perdidas.md). Um erro que
+   aparece num jogo só não vira regra.
 2. A partir daqui, os 50 prints passam a ser conjunto de ajuste, com os 90 da referência.
    A próxima prova é a rodada 2, com jogos que nenhuma correção viu.
 3. Antes da rodada 2, conferir cada gabarito contra a regra do README **antes** de medir.
