@@ -79,6 +79,19 @@ A 1ª versão do problema 8 (as descrições curtas do Caves of Qud) foi resolvi
 do problema 7 antes de as respostas serem medidas. A 2ª versão trouxe a lista de tópicos do
 Morrowind.
 
+**Depois da validação (24/11).** Os erros que a validação com jogos novos revelou voltaram
+para a consulta. A régua passou a ser de 140 prints (os 90 e os 50 da validação), e a
+pergunta passou a pedir que cada IA aplicasse a própria regra, à mão, a cada caso real.
+
+| # | Problema | Data | Quem respondeu | O que entrou (de quem) | Linhas inteiras (90 prints) | Quebras a mais |
+|---|---|---|---|---|---|---|
+| 9 | Frase que termina no fim da linha corta o parágrafo | 24/11 | ChatGPT, Grok, DeepSeek, Mistral, Qwen | Fim de frase não quebra se as linhas estão coladas (**Mistral**; o mesmo sinal do **ChatGPT**) | 541 → 546 | 69 → 63 |
+
+As cinco disseram acertar os 13 casos da pergunta. Nos 140 prints, só o Mistral e o
+ChatGPT não perderam nenhuma linha; Grok, DeepSeek e Qwen perderam de 2 a 6, quase sempre
+no mesmo título de cartaz e numa resposta do Katawa Shoujo. Os detalhes estão em [Por que
+as linhas se perderam](classificacao-linhas-perdidas.md).
+
 ## O que decidiu cada rodada
 
 1. **Margem do painel.** Três propostas usavam uma margem só para o bloco, uma ideia que eu

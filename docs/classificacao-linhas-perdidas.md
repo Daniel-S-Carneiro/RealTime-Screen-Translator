@@ -288,3 +288,47 @@ correção. Agora são 110 testes.
 **Ficam para a consulta às outras IAs:** a frase que termina no fim da linha (F2) e as
 descrições centralizadas. Os dois têm casos reais em vários jogos, contraexemplos claros e
 nenhum sinal simples que os separe.
+
+## A terceira correção: as linhas coladas (com as outras IAs)
+
+*Feita em 24/11/2026 no branch `regra-fim-de-frase`, a partir do problema 9 do arquivo de
+perguntas, respondido por ChatGPT, Grok, DeepSeek, Mistral e Qwen.*
+
+As cinco propostas mantêm a regra do fim de frase e abrem uma exceção quando o par tem
+cara de parágrafo. Cada uma virou uma variante do código
+(`laboratorios/validacao/variantes_p9.py`) e foi medida nos 140 prints, nas duas leituras:
+
+| Proposta | A regra não quebra quando… | Ganhos | Perdas |
+|---|---|---:|---:|
+| ChatGPT | o passo é até 1,16 da altura média das duas linhas, e as alturas diferem menos de 1,4x | 7 | 0 |
+| Grok | a linha tem 14 h ou mais e o passo é menor que 1,35 h, salvo par centralizado longe da borda | 7 | 2 |
+| Grok, sem a cláusula da borda | | 5 | 0 |
+| DeepSeek | a linha tem 14 h ou mais e não é título nem resposta centralizada | 7 | 4 |
+| **Mistral** | **o vão entre as caixas é menor que 0,18 h, e as alturas diferem menos de 1,4x** | **7** | **0** |
+| Qwen | a linha tem 15 h ou mais e termina a até 2 h da margem | 7 | 6 |
+
+O que separou as propostas foi o título do cartaz da festa do Night in the Woods. Na
+leitura do EasyOCR, o passo dele é 1,23 h e a largura, 18 h, então quem usa a largura ou o
+passo o toma por prosa. O vão entre as caixas, não: 0,24 h. Nos pares em que o fim de
+frase é a única quebra, as emendas têm vão de -0,20 a 0,10 h, e as quebras, de 0,24 a
+0,57 h. O limite do Mistral, 0,18, fica quase no meio. O ChatGPT achou o mesmo sinal por
+outra conta, mas com o limite a 0,01 da legenda do Fallout.
+
+Um dado que eu não mandei pesou contra duas propostas. Na resposta do Katawa Shoujo, o app
+calcula a margem do painel em 1566 px, e eu informei a largura do print (1852 px). O Grok
+pediu a borda do print, e foi medido com ela; o DeepSeek pediu a margem do painel.
+
+Entrou a regra do Mistral (`_linhas_coladas`, em `paragrafos.py`), com os limiares dele.
+
+| Conjunto | Linhas inteiras | Quebras a mais |
+|---|---|---|
+| 90 prints | 541 → 546 | 69 → 63 |
+| Validação | 196 → 197 | 31 → 30 |
+| Espanhol | igual | igual |
+
+As letras não mudaram, e nenhuma linha se perdeu nas duas leituras. Os 5 jogos com o erro
+saíram certos. Entraram dois casos nos testes: um parágrafo com linhas coladas, que falha
+na `main`, e um título de letra 1,45x maior colado ao subtítulo, que falha se a trava de
+fonte for tirada. Agora são 112 testes.
+
+**Continua para a consulta:** as descrições centralizadas (problema 10).

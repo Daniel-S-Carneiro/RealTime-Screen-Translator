@@ -1274,7 +1274,10 @@ do bloco passou a quebrar. Ganhou 5 linhas inteiras na validação e 2 nos 90 pr
 nenhuma perda nas duas leituras. A segunda correção junta a última palavra de uma fala
 quando ela fica sozinha na linha ("...para tu / llegada."): 1 linha a mais na validação e
 2 no espanhol. O diagnóstico também achou um erro antigo, a quebra por fim de frase que
-corta parágrafos em 5 jogos, que fica para a consulta às outras IAs. A classificação e as
+corta parágrafos em 5 jogos. Levei esse erro às outras IAs, e entrou a proposta do
+Mistral, com o mesmo sinal que o ChatGPT achou: se a linha de baixo encosta na de cima, o
+fim de frase não quebra. Nos 90 prints, as linhas inteiras foram de 541 para 546, sem
+nenhuma perda nas duas leituras. A classificação e as
 correções estão em [Por que as linhas se perderam](classificacao-linhas-perdidas.md).
 
 ## 8. De onde vem o erro que sobrou
@@ -1493,6 +1496,11 @@ aberto](problemas-em-aberto.md). Em resumo:
     passariam com folga. Mas o portão foi escrito antes da coleta e conta todos os prints,
     e é por isso que o resultado vale: um portão ajustado depois de ver os números não
     prova nada.
+37. **Mande o dado que o app usa, não o que se vê no print.** Na resposta do Katawa
+    Shoujo, eu informei a largura do print, e o app mede a margem do painel, que acaba
+    300 px antes. Duas IAs montaram a regra em cima do número que eu dei e perderam o
+    caso na medida real. As cinco disseram acertar os 13 casos da pergunta; só os 140
+    prints mostraram quem acertava de verdade.
 
 ## Como reproduzir
 
