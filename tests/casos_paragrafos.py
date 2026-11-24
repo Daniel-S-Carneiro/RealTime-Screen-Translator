@@ -630,6 +630,24 @@ CASOS = [
          "REVACHOLIAN NATIONHOOD", "HOBOCOP", "INEXPLICABLE AGENDA"],
     ),
     Caso(
+        "espanhol: fala com a última palavra sozinha na linha, caixa mais estreita que a tela",
+        "es",
+        [
+            caixa(40, 0, 14 * 27, "Yo soy Robin, la carpintera"),
+            caixa(40, 40, 14 * 29, "local. El alcalde Lewis me ha"),
+            caixa(40, 80, 14 * 30, "pedido que te enseñe el camino"),
+            caixa(40, 120, 14 * 27, "a tu nuevo hogar. Te espera"),
+            caixa(40, 160, 14 * 31, "allí, arreglándolo todo para tu"),
+            caixa(40, 200, 14 * 8, "llegada."),
+            caixa(900, 260, 14 * 5, "Robin"),
+        ],
+        [
+            "Yo soy Robin, la carpintera local. El alcalde Lewis me ha pedido que te enseñe el "
+            "camino a tu nuevo hogar. Te espera allí, arreglándolo todo para tu llegada.",
+            "Robin",
+        ],
+    ),
+    Caso(
         "inglês: parágrafo com uma linha um pouco mais afastada (1,19 do passo) não quebra",
         "en",
         [

@@ -1271,8 +1271,11 @@ Disco Elysium, as descrições centralizadas do Path of Exile e itens de lista c
 A primeira correção usa um sinal que o app ignorava: entre itens e parágrafos, o vão
 vertical é maior que entre as linhas de um mesmo parágrafo. Um passo de 1,35 vez o típico
 do bloco passou a quebrar. Ganhou 5 linhas inteiras na validação e 2 nos 90 prints, sem
-nenhuma perda nas duas leituras. A classificação e a correção estão em [Por que as linhas
-se perderam](classificacao-linhas-perdidas.md).
+nenhuma perda nas duas leituras. A segunda correção junta a última palavra de uma fala
+quando ela fica sozinha na linha ("...para tu / llegada."): 1 linha a mais na validação e
+2 no espanhol. O diagnóstico também achou um erro antigo, a quebra por fim de frase que
+corta parágrafos em 5 jogos, que fica para a consulta às outras IAs. A classificação e as
+correções estão em [Por que as linhas se perderam](classificacao-linhas-perdidas.md).
 
 ## 8. De onde vem o erro que sobrou
 

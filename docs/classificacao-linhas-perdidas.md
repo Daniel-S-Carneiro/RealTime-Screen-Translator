@@ -226,3 +226,65 @@ quebra. Agora são 109 testes.
 OCR do app, que desde 16/11 é o RapidOCR em inglês. Os 90 prints têm uma leitura `cinza2`
 antiga, feita com o EasyOCR. Nos prints novos, a leitura do EasyOCR veio do modo
 `easyocr_cpu`.
+
+## O diagnóstico dos candidatos 2 e 3
+
+*Feito em 24/11/2026. O script `laboratorios/validacao/por_que_quebrou.py` mostra, para
+cada emenda do gabarito que o app quebra, quais condições pediram a quebra.*
+
+O candidato 2 (fala ou rótulo quebrado que não é juntado) tinha **duas causas diferentes**.
+
+**A última palavra da fala, sozinha na linha.** "llegada.", "quieres.", "conversación!" e
+"want." O app só reconhece que a frase continua quando a linha de baixo tem duas palavras
+ou mais. A trava existe para não juntar tópicos de uma palavra só ("duties", "rules" no
+Morrowind). Fora desse caminho, o app testa se a palavra "caberia" na linha de cima. Ele
+mede isso pela borda do print, e não pela da caixa de diálogo, então a palavra cabe e a
+linha quebra.
+
+**A frase que termina no fim da linha.** O app quebra sempre que uma linha termina com
+ponto e a de baixo começa com maiúscula. A regra foi feita para avisos seguidos do
+Morrowind ("...increased to 66." / "Item does not have enough charge."), mas também corta
+parágrafos em que uma frase acaba bem no fim da linha. Isso acontece em 7 lugares, de 5
+jogos (Katawa Shoujo, Fallout, Morrowind, Night in the Woods e Caves of Qud), e 6 deles
+estão nos 90 prints. É um erro antigo que a validação ajudou a enxergar.
+
+Medi duas correções nos 140 prints e nas duas leituras (`sinais_fala.py`):
+
+| Correção | Ganhos | Perdas |
+|---|---:|---:|
+| **F1.** Palavra só, com minúscula e fim de frase, conta como continuação | 5 | 0 |
+| **F2.** Fim de sentença só quebra junto com outra condição | 11 | 10 |
+
+A F2 quase empata, e as perdas caem em telas que hoje saem certas. O fim de frase separa tanto avisos, títulos e respostas curtas ("Yeah, of
+course." / "Why?") quanto corta parágrafos, e nenhuma condição que o app já tem distingue
+uma coisa da outra.
+
+O candidato 3 (descrições centralizadas) também não tem solução simples. A ideia era
+medir o "caberia" pela linha mais larga do grupo centralizado, e não pela borda do print
+(`sinais_centro.py`). Ela ganha 1 ou 2 quebras no Path of Exile e perde 2 nos cartazes do
+Night in the Woods, que são frases centralizadas quebradas de propósito pelo desenho. As
+descrições do Path of Exile ainda vêm em versalete, e o OCR lê tudo em maiúscula, então a
+maiúscula também não ajuda.
+
+## A segunda correção: a última palavra da fala
+
+*Feita em 24/11/2026 no branch `regra-palavra-final`.*
+
+A F1 entrou em `_continua_frase`: uma linha de uma palavra só também é continuação quando
+começa com minúscula e termina a frase (`PALAVRA_FINAL`). Um tópico de menu de uma palavra
+não tem pontuação no fim, então continua separado.
+
+| Conjunto | Linhas inteiras | Quebras a mais |
+|---|---|---|
+| 90 prints | 541 → 541 | 69 → 69 |
+| Validação | 195 → 196 | 32 → 31 |
+| Espanhol | 8 → 10 (38% → 48%) | 17 → 14 |
+
+As letras não mudaram, e nada mudou nos 90 prints, nas duas leituras. Na fala do Elliott,
+a linha continua perdida porque o "¡" foi lido como "i". Entrou um caso nos testes, com a
+fala do Stardew numa caixa mais estreita que a tela, que falha na `main` e passa com a
+correção. Agora são 110 testes.
+
+**Ficam para a consulta às outras IAs:** a frase que termina no fim da linha (F2) e as
+descrições centralizadas. Os dois têm casos reais em vários jogos, contraexemplos claros e
+nenhum sinal simples que os separe.

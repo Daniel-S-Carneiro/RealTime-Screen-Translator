@@ -97,6 +97,9 @@ VERBETE = re.compile(r"\[[^\]]+\]\s*(\w)")
 FIM_DE_FRASE = re.compile(r"[.!?:;)\]]$")
 # A linha de cima termina uma sentença
 FIM_DE_SENTENCA = re.compile(r"[.!?]$")
+# Última palavra de uma fala, sozinha na linha de baixo: "llegada.", "quieres.", "want."
+# (24/11/2026). Tópico de menu de uma palavra ("duties", "rules") não tem pontuação.
+PALAVRA_FINAL = re.compile(r"[.!?…。！？][\"'”’»)\]]*$")
 TITULO_PALAVRAS = 5  # um título tem até 5 palavras
 
 # Margem do "caberia" num painel estreito sem borda visível (o diálogo do Morrowind, o
@@ -944,12 +947,14 @@ def _continua_frase(anterior: Linha, seguinte: Linha) -> bool:
     """A linha de baixo começa com minúscula e a de cima não fechou a frase.
 
     Ex.: "Sensei! Mind your / health, okay?". Linha de uma palavra só ("duties",
-    "rules") é tópico de menu, não continuação.
+    "rules") é tópico de menu, não continuação, a não ser que termine a frase
+    ("...para tu / llegada.").
     """
+    palavras = seguinte.texto.split()
     return (
         seguinte.texto[:1].islower()
         and not FIM_DE_FRASE.search(anterior.texto)
-        and len(seguinte.texto.split()) >= 2
+        and (len(palavras) >= 2 or bool(PALAVRA_FINAL.search(seguinte.texto)))
     )
 
 
