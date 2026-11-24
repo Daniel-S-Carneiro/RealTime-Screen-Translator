@@ -599,4 +599,49 @@ CASOS = [
         ["Training", "errands", "join the Guild", "orders", "Northmoor"],
         limite_conhecido=True,
     ),
+    Caso(
+        "inglês: falas seguidas e uma nota entre elas, com um vão um pouco maior (1,44)",
+        "en",
+        [
+            caixa(20, 0, 880, 'YOU - "Was I singing this?" (Show her the empty case'),
+            caixa(20, 32, 870, "of the record with the smallest church in the whole"),
+            caixa(20, 64, 870, "town on the cover, the one you found by the door.)"),
+            caixa(20, 110, 380, "+5 XP: gained experience."),
+            caixa(20, 156, 880, 'KLAASJE - "Yes! There was a church in there. A very'),
+            caixa(20, 188, 870, "small church, the smallest and saddest church in"),
+            caixa(20, 220, 400, 'the whole world."'),
+        ],
+        [
+            'YOU - "Was I singing this?" (Show her the empty case of the record with the '
+            'smallest church in the whole town on the cover, the one you found by the door.)',
+            "+5 XP: gained experience.",
+            'KLAASJE - "Yes! There was a church in there. A very small church, the smallest '
+            'and saddest church in the whole world."',
+        ],
+    ),
+    Caso(
+        "inglês: duas listas de itens com um vão um pouco maior entre elas (1,56)",
+        "en",
+        coluna(["ACE'S HIGH", "LONESOME ROAD", "GUILLAUME LE MILLION OF THE NORTHERN HILLS"],
+               passo=32)
+        + [caixa(20, 114 + 32 * k, 14 * len(texto), texto)
+           for k, texto in enumerate(["REVACHOLIAN NATIONHOOD", "HOBOCOP", "INEXPLICABLE AGENDA"])],
+        ["ACE'S HIGH", "LONESOME ROAD", "GUILLAUME LE MILLION OF THE NORTHERN HILLS",
+         "REVACHOLIAN NATIONHOOD", "HOBOCOP", "INEXPLICABLE AGENDA"],
+    ),
+    Caso(
+        "inglês: parágrafo com uma linha um pouco mais afastada (1,19 do passo) não quebra",
+        "en",
+        [
+            caixa(20, 0, 880, "The road to the harbor was longer than anyone had"),
+            caixa(20, 32, 870, "expected, and by the time the lights of the town"),
+            caixa(20, 70, 880, "appeared over the hill the rain had already begun"),
+            caixa(20, 102, 500, "to soak through their coats."),
+        ],
+        [
+            "The road to the harbor was longer than anyone had expected, and by the time the "
+            "lights of the town appeared over the hill the rain had already begun to soak "
+            "through their coats."
+        ],
+    ),
 ]

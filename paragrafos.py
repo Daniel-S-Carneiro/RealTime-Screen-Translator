@@ -152,6 +152,13 @@ TOPICOS_QUEBRADOS = 2  # itens em duas linhas para dispensar a regra do menu
 TOPICOS_INTEIROS = 3  # passos entre itens, no mínimo
 TOPICO_CURTAS = 2  # linhas antes da última bem mais curtas que a mais larga (MENU_CURTA)
 
+# Itens de lista e parágrafos seguidos costumam ter um vão maior que o das linhas de um
+# mesmo parágrafo. Nos 140 prints (24/11/2026), nenhuma emenda de linha do gabarito tem
+# passo acima de 1,21 do típico do bloco, nas duas leituras. Platô de 1,3 a 1,4: com 1,25
+# aparece a primeira quebra errada (Caves of Qud, EasyOCR); com 1,45 os ganhos somem.
+PASSO_GRANDE = 1.35  # passo (topo a topo) contra o típico do bloco: quebra
+PASSO_MESMA_FILEIRA = 0.5  # passo menor que isso (em alturas) é da mesma fileira, não conta
+
 # Abas de uma palavra encostadas ("Browse | Quickbar", "General | Mining | WarpTo"): o vão
 # é o de um espaço e o texto não as distingue de uma frase lida palavra a palavra. A aba
 # selecionada tem fundo próprio, medido pelo tom mais comum dentro da caixa (a tinta das
@@ -1133,6 +1140,20 @@ def _e_menu(pilha: list, altura: float) -> bool:
     )
 
 
+def _quebras_por_passo(linhas: list, altura: float) -> set:
+    """Quebra onde o passo vertical é bem maior que o típico do bloco.
+
+    "Sell Items" / "Goodbye" do Path of Exile, a fala do Disco Elysium e o "+5 XP" embaixo
+    dela: o vão entre os itens é maior que o das linhas de cada um.
+    """
+    passos = [b.topo - a.topo for a, b in zip(linhas, linhas[1:])]
+    entre_fileiras = [passo for passo in passos if passo >= PASSO_MESMA_FILEIRA * altura]
+    if len(entre_fileiras) < 2:
+        return set()
+    tipico = statistics.median(entre_fileiras)
+    return {indice for indice, passo in enumerate(passos) if passo >= PASSO_GRANDE * tipico}
+
+
 def _quebras_de_menu(linhas: list, altura: float) -> set:
     """Índices i em que linhas[i + 1] é outro item de um menu vertical.
 
@@ -1278,7 +1299,12 @@ def _itens_quebrados(linhas: list, altura: float) -> tuple:
 def _paragrafos_do_bloco(linhas: list, margem_dir: float, altura: float, letra: float) -> list:
     """Junta as linhas de um bloco em parágrafos."""
     de_itens, juntas = _itens_quebrados(linhas, altura)
-    de_lista = _quebras_de_lista(linhas, altura) | _quebras_de_menu(linhas, altura) | de_itens
+    de_lista = (
+        _quebras_de_lista(linhas, altura)
+        | _quebras_de_menu(linhas, altura)
+        | de_itens
+        | _quebras_por_passo(linhas, altura)
+    )
     atuais = [[linhas[0].texto]]
     for indice, (anterior, seguinte) in enumerate(zip(linhas, linhas[1:])):
         if indice in juntas:

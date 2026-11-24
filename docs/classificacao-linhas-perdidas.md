@@ -1,0 +1,228 @@
+# Por que as linhas se perderam: a validação, linha por linha
+
+*Fase 4.2 do [plano de validação](plano-de-validacao.md), feita em 24/11/2026. Cada linha
+que não chegou inteira ao tradutor na rodada 1 ganhou uma causa: 100 em inglês e 13 em
+espanhol. Usei o texto que o app montou e, nos casos duvidosos, a imagem do print. Os
+números são os da medida com os gabaritos corrigidos, descrita em [Resultados da
+validação](resultados-validacao.md).*
+
+A lista completa, com a linha do gabarito, o que o app entregou e a causa, fica fora do git,
+em `relatorios/validacao/linhas_perdidas.txt` e `relatorios/validacao/classificacao.csv`.
+Os scripts que geram as duas ficam em `laboratorios/validacao/`.
+
+## O resumo
+
+Das 100 linhas perdidas em inglês, **46 são de leitura** e **54 são de montagem**.
+
+- **Mais da metade das perdas de leitura não muda o sentido.** Em 27 linhas, o texto está
+  todo lá, e só um espaço, uma pontuação ou um traço saiu diferente ("forwork", "2.-",
+  hífen no lugar de travessão).
+- **Três padrões explicam 41 das 54 perdas de montagem:** a grade de atributos do Disco
+  Elysium (19), as descrições centralizadas do Path of Exile (12) e itens de lista e
+  parágrafos seguidos colados (10).
+
+| Causa | Linhas | Jogos | Já era conhecido? |
+|---|---:|---|---|
+| **Leitura** | **46** | | |
+| L1. Texto não lido ou ilegível | 12 | The Big Con 6, Disco 6 | Letreiros: [Problema 5](problemas-em-aberto.md). Texto com desenho por cima: novo |
+| L2. Letra trocada | 3 | Disco 2, Path of Exile 1 | |
+| L3. Espaço, pontuação ou traço | 27 | Disco 15, Katawa 7, Path of Exile 3, The Big Con 2 | Novo para a medida ([Problema 9](problemas-em-aberto.md), a forma de medir) |
+| L4. Ícone ou lixo colado ao texto | 4 | The Big Con 2, Butterfly 1, Disco 1 | [Problema 6](problemas-em-aberto.md) |
+| **Montagem** | **54** | | |
+| M6. Atributo com número e rótulo em grade | 19 | Disco 19 | Novo |
+| M2. Linhas centralizadas de uma descrição coladas | 12 | Path of Exile 12 | Novo, família do [Problema 7](problemas-em-aberto.md) |
+| M3. Itens de lista ou parágrafos seguidos colados | 10 | Disco 7, Butterfly 2, Path of Exile 1 | Família do Problema 7 |
+| M1. Itens lado a lado colados | 6 | Katawa 2, Path of Exile 2, Butterfly 2 | Família dos Problemas 3 e 4 |
+| M4. Última linha curta de uma fala separada | 4 | The Big Con 4 | Novo, família do [Problema 1](problemas-em-aberto.md) |
+| M5. Frase ou rótulo quebrado em duas linhas | 2 | Disco 1, Katawa 1 | Família do Problema 1 |
+| M7. Palavras espalhadas pelo desenho da placa | 1 | The Big Con 1 | Limite (veja abaixo) |
+
+Por tipo de tela, as perdas ficam assim:
+
+| Tipo | Perdidas | Leitura | Montagem |
+|---|---:|---:|---:|
+| ficha | 53 | 19 | 34 |
+| menu | 28 | 14 | 14 |
+| letreiro | 9 | 6 | 3 |
+| texto | 6 | 4 | 2 |
+| legenda | 4 | 3 | 1 |
+
+## As causas de leitura
+
+**L1. Texto não lido ou ilegível (12).** Metade são os letreiros do The Big Con: o Mallton
+Mall em arco, o Cooper's Market em cursiva, o Costume Cave e as duas frases da Crystal Horm.
+Isso é o Problema 5, um limite da leitura. A outra metade é do Disco Elysium. Na lista de
+pensamentos, cinco itens não foram lidos ou saíram truncados, e quatro deles têm o desenho
+do fundo passando por cima das letras (White Mourning, Caustic Echo, Detective Costeau,
+Apricot Chewing Gum). A sexta linha é o nome do idioma em russo, que o OCR em inglês não
+lê, como esperado.
+
+**L2. Letra trocada (3).** "René" lido como "Tené", "or" como "o", "ACTUAL" como "AQTUAL"
+e o zero de "has 0 Charges" como a letra "o".
+
+**L3. Espaço, pontuação ou traço (27).** O texto chega ao tradutor com o mesmo sentido,
+mas a medida conta a linha como perdida, porque compara palavra por palavra:
+- espaço engolido (8 linhas): "forwork", "waslike", "youmight", "dayever", "consumes7",
+  "regenerate1.8life", "speed:80%", "pistols(9mm)";
+- espaço antes dos dois-pontos (7): os bônus do inventário do Disco ("Inland Empire : +1"
+  virou "Inland Empire: +1");
+- travessão "–" lido como hífen "-", ou o contrário (4);
+- aspas, reticências e ponto (4): "cold..." com aspa simples, aspa final que sumiu,
+  "missed.." e o ponto de "SHAKESPEARE.";
+- número de opção (3): "2. -" virou "2.-";
+- o "x" de "2560 x 1440" lido como "×" (1).
+
+O mesmo tipo de perda também existe nos 90 prints da referência, então ele não explica a
+diferença entre os dois resultados.
+
+**L4. Ícone ou lixo colado ao texto (4).** A bolinha de marcar do Butterfly Soup virou "o"
+("ounseen"), o botão do controle virou "*" depois de "quit.", o "NOTES" do caderno colou no
+aviso de tarefa e um "A" solto colou na última opção do Disco. É o Problema 6.
+
+## As causas de montagem
+
+**M6. Atributo com número e rótulo em grade (19), só no Disco Elysium.** Na escolha de
+arquétipo e no inventário, cada atributo é um número grande em cima de uma sigla (5 sobre
+INT, 1 sobre PSY). O app lê os números numa linha ("2 5 4") e as siglas em outra ("INT PSY
+FYS MOT"). Os números "1" em caixa preta com letra branca nem são lidos. Na tela de
+atributos, "GOOD 4 INTELLECT" sai em três pedaços, sem o número. Os 90 prints não tinham
+esse desenho.
+
+**M3. Itens de lista ou parágrafos seguidos colados (10).** Linhas que estão uma embaixo
+da outra e saem numa linha só:
+- no Butterfly Soup, o título "Screen Motion" com as duas opções embaixo dele, três
+  linhas de larguras quase iguais encostadas na borda direita;
+- no Disco, "SORT THOUGHTS BY" com as abas embaixo, dois pensamentos seguidos, a fala do
+  personagem com o "+5 XP" da linha de baixo e a fala da Klaasje com a primeira opção de
+  resposta;
+- no Path of Exile, "Sell Items" com "Goodbye", que tem uma linha divisória no meio.
+
+**M2. Linhas centralizadas de uma descrição coladas (12), no Path of Exile.** Nas
+descrições de item e de habilidade, cada propriedade é uma linha centralizada de largura
+diferente ("Requires Level 17, 21 Dex, 21 Int" e embaixo "+92 to Accuracy Rating"). O app
+junta essas linhas como se fossem um parágrafo quebrado. O mesmo acontece com a nota em
+itálico embaixo de um efeito. No Stardew Valley, o painel do jogador tem o mesmo desenho
+e o mesmo erro.
+
+**M4. Última linha curta de uma fala separada (4).** A fala quebra porque não cabe, e a
+última linha tem uma palavra só: "want." no diário do The Big Con, "INFORMATION." no balão
+do guia. O app deixa essa palavra sozinha numa linha. O balão "REWIND / FOR / HUMANKIND!",
+de três linhas curtas, sai em três pedaços pelo mesmo motivo.
+
+**M1. Itens lado a lado colados (6).** O menu do título do Butterfly Soup é horizontal, e
+o OCR entrega os cinco itens numa caixa só ("New Game Load Game Settings About Quit"). É o
+caso da barra de menu numa caixa só (Problema 4), mas a regra dela não dispara, porque a
+tela não tem fala para servir de medida do espaço normal. As abas do Katawa Shoujo ("Act 1 Emi Hanako...")
+saem numa linha só e ainda levam junto o primeiro item da lista embaixo delas.
+"Completion: 100%" cola no "Return", que está no outro canto da mesma linha. No Path of
+Exile, um tópico da coluna da esquerda cola na opção da direita que está na mesma altura.
+
+**M5. Frase ou rótulo quebrado em duas linhas (2).** A dica longa do Disco ("TAP Q OR L TO
+SEAMLESSLY SWITCH / LANGUAGES IN GAME") sai em duas linhas, e uma fala do Katawa Shoujo é
+cortada antes da última frase.
+
+**M7. Palavras espalhadas pelo desenho da placa (1).** Na placa do trem, "THIS" e "TO" ficam
+de um lado da locomotiva e "WAY" e "TRAIN" do outro. Nenhuma regra de montagem deve tentar
+juntar isso.
+
+## O espanhol
+
+Das 13 linhas perdidas no Stardew Valley:
+- **4 são a última linha curta de uma fala** (M4): "llegada.", "quieres.",
+  "conversación!" e a assinatura "-Alcalde Lewis»". É o mesmo erro do The Big Con.
+- **4 são rótulos de formulário em duas linhas** (M5): "Tu cosa / favorita", "Tu animal /
+  preferido", "Color de / ojos:" e "Color de / pelo:". O "Nombre de / la granja", do mesmo
+  formulário, saiu inteiro.
+- **2 são letra trocada** (L2): o "¡" lido como "i" em "iHas recibido" e "total" lido como
+  "totol". O "¡" virou "i" também na fala do Elliott ("iAh!"), que conta como linha curta
+  porque também saiu partida. É um erro de leitura próprio do espanhol, que o inglês não
+  tinha como mostrar.
+- As outras 3 são uma de cada: espaço a mais ("Spanish Boost"), o painel centralizado do
+  jogador (M2) e o nome do personagem colado na data, que está na mesma altura (M1).
+
+## O que isso diz para as correções (fase 4.3)
+
+A regra do plano é que **um erro que aparece num jogo só não vira regra**. Contando o
+espanhol, os candidatos ficam nesta ordem:
+
+| Ordem | Padrão | Linhas | Jogos |
+|---|---|---:|---|
+| 1 | M3. Itens de lista ou parágrafos seguidos colados | 10 | Disco, Butterfly Soup, Path of Exile |
+| 2 | M4 e M5. Fala ou rótulo quebrado que não é juntado | 14 | The Big Con, Stardew, Disco, Katawa |
+| 3 | M2. Linhas centralizadas de uma descrição | 13 | Path of Exile, Stardew |
+| 4 | M1. Itens lado a lado colados | 7 | Katawa, Path of Exile, Butterfly Soup, Stardew |
+
+O menu do Butterfly Soup estava em M3 na primeira versão desta tabela. As caixas do OCR
+mostraram que ele é horizontal, e ele passou para M1.
+
+Ficam de fora por enquanto:
+- **M6, a grade de atributos (19 linhas),** só aparece no Disco Elysium. É o maior bloco,
+  mas é de um jogo só. A rodada 2 tem outros RPGs (Pillars of Eternity, Baldur's Gate 3,
+  Skyrim), mas ela só pode ser olhada depois das correções.
+- **Os letreiros estilizados (L1 e M7)** são limite da leitura, o Problema 5.
+- **Espaço e pontuação (L3)** vêm do próprio OCR. Uma medida nova, que não contasse essas
+  diferenças, ajudaria a separar o que atrapalha a tradução do que não atrapalha. Pela
+  regra da régua, ela entraria ao lado das medidas atuais, sem mudar nenhuma delas.
+
+Cada correção segue os passos da fase 4.3: achar um caso reproduzível, medir o sinal nos
+140 prints (os 90 e os 50 da validação) antes de escrever a regra, comparar com a `main`
+nas duas leituras e olhar o resultado por tipo de tela. Ela também não pode estragar o
+espanhol.
+
+## A primeira correção: o vão maior entre itens
+
+*Feita em 24/11/2026 no branch `regra-passo-grande`, a partir do candidato 1 (M3).*
+
+**O que os casos tinham em comum.** Entre itens de lista e entre parágrafos seguidos, o
+passo vertical (do topo de uma linha ao topo da seguinte) é maior que entre as linhas de
+um mesmo parágrafo. Na fala do Disco Elysium, as linhas estão a 31 px e o "+5 XP" a 44 px.
+No Path of Exile, "Sell Items" e "Goodbye" estão a 42 px, contra 20 px dentro de cada caixa
+de opções. O app não usava esse sinal: um vão só quebra a linha acima de 0,8 altura de
+letra, e nesses prints ele fica entre 0,5 e 0,7.
+
+**O sinal, medido antes da regra.** Em cada bloco, o passo de cada par de linhas foi
+comparado com o passo típico do bloco, nos 140 prints e nas duas leituras (script
+`laboratorios/validacao/passos_grandes.py`). Nenhuma emenda de linha do gabarito tem passo
+acima de **1,21** do típico. As quebras que o app perdia ficam entre **1,26 e 1,78**.
+
+**A regra** (`_quebras_por_passo`, em `paragrafos.py`). Num bloco, o passo típico é a
+mediana dos passos entre fileiras diferentes, ignorando linhas da mesma altura. Um passo
+de **1,35 vez o típico** ou mais quebra o parágrafo.
+
+O limite fica no meio de um platô estreito:
+- com 1,25, aparecem dois ganhos e a primeira quebra errada (Caves of Qud, no EasyOCR);
+- entre 1,3 e 1,4, o resultado é o mesmo;
+- com 1,45, os ganhos dos prints novos começam a sumir.
+
+Uma segunda versão aceitava 1,2 quando a linha de cima termina frase. Ela só ganhava uma
+linha a mais, num print só, e ficou de fora.
+
+**O resultado, sem nenhuma perda e nenhuma quebra a mais:**
+
+| Leitura | Linhas inteiras | Quebras certas |
+|---|---:|---:|
+| RapidOCR, 90 prints | +2 | +1 |
+| RapidOCR, 60 prints novos | +5 | +3 |
+| EasyOCR, 90 prints | +3 | +5 |
+| EasyOCR, 60 prints novos | +1 | +2 |
+
+No benchmark do app, as letras não mudaram em nenhum print:
+- 90 prints: linhas inteiras de 539 para 541;
+- validação: de 190 para 195 (65,5% → 67,2%);
+- espanhol: igual.
+
+Entraram três casos simulados nos testes, com as proporções dos prints reais. Dois falham
+com o código da `main` e passam com a regra, e o terceiro garante que um passo de 1,19 não
+quebra. Agora são 109 testes.
+
+**O que sobrou do M3:**
+- "Screen Motion" e as duas opções do Butterfly Soup têm o mesmo passo. O problema é a
+  regra de menu, que exige uma linha bem mais curta que as outras, um limite conhecido.
+- "SORT THOUGHTS BY" com as abas embaixo, no Disco, também tem o mesmo passo. Lido junto,
+  faz sentido como frase.
+- A fala da Klaasje com a primeira opção de resposta tem passo 1,26, abaixo do limite.
+
+**Uma armadilha do laboratório.** O modo `cinza2` do `cache_motores.py` chama o motor de
+OCR do app, que desde 16/11 é o RapidOCR em inglês. Os 90 prints têm uma leitura `cinza2`
+antiga, feita com o EasyOCR. Nos prints novos, a leitura do EasyOCR veio do modo
+`easyocr_cpu`.

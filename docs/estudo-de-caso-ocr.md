@@ -1264,6 +1264,16 @@ quebravam as frases como na tela, contra a regra do README. As linhas inteiras f
 as duas medidas lado a lado e a primeira medida em espanhol (Stardew Valley, fora do
 portão) estão em [Resultados da validação](resultados-validacao.md).
 
+Depois da medida, classifiquei cada uma das 100 linhas perdidas. Metade era leitura, e
+mais da metade dessa leitura era só espaço ou pontuação, sem mudar o sentido. A outra
+metade era montagem, com três padrões que explicam quase tudo: a grade de atributos do
+Disco Elysium, as descrições centralizadas do Path of Exile e itens de lista colados.
+A primeira correção usa um sinal que o app ignorava: entre itens e parágrafos, o vão
+vertical é maior que entre as linhas de um mesmo parágrafo. Um passo de 1,35 vez o típico
+do bloco passou a quebrar. Ganhou 5 linhas inteiras na validação e 2 nos 90 prints, sem
+nenhuma perda nas duas leituras. A classificação e a correção estão em [Por que as linhas
+se perderam](classificacao-linhas-perdidas.md).
+
 ## 8. De onde vem o erro que sobrou
 
 Medindo de novo do mesmo jeito, com as palavras em ordem alfabética:
