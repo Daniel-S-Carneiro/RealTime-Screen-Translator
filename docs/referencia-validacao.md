@@ -67,7 +67,8 @@ referência nos 90 prints. Uma leitura mais fraca do japonês não diz nada sobr
 de montagem terem decorado o dataset.
 
 **A validação tem duas rodadas.** O portão acima é o da rodada 1: Katawa Shoujo, Butterfly
-Soup, Disco Elysium, Path of Exile e Firewatch. Os outros 8 jogos da lista do [plano de
+Soup, Disco Elysium, Path of Exile e The Big Con (no lugar do Firewatch, que quase não tem
+placas). Os outros 8 jogos da lista do [plano de
 validação](plano-de-validacao.md) formam a rodada 2 (`--periodo segunda-validacao`), que
 fica guardada para provar as correções e é medida uma vez, com o ponto de congelamento que
 existir depois delas.
