@@ -88,6 +88,7 @@ pergunta passou a pedir que cada IA aplicasse a própria regra, à mão, a cada 
 | 9 | Frase que termina no fim da linha corta o parágrafo | 24/11 | ChatGPT, Grok, DeepSeek, Mistral, Qwen | Fim de frase não quebra se as linhas estão coladas (**Mistral**; o mesmo sinal do **ChatGPT**) | 541 → 546 | 69 → 63 |
 | 10 | Descrição de item centralizada, uma propriedade por linha | 24/11 | as mesmas cinco | Pontuação e linha cheia (**Mistral**) + prova de centralização (**Grok**) + travas da vírgula e da largura (minhas) | igual nos 90; validação 197 → 207 | igual |
 | 11 | Menu inteiro lido numa caixa só, itens de mais de uma palavra | 25/11 | Grok, Mistral, Qwen | Espaços pelas palavras do reconhecedor, salto de 2,2x e itens com maiúscula (**Mistral**) + regularidade de 2x (**Grok**) | igual nos 90; validação 207 → 210 | igual |
+| 12 | O OCR engole o espaço entre duas palavras | 25/11 | as cinco | Candidatos pela geometria e decisão pela probabilidade do CTC (**ChatGPT**), na versão barata (a margem do espaço na coluna) | 546 → 550; validação 210 → 213 | igual |
 
 As cinco disseram acertar os 13 casos da pergunta. Nos 140 prints, só o Mistral e o
 ChatGPT não perderam nenhuma linha; Grok, DeepSeek e Qwen perderam de 2 a 6, quase sempre
@@ -99,6 +100,14 @@ atrapalha), e a regra, das IAs. O que separou as três propostas foi uma trava d
 item começa com maiúscula. Sem ela, o Grok e o Qwen cortavam frases na fonte de largura
 fixa do Caves of Qud. Os detalhes estão em [Por que as linhas se
 perderam](classificacao-linhas-perdidas.md).
+
+**Antes do congelamento (25/11).** Depois de revisar tudo o que ainda se perde nos 150
+prints, foram para as IAs quatro padrões que se repetem em vários jogos (problemas 12 a 15):
+o espaço engolido pelo OCR, duas caixas distantes na mesma linha, o ícone lido como
+símbolo e a frase quebrada em linhas curtas e coladas. No problema 12, três das cinco
+propostas eram regras de passo e de tinta, e cada uma inseriu centenas de espaços errados;
+a que entrou, do ChatGPT, deixa o próprio reconhecedor decidir, pela probabilidade que ele
+já calcula. As respostas dos problemas 13 a 15 ainda não chegaram.
 
 ## O que decidiu cada rodada
 

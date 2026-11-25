@@ -1287,7 +1287,10 @@ acerta os dois prints numa faixa estreita de limiares. Ele foi às outras IAs co
 11, com uma segunda medida: as caixas por palavra que o próprio reconhecedor dá. A quinta
 correção, do Mistral com uma trava do Grok, corta o menu pelos espaços entre essas
 palavras, sem olhar a tinta: 3 linhas a mais, e a validação chegou a 210 de 290 linhas
-inteiras (72,4%). A classificação, as correções e esse diagnóstico estão em
+inteiras (72,4%). A sexta correção põe de volta o espaço que o OCR engole entre duas
+palavras ("youmight"), com a probabilidade que o próprio reconhecedor calcula, proposta do
+ChatGPT: 213 de 290 (73,4%) na validação e 550 de 661 nos 90 prints. A classificação, as
+correções e esse diagnóstico estão em
 [Por que as linhas se perderam](classificacao-linhas-perdidas.md).
 
 ## 8. De onde vem o erro que sobrou
@@ -1525,6 +1528,12 @@ aberto](problemas-em-aberto.md). Em resumo:
     vezes, sempre na mesma ordem, dizia que as palavras deixavam a leitura mais rápida.
     Dois benchmarks em dias diferentes diziam que ela ficava 0,11 s mais lenta. Alternando
     a ordem na mesma rodada, a diferença foi de 15 ms.
+41. **Quando a geometria não decide, pergunte ao modelo.** Três IAs propuseram regras de
+    passo e de tinta para achar o espaço engolido, e cada uma inseriu centenas de espaços
+    errados: o vão normal entre letras de muitas fontes é tão largo quanto o espaço. O
+    reconhecedor já sabia: entre as duas letras, o espaço quase ganhou na coluna dele.
+    Esse sinal separou os 4.564 candidatos errados dos certos sem nenhuma sobreposição, e
+    as probabilidades já estavam calculadas, só eram jogadas fora.
 
 ## Como reproduzir
 
