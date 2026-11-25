@@ -703,7 +703,104 @@ Entraram 5 casos nos testes: a galeria com o botão no canto, duas listas com um
 meio, o nome com a data, a opção com o valor escrito e o nome da técnica com o nível.
 Agora são 140 testes.
 
-**Desde a medida da validação, sete correções:** nos 90 prints, as linhas inteiras foram
-de 539 para 550; na validação, de 190 para 216 (65,5% para 74,5%); no espanhol, de 8 para
+## A oitava correção: o ícone lido como símbolo (com as outras IAs)
+
+*Feita em 25/11/2026 no branch `regra-icones-colados`, a partir do problema 14: o OCR lê
+um ícone da interface como símbolo do tamanho do texto, e ele chega ao tradutor colado à
+linha.*
+
+Os casos da pergunta, em 6 jogos:
+- **uma caixa só para o ícone:**
+  - os "+" no fim de cada linha da fila de skills do EVE Online, em duas colunas;
+  - o "8" antes do nome da técnica do Immortal Clan;
+  - um "A" baixo, 5 alturas depois de uma opção de diálogo do Disco Elysium;
+- **o ícone dentro da caixa da palavra:**
+  - o "≡" do menu do EVE ("≡ Overview (General)");
+  - o cursor ">" do Caves of Qud ("> [2] Do you live here?");
+  - a caixinha de marcar do Butterfly Soup, lida como "o" ("oUnseen Text");
+  - o "*" de enfeite do The Big Con ("quit.*").
+
+A regra de ícones que já existia (`quantidades.tirar_icones`) não os pega:
+- o "8" e os "+" têm a altura do texto;
+- a coluna de "+" é toda igual, e não mista de letra e não-letra;
+- o "A" está longe da borda do print;
+- a confiança dos "+" é de 0,97 a 0,99.
+
+Cada proposta entrou como foi escrita, logo depois do filtro de desenhos, e foi medida nas
+quatro leituras (`laboratorios/validacao/variantes_p14.py`). Cada caractere tirado foi
+conferido contra o gabarito (`erros_p14.py`): é certo quando o texto lido tinha mais dele
+do que o gabarito.
+
+| Proposta | Linhas ganhas | Perdidas | Caracteres tirados | Que eram texto |
+|---|---:|---:|---:|---:|
+| **Grok** | **11** | **0** | 14 | **0** |
+| DeepSeek | 8 | 1 | 21 | 6 ou mais |
+| ChatGPT | 4 | 0 | 4 | 0 |
+| Qwen | 3 | 1 | 7 | 1 |
+| Mistral | 5 | 11 | 20 | 4 ou mais |
+
+O que separou as propostas:
+- **O ">" do Persona 4 é texto.** No gabarito, "> Obtained Peach Seed x 5" começa com ">".
+  Qwen, DeepSeek e Mistral tiram todo ">" no começo da linha. O Grok só tira o cursor que
+  vem antes de um atalho entre colchetes, como os do Caves of Qud.
+- **"O" seguido de maiúscula é normal em maiúsculas.** Para pegar a caixinha do Butterfly
+  Soup, o DeepSeek e o Mistral tiram o "o" ou o "O" antes de uma maiúscula. Nas telas em
+  maiúsculas do Disco Elysium, saíram "PTIONS", "STEAU" e "VERPRODUCTIVE". A trava de
+  repetição (2+ caixas) não segura, porque uma tela em maiúsculas repete o padrão.
+- **Tirar um ícone certo pode desmontar a tela.** O Mistral tirou o "1" antes de "Missiles"
+  na grade de skills do EVE, que é mesmo um ícone. Sem essa caixa, as regras de colunas
+  montaram a grade de outro jeito, e 9 linhas se perderam. A régua das linhas inteiras
+  pegou o que a conta das remoções não pegaria.
+- **A ponta da linha.** O ChatGPT só tira o símbolo na ponta da linha, e não errou nada.
+  Mas a coluna de "+" da esquerda fica no meio da linha, antes da segunda coluna da fila,
+  e ficou.
+
+Entrou a regra do Grok, como ele escreveu (`_tirar_icones_colados`, em `paragrafos.py`, logo
+depois do filtro de desenhos):
+- **Coluna de ícones:** 3+ caixas do mesmo símbolo ou dígito (Unicode Sm, So ou Nd), com a
+  borda esquerda a até 1 altura e passo de até 3 alturas, cada uma a menos de 0,8 altura de
+  um texto com letra. O dígito só sai quando vem antes do texto: depois dele, é valor
+  ("Missiles 1").
+- **Glifo longe:** letra latina ou símbolo de uma caixa só, mais baixo que 0,75 do texto e
+  a 2,1 alturas ou mais da caixa mais perto da linha.
+- **Pontas da linha:** o "≡" no começo, o cursor (">", "›", "▶"...) só antes de um atalho
+  entre colchetes, e o enfeite ("*", "+", "★"...) logo depois de ".", "!", "?" ou "…" no
+  fim.
+
+Marcador de lista, letra em coluna ("A Route" do EasyOCR, uma caixa por palavra), o ">" no
+meio ("Extras > Library") e o hífen da opção ("4. - Not now.") ficam.
+
+No laboratório, o app reproduziu a variante do Grok print a print, nas quatro leituras. No
+benchmark do app:
+
+| Conjunto | Linhas inteiras | Linhas com sobra | Acerto de letras | Quebras a mais |
+|---|---|---|---|---|
+| 90 prints | 550 → 560 | 30 → 21 | 95,85% → 95,91% | 65 → 64 |
+| Validação | 216 → 217 | igual | 91,35% → 91,42% | 32 → 31 |
+| Espanhol | igual (11) | igual | igual | igual |
+
+Nenhum print piorou. As 10 linhas dos 90 prints são 6 da fila de skills do EVE, o overview
+do EVE e as três falas do Caves of Qud com o cursor. Na validação, a linha é a do The Big
+Con. O "A" do Disco já saía numa linha à parte: com ele fora, sai uma quebra a mais.
+
+**O que ficou de fora, e por quê:**
+- **O "8" do Immortal Clan.** Ele aparece uma vez por print, e uma coluna de 3 não se
+  forma. Com um "8" sozinho a 0,3 altura do nome, nada o separa de uma quantidade ("8 Lotus
+  Heart"). Só o Mistral o tirou, pela altura e pela confiança juntas, e só num dos dois
+  prints: no outro, a altura ficou dentro da faixa protegida (1,09 do texto).
+- **A caixinha "oUnseen" do Butterfly Soup.** Medi a sugestão do Grok: o passo do CTC da
+  1ª letra até a 2ª, contra a mediana das outras. No "oUnseen", ele é 1,83 vez a mediana,
+  e o vão é de 0,27 altura. Nas 522 palavras de 4+ letras dos 150 prints que começam com
+  uma letra seguida de maiúscula, "MELEE" (2,07), "TEMKET" (1,91) e "MONSTERS" (1,83)
+  chegam a esse passo ou passam dele. O passo não separa.
+
+Os dois são de um jogo só cada, e pela regra do projeto não viram regra.
+
+Entraram 13 testes (`tests/test_icones_colados.py`): 6 com os casos que saem, a maioria
+com as coordenadas dos prints, e 7 com o que tem de ficar. Sem a regra, os 6 primeiros
+falham. Agora são 153 testes.
+
+**Desde a medida da validação, oito correções:** nos 90 prints, as linhas inteiras foram
+de 539 para 560; na validação, de 190 para 217 (65,5% para 74,8%); no espanhol, de 8 para
 11.
 

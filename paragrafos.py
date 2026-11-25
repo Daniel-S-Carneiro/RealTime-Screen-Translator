@@ -38,6 +38,7 @@ certas (com o EasyOCR, antes dos blocos e das regras de 2026-11-15: 69% e 78%).
 import math
 import re
 import statistics
+import unicodedata
 from dataclasses import dataclass, field, replace
 
 import numpy as np
@@ -95,6 +96,23 @@ VALOR_CURTO = re.compile(r"[^\W\d_]{1,4}\.?\d{1,4}")  # "Lv.10", "lv5": nível, 
 LIXO_ALTURA = 3.0  # muito mais alta que o texto típico...
 LIXO_LETRAS = 3  # ...e com quase nada escrito
 INCLINACAO_MINIMA = 0.05  # abaixo disso o texto é tratado como reto
+
+# Ícones lidos como símbolo e colados à linha: o "+" dos botões, o "≡" do menu, o ">" do
+# cursor (problema 14, proposta do Grok, 25/11/2026). Medidas na altura do texto.
+ICONES_NA_COLUNA = 3  # caixas iguais, no mínimo: com 2, dois valores iguais virariam ícone
+ICONE_BORDA = 1.0  # coluna: borda esquerda a até isso...
+ICONE_PASSO = 3.0  # ...e passo topo a topo de até isso entre as caixas seguidas
+ICONE_COLADO = 0.8  # vão até o texto vizinho menor que isso (o de itens lado a lado)
+ICONE_BAIXO = 0.75  # glifo solto mais baixo que isso...
+ICONE_LONGE = 2.1  # ...e tão longe da caixa mais perto da linha (o das caixas distantes)
+CATEGORIAS_DE_ICONE = frozenset({"Sm", "So", "Nd"})  # "+", "≡", "×" e dígitos (Unicode)
+MARCADORES_DE_LISTA = frozenset("•-*–—")
+ICONES_DE_MENU = frozenset("≡☰≣")
+CURSORES = frozenset(">›»▶►")
+ICONE_DE_MENU = re.compile(r"^[≡☰≣]\s*(?=.*[^\W\d_])")
+CURSOR = re.compile(r"^[>›»▶►]\s*(?=\[[^\]]+\])")  # só antes de atalho: "> [2] Do you..."
+ATALHO = re.compile(r"\[[^\]]+\]")
+ENFEITE = re.compile(r"(?<=[.!?…])[*+•★✦]+$")  # "quit.*"
 
 # Línguas escritas da direita para a esquerda (códigos do EasyOCR)
 IDIOMAS_DA_DIREITA = frozenset({"ar", "fa", "ur", "ug"})
@@ -291,6 +309,143 @@ def _filtrar_lixo(itens: list) -> list:
         or len(_texto(item).replace(" ", "")) > LIXO_LETRAS
         or not _texto(item).isascii()
     ]
+
+
+def _glifo(item) -> str:
+    """O caractere de uma caixa de um caractere só, ou ""."""
+    texto = "".join(_texto(item).split())
+    return texto if len(texto) == 1 else ""
+
+
+def _vao_entre(a, b) -> float:
+    """Distância horizontal entre duas caixas (negativa se elas se cruzam)."""
+    esq_a, dir_a, _, _ = _limites(a)
+    esq_b, dir_b, _, _ = _limites(b)
+    return max(esq_b - dir_a, esq_a - dir_b)
+
+
+def _vizinho_na_linha(item, itens: list, altura: float):
+    """A caixa mais perto na mesma linha (centros a até meia altura), ou None."""
+    centro = _centro_vertical(item)
+    vizinhos = [o for o in itens
+                if o is not item and abs(_centro_vertical(o) - centro) <= altura / 2]
+    return min(vizinhos, key=lambda o: _vao_entre(item, o)) if vizinhos else None
+
+
+def _colunas_de_glifos(glifos: list, altura: float) -> list:
+    """Caixas do mesmo glifo com a borda esquerda a até ICONE_BORDA, em cadeia, cortadas
+    onde o passo topo a topo passa de ICONE_PASSO."""
+    por_glifo = {}
+    for item in glifos:
+        por_glifo.setdefault(_glifo(item), []).append(item)
+    colunas = []
+    for grupo in por_glifo.values():
+        cadeias = []
+        for item in sorted(grupo, key=lambda i: _limites(i)[0]):
+            if cadeias and _limites(item)[0] - _limites(cadeias[-1][-1])[0] <= ICONE_BORDA * altura:
+                cadeias[-1].append(item)
+            else:
+                cadeias.append([item])
+        for cadeia in cadeias:
+            cadeia.sort(key=lambda i: _limites(i)[2])
+            colunas.append([cadeia[0]])
+            for anterior, item in zip(cadeia, cadeia[1:]):
+                if _limites(item)[2] - _limites(anterior)[2] <= ICONE_PASSO * altura:
+                    colunas[-1].append(item)
+                else:
+                    colunas.append([item])
+    return colunas
+
+
+def _coluna_de_icones(coluna: list, itens: list, altura: float) -> bool:
+    """3+ símbolos (ou dígitos) iguais, cada um colado a um texto com letra; o dígito só
+    quando vem antes do texto, porque depois dele é valor ("Missiles 1")."""
+    simbolo = _glifo(coluna[0])
+    categoria = unicodedata.category(simbolo)
+    if len(coluna) < ICONES_NA_COLUNA or categoria not in CATEGORIAS_DE_ICONE:
+        return False
+    for item in coluna:
+        vizinho = _vizinho_na_linha(item, itens, altura)
+        if (vizinho is None or _vao_entre(item, vizinho) >= ICONE_COLADO * altura
+                or not any(letra.isalpha() for letra in _texto(vizinho))):
+            return False
+        if categoria == "Nd" and _limites(item)[1] > _limites(vizinho)[0]:
+            return False
+    return True
+
+
+def _glifo_longe(item, itens: list, altura: float) -> bool:
+    """Letra latina ou símbolo, baixo e longe da caixa mais perto da linha (o "A" depois
+    da opção de diálogo, a 5 alturas dela)."""
+    simbolo = _glifo(item)
+    categoria = unicodedata.category(simbolo)
+    latina = categoria[0] == "L" and "LATIN" in unicodedata.name(simbolo, "")
+    simbolo_solto = categoria in ("Sm", "So") and simbolo not in MARCADORES_DE_LISTA
+    if simbolo.isdigit() or not (latina or simbolo_solto):
+        return False
+    if _altura_caixa(item) >= ICONE_BAIXO * altura:
+        return False
+    vizinho = _vizinho_na_linha(item, itens, altura)
+    return vizinho is not None and _vao_entre(item, vizinho) >= ICONE_LONGE * altura
+
+
+def _pontas_sem_icone(linha: list, tirar: set, trocas: dict) -> None:
+    """O "≡" e o cursor no começo da linha e o enfeite depois do ponto no fim. O ">" no
+    meio ("Extras > Library") e o marcador de lista ficam."""
+    primeira, ultima = linha[0], linha[-1]
+    texto = _texto(primeira)
+    resto = " ".join(_texto(item) for item in linha[1:])
+    if texto in ICONES_DE_MENU and any(letra.isalpha() for letra in resto):
+        tirar.add(id(primeira))
+    elif texto in CURSORES and ATALHO.match(resto):
+        tirar.add(id(primeira))
+    else:
+        novo = CURSOR.sub("", ICONE_DE_MENU.sub("", texto))
+        if novo != texto:
+            trocas[id(primeira)] = novo
+    if id(ultima) not in tirar:
+        texto = trocas.get(id(ultima), _texto(ultima))
+        novo = ENFEITE.sub("", texto)
+        if novo != texto:
+            trocas[id(ultima)] = novo
+
+
+def _tirar_icones_colados(itens: list) -> list:
+    """Tira os ícones que o OCR leu como símbolo do tamanho do texto, que o filtro de
+    desenhos e o quantidades.tirar_icones deixam passar (problema 14).
+
+    - Coluna de ícones: 3+ caixas do mesmo símbolo ou dígito, uma embaixo da outra, cada uma
+      colada a um texto (os "+" no fim de cada linha da fila de skills do EVE).
+    - Glifo solto: letra latina ou símbolo, mais baixo que o texto e longe da linha.
+    - Pontas da linha: o "≡" de menu, o cursor ">" antes de um atalho entre colchetes
+      ("> [2] Do you live here?") e o enfeite depois do ponto ("quit.*").
+
+    Proposta do Grok (25/11/2026), medida nos 150 prints com as duas leituras: 11 linhas
+    inteiras a mais e nenhuma a menos, e os 14 caracteres tirados eram todos ícones. Ficam
+    de fora o ícone que aparece numa linha só (o "8" antes do nome da técnica) e a
+    caixinha lida como "o" colada na palavra: a geometria não os separa do texto.
+    """
+    if len(itens) < 2:
+        return itens
+    longas = [_altura_caixa(item) for item in itens if len(_texto(item)) >= 3]
+    altura = statistics.median(longas or [_altura_caixa(item) for item in itens])
+    if not altura:
+        return itens
+    glifos = [item for item in itens if _glifo(item)]
+    tirar = set()
+    for coluna in _colunas_de_glifos(glifos, altura):
+        if _coluna_de_icones(coluna, itens, altura):
+            tirar.update(id(item) for item in coluna)
+    tirar.update(id(item) for item in glifos
+                 if id(item) not in tirar and _glifo_longe(item, itens, altura))
+    trocas = {}
+    for linha in agrupar_em_linhas([item for item in itens if id(item) not in tirar]):
+        _pontas_sem_icone(linha, tirar, trocas)
+    if not tirar and not trocas:
+        return itens
+    # A caixa editada perde as palavras do reconhecedor, que não batem mais com o texto
+    return [(item[0], trocas[id(item)]) + tuple(item[2:3]) if id(item) in trocas else item
+            for item in itens if id(item) not in tirar]
 
 
 def _endireitar(itens: list) -> list:
@@ -1714,7 +1869,7 @@ def montar_paragrafos(resultados, idioma: str = "", imagem=None) -> list:
     espelhada = (idioma or "").lower() in IDIOMAS_DA_DIREITA
     if espelhada:
         itens = [_espelhar(item) for item in itens]
-    filtrados = _filtrar_lixo(itens)
+    filtrados = _tirar_icones_colados(_filtrar_lixo(itens))
     itens = _endireitar(filtrados)
     # Caixas giradas não batem mais com a imagem: aí as regras da imagem ficam de fora
     fundo = _fundo(imagem, espelhada) if itens is filtrados else None
