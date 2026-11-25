@@ -77,6 +77,20 @@ PALAVRAS_ITEM = 3  # um item de menu, aba ou botão tem até 3 palavras
 ALINHAMENTO = 0.5  # bordas ou centros mais perto que isso (em alturas): caixas alinhadas
 DISTANCIA_CABECALHO = 1.5  # cabeçalho de tabela fica até 1,5 altura acima da 1ª linha
 
+# Duas caixas na mesma linha, longe uma da outra: dois itens ou rótulo e valor? ("Completion:
+# 100%" | "Return" no Katawa; "The Keepers" | "Purchase Graft" no Path of Exile). Problema
+# 13 da consulta às IAs, 2ª rodada (25/11/2026): regra do Grok, com as travas que a 1ª
+# rodada mostrou que faltavam (valor curto, cabeçalho de tabela, vão mínimo).
+DISTANTES_VAO = 2.1  # vão (em alturas) que separa os dois segmentos da linha; abaixo disso
+# é palavra do EasyOCR ("as" | "mutated", 1,3) ou célula de cabeçalho ("Distance" | "Name")
+DISTANTES_BORDA = 1.0  # mesma coluna: borda esquerda ou direita a até isso
+DISTANTES_PASSO = 3.0  # e passo vertical de até isso entre as caixas seguidas da coluna
+DISTANTES_PARES = 0.5  # colunas com pares em até metade das linhas são listas separadas
+DISTANTES_LARGURA = 0.75  # a coluna da direita com essa largura da esquerda é de itens
+DISTANTES_FRASE = 4  # palavras: duas caixas sozinhas, a maior frase com número ("Día 2 de...")
+NUMERO_CURTO = set(".,:/%+-×")
+VALOR_CURTO = re.compile(r"[^\W\d_]{1,4}\.?\d{1,4}")  # "Lv.10", "lv5": nível, não item
+
 # Caixas de desenho: barra de vida, coluna de ícones, logotipo
 LIXO_ALTURA = 3.0  # muito mais alta que o texto típico...
 LIXO_LETRAS = 3  # ...e com quase nada escrito
@@ -381,6 +395,7 @@ class Vizinhanca:
     cabecalho: frozenset = frozenset()
     alinhada: frozenset = frozenset()
     comeca_item: frozenset = frozenset()  # pedaços de uma barra de menu cortada (_separar_barras)
+    distantes: frozenset = frozenset()  # (id, id): caixas vizinhas que são itens separados
 
 
 def _alinhadas(item, linha: Linha, altura: float) -> bool:
@@ -409,7 +424,205 @@ def _vizinhanca(itens: list) -> Vizinhanca:
             and sum(_alinhadas(item, abaixo, linha.altura) for item in linha.itens) >= 2
         ):
             cabecalho.update(id(item) for item in linha.itens)
-    return Vizinhanca(frozenset(cabecalho), frozenset(alinhada))
+    return Vizinhanca(
+        frozenset(cabecalho), frozenset(alinhada), distantes=_pares_distantes(itens, cabecalho)
+    )
+
+
+@dataclass
+class _Segmento:
+    """Caixas seguidas da mesma fileira, a menos de DISTANTES_VAO uma da outra."""
+
+    itens: list
+    fileira: int
+    esq: float = field(init=False)
+    dir: float = field(init=False)
+    cy: float = field(init=False)
+    texto: str = field(init=False)
+
+    def __post_init__(self) -> None:
+        limites = [_limites(item) for item in self.itens]
+        self.esq = min(lim[0] for lim in limites)
+        self.dir = max(lim[1] for lim in limites)
+        self.cy = (min(lim[2] for lim in limites) + max(lim[3] for lim in limites)) / 2
+        self.texto = _juntar([_texto(item) for item in self.itens])
+
+    @property
+    def palavras(self) -> int:
+        """Palavras do texto do segmento."""
+        return len(self.texto.split())
+
+
+def _pares_distantes(itens: list, cabecalho: set) -> frozenset:
+    """Pares de caixas vizinhas da mesma linha, longe uma da outra, que são dois itens e
+    não rótulo e valor: [(id da última caixa da esquerda, id da primeira da direita)].
+
+    Só olha a linha que, cortada nos vãos de DISTANTES_VAO, dá exatamente dois segmentos.
+    """
+    if len(itens) < 2:
+        return frozenset()
+    altura = max(statistics.median(_altura_caixa(item) for item in itens), 1.0)
+    fileiras = []
+    for k, grupo in enumerate(agrupar_em_linhas(itens)):
+        segmentos = [[grupo[0]]]
+        for anterior, item in zip(grupo, grupo[1:]):
+            if _limites(item)[0] - _limites(anterior)[1] < DISTANTES_VAO * altura:
+                segmentos[-1].append(item)
+            else:
+                segmentos.append([item])
+        fileiras.append([_Segmento(s, k) for s in segmentos])
+    todos = [s for fileira in fileiras for s in fileira]
+    saida = set()
+    for fileira in fileiras:
+        if len(fileira) != 2:
+            continue
+        a, b = fileira
+        if any(id(item) in cabecalho for item in a.itens + b.itens):
+            continue
+        if _itens_distantes(a, b, todos, altura):
+            saida.add((id(a.itens[-1]), id(b.itens[0])))
+    return frozenset(saida)
+
+
+def _valor_curto(texto: str) -> bool:
+    """Número, número com unidade curta ("3d 20h", "3/56", "+5") ou nível ("Lv.10", "lv5")."""
+    if VALOR_CURTO.fullmatch(texto.strip()):
+        return True
+    sem_espaco = texto.replace(" ", "")
+    if not sem_espaco or len(texto.split()) > 2:
+        return False
+    if any(len(grupo) > 3 for grupo in re.findall(r"[^\W\d_]+", texto)):
+        return False
+    return sum(c.isdigit() or c in NUMERO_CURTO for c in sem_espaco) >= len(sem_espaco) / 2
+
+
+def _coluna(segmento: _Segmento, todos: list, altura: float, lado: str) -> list:
+    """Segmentos com a mesma borda (esquerda ou direita, a até DISTANTES_BORDA), encadeados
+    de cima a baixo com passo de até DISTANTES_PASSO."""
+    def borda(s):
+        return s.esq if lado == "esq" else s.dir
+
+    mesma_borda = sorted(
+        (s for s in todos if abs(borda(s) - borda(segmento)) <= DISTANTES_BORDA * altura),
+        key=lambda s: s.cy,
+    )
+    inicio = mesma_borda.index(segmento)
+    membros = [segmento]
+    for passo in (-1, 1):
+        j, atual = inicio + passo, segmento
+        while 0 <= j < len(mesma_borda):
+            if abs(mesma_borda[j].cy - atual.cy) > DISTANTES_PASSO * altura:
+                break
+            membros.append(mesma_borda[j])
+            atual = mesma_borda[j]
+            j += passo
+    return membros
+
+
+def _fileiras(coluna: list) -> set:
+    return {s.fileira for s in coluna}
+
+
+def _sem_numero(texto: str) -> bool:
+    return not re.search(r"[\d\[\]()]", texto)
+
+
+def _itens_distantes(a: _Segmento, b: _Segmento, todos: list, altura: float) -> bool:
+    """O par (a, b) da mesma linha são dois itens? Primeiro as travas que juntam (valor
+    curto, tabela de rótulo e valor, rótulo com valor de uma palavra), depois os desenhos
+    que separam (duas listas, a caixa sozinha ao lado de uma coluna, duas caixas sozinhas
+    quando uma é frase com número)."""
+    if _valor_curto(a.texto) or _valor_curto(b.texto):
+        return False
+    esquerda = _maior(_coluna(a, todos, altura, "esq"), _coluna(a, todos, altura, "dir"))
+    direita = _maior(_coluna(b, todos, altura, "esq"), _coluna(b, todos, altura, "dir"))
+    pares = len(_fileiras(esquerda) & _fileiras(direita))
+    if _rotulo_e_valor(a, b, todos, altura, pares):
+        return False
+    if _duas_listas(_coluna(a, todos, altura, "esq"), _coluna(b, todos, altura, "esq"), altura):
+        return True
+    return _colunas_soltas(a, b, esquerda, direita, pares)
+
+
+def _rotulo_e_valor(a: _Segmento, b: _Segmento, todos: list, altura: float, pares: int) -> bool:
+    """Tabela de rótulo e valor (pares em 2+ linhas, rótulos fechando à direita e valores
+    abrindo à esquerda), ou um rótulo de 2+ palavras com um valor de uma palavra e sem par
+    em outra linha ("Default Mouse Cursor" | "Regular")."""
+    rotulos = _fileiras(_coluna(a, todos, altura, "dir"))
+    valores = _fileiras(_coluna(b, todos, altura, "esq"))
+    if pares >= 2 and len(rotulos & valores) >= 2:
+        return True
+    if pares >= 2:
+        return False
+    return any(
+        _palavra_solta(curto) and _rotulo_sem_numero(longo)
+        for curto, longo in ((a, b), (b, a))
+    )
+
+
+def _palavra_solta(segmento: _Segmento) -> bool:
+    return segmento.palavras == 1 and _sem_numero(segmento.texto)
+
+
+def _rotulo_sem_numero(segmento: _Segmento) -> bool:
+    return segmento.palavras >= 2 and _sem_numero(segmento.texto) and ":" not in segmento.texto
+
+
+def _colunas_soltas(a: _Segmento, b: _Segmento, esquerda: list, direita: list, pares: int) -> bool:
+    """Duas colunas com pares em até metade das linhas, a caixa sozinha ao lado de uma
+    coluna ("Return"), ou duas caixas sozinhas quando a maior é frase com número."""
+    n_esq, n_dir = len(_fileiras(esquerda)), len(_fileiras(direita))
+    if (min(n_esq, n_dir) >= 2 and pares / max(n_esq, n_dir) <= DISTANTES_PARES
+            and any(s.palavras >= 2 for s in direita)):
+        return True
+    if min(n_esq, n_dir) == 1 and max(n_esq, n_dir) >= 2:
+        return True
+    if n_esq == 1 and n_dir == 1:
+        longo = a if a.palavras >= b.palavras else b
+        return longo.palavras >= DISTANTES_FRASE and any(c.isdigit() for c in longo.texto)
+    return False
+
+
+def _maior(primeira: list, segunda: list) -> list:
+    return primeira if len(primeira) >= len(segunda) else segunda
+
+
+def _duas_listas(esquerda: list, direita: list, altura: float) -> bool:
+    """Duas colunas alinhadas à esquerda que são listas de itens (o genótipo e as mutações
+    do Caves of Qud): a esquerda tem fim irregular e alguma linha sem par, a direita tem
+    um item de 2+ palavras e largura parecida, e nenhuma é de valores curtos."""
+    if len(esquerda) < 2 or len(direita) < 2:
+        return False
+    fins = [s.dir for s in esquerda]
+    larguras_esq = [s.dir - s.esq for s in esquerda]
+    larguras_dir = [s.dir - s.esq for s in direita]
+    return (
+        max(fins) - min(fins) > DISTANTES_BORDA * altura
+        and bool(_fileiras(esquerda) - _fileiras(direita))
+        and any(s.palavras >= 2 for s in direita)
+        and statistics.median(larguras_dir) >= DISTANTES_LARGURA * statistics.median(larguras_esq)
+        and sum(_valor_curto(s.texto) for s in esquerda) < len(esquerda) / 2
+        and sum(_valor_curto(s.texto) for s in direita) < len(direita) / 2
+    )
+
+
+def _cortar_nos_distantes(partes: list, distantes: frozenset) -> list:
+    """Corta cada linha entre as caixas vizinhas que _pares_distantes marcou."""
+    if not distantes:
+        return partes
+    saida = []
+    for parte in partes:
+        grupos = [[parte.itens[0]]]
+        for anterior, item in zip(parte.itens, parte.itens[1:]):
+            if (id(anterior), id(item)) in distantes:
+                grupos.append([item])
+            else:
+                grupos[-1].append(item)
+        if len(grupos) == 1:
+            saida.append(parte)
+        else:
+            saida += [Linha(g, item_novo=parte.item_novo or k > 0) for k, g in enumerate(grupos)]
+    return saida
 
 
 @dataclass(frozen=True)
@@ -730,7 +943,10 @@ def _separar_itens(linha: Linha, vizinhanca: Vizinhanca = Vizinhanca(), fundo=No
     (_separar_itens_pelo_texto) e, com o print, abas encostadas pelo fundo e pedaços de
     barra de menu (_separar_barras)."""
     saida = []
-    for parte in _separar_itens_pelo_texto(linha, vizinhanca):
+    partes = _cortar_nos_distantes(
+        _separar_itens_pelo_texto(linha, vizinhanca), vizinhanca.distantes
+    )
+    for parte in partes:
         if fundo is not None and _abas_pelo_fundo(parte.itens, fundo):
             saida += [
                 Linha([item], item_novo=parte.item_novo or k > 0)
