@@ -70,6 +70,11 @@ def topicos(por_palavra=False):
     return caixas
 
 
+def centralizada(y, largura, texto, altura=ALTURA, centro_x=300):
+    """Caixa centralizada em centro_x (texto de cartaz, descrição de item)."""
+    return caixa(centro_x - largura // 2, y, largura, texto, altura=altura)
+
+
 CASOS = [
     Caso(
         "português: fala quebrada em duas linhas, com o nome em cima",
@@ -254,6 +259,45 @@ CASOS = [
             caixa(20, 45, 700, "Stand Tall, Galactic Hero!", altura=40),
         ],
         ["A Next Generation Legend!", "Stand Tall, Galactic Hero!"],
+    ),
+    Caso(
+        "inglês: descrição de item centralizada, em maiúsculas, uma propriedade por linha",
+        "en",
+        [
+            centralizada(0, 182, "DOUBLE STRIKE"),
+            centralizada(32, 400, "ATTACK, MELEE, STRIKE, PHYSICAL"),
+            centralizada(64, 112, "LEVEL: 1"),
+            centralizada(96, 168, "COST: 7 MANA"),
+            centralizada(128, 224, "REQUIRES LEVEL 1"),
+            centralizada(160, 532, "PERFORMS TWO FAST STRIKES WITH A MELEE"),
+            centralizada(192, 98, "WEAPON."),
+        ],
+        ["DOUBLE STRIKE", "ATTACK, MELEE, STRIKE, PHYSICAL", "LEVEL: 1", "COST: 7 MANA",
+         "REQUIRES LEVEL 1", "PERFORMS TWO FAST STRIKES WITH A MELEE WEAPON."],
+    ),
+    Caso(
+        "inglês: cartaz centralizado, frase que continua depois da vírgula com nome próprio",
+        "en",
+        [
+            centralizada(0, 540, "Sponsored by the Possum Springs Chamber"),
+            centralizada(32, 560, "of Commerce, Blessed Rest Funeral Parlor,"),
+            centralizada(64, 420, "Cattrosser & Cattrosser Attorneys,"),
+            centralizada(96, 210, "and Ham Panther"),
+        ],
+        [
+            "Sponsored by the Possum Springs Chamber of Commerce, Blessed Rest Funeral Parlor, "
+            "Cattrosser & Cattrosser Attorneys, and Ham Panther"
+        ],
+    ),
+    Caso(
+        "inglês: rótulo curto centralizado em duas linhas, sem pontuação (\"POINTS / TO GO\")",
+        "en",
+        [
+            centralizada(0, 60, "05", altura=40),
+            centralizada(60, 100, "POINTS"),
+            centralizada(92, 75, "TO GO"),
+        ],
+        ["05", "POINTS TO GO"],
     ),
     Caso(
         "inglês: HUD alternando rótulo e valor",

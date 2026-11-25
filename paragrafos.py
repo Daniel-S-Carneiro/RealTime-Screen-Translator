@@ -106,6 +106,17 @@ PALAVRA_FINAL = re.compile(r"[.!?…。！？][\"'”’»)\]]*$")
 # e respostas separadas começam em 0,24.
 FIM_COLADO = 0.18
 FIM_FONTE = 1.4  # alturas tão diferentes (título de fonte grande) quebram mesmo coladas
+
+# Descrição de item centralizada, uma propriedade por linha (Path of Exile, painel do
+# Stardew), problema 10 da consulta às IAs (24/11/2026): estrutura do Mistral, prova de
+# centralização do Grok, e as travas da vírgula e da linha larga medidas nos 140 prints.
+# Propriedade não termina frase; a frase quebrada tem as linhas de dentro "cheias".
+DESCRICAO_ESQUERDA = 0.5  # a margem esquerda varia isso em algum par: texto centralizado
+DESCRICAO_LARGA = 8.0  # alguma linha do grupo tem essa largura ("POINTS / TO GO" não tem);
+# de 6 a 9,7 alturas dá o mesmo resultado nos 140 prints
+DESCRICAO_CHEIA = 0.82  # linha "cheia": essa fração da mais larga do grupo
+DESCRICAO_VAO = 0.45  # vão entre as caixas (em alturas) que separa itens mesmo cheios
+FRASE_FECHADA = re.compile(r"[.!?…。！？؟][\"'”’»)\]]*$")  # fim de frase, talvez com fecho
 TITULO_PALAVRAS = 5  # um título tem até 5 palavras
 
 # Margem do "caberia" num painel estreito sem borda visível (o diálogo do Morrowind, o
@@ -1166,6 +1177,61 @@ def _e_menu(pilha: list, altura: float) -> bool:
     )
 
 
+def _grupos_por_centro(linhas: list, altura: float) -> list:
+    """Sequências de índices seguidos com os centros a até CENTRALIZADO alturas."""
+    grupos, atual = [], [0]
+    for indice in range(1, len(linhas)):
+        anterior, linha = linhas[indice - 1], linhas[indice]
+        distancia = abs((linha.esq + linha.dir) - (anterior.esq + anterior.dir)) / 2
+        if distancia <= CENTRALIZADO * altura:
+            atual.append(indice)
+        else:
+            grupos.append(atual)
+            atual = [indice]
+    grupos.append(atual)
+    return grupos
+
+
+def _quebras_centralizadas(linhas: list, altura: float) -> set:
+    """Quebra entre as propriedades de uma descrição de item centralizada.
+
+    "ATTACK, MELEE, STRIKE, PHYSICAL" / "LEVEL: 1" (Path of Exile, em versalete, sem a pista
+    da minúscula) saíam numa linha só. Não quebra quando a de cima termina frase (aí vale a
+    regra do fim de frase), a de baixo continua com minúscula, a de cima acaba em vírgula,
+    nem quando as duas são cheias ou a de baixo fecha a frase de uma de cima cheia:
+    "PERFORMS TWO FAST STRIKES WITH A MELEE" / "WEAPON." fica junto.
+    """
+    quebras = set()
+    for grupo in _grupos_por_centro(linhas, altura):
+        larguras = [linhas[i].dir - linhas[i].esq for i in grupo]
+        centralizado = any(
+            abs(linhas[i].esq - linhas[j].esq) > DESCRICAO_ESQUERDA * altura
+            for i, j in zip(grupo, grupo[1:])
+        )
+        if len(grupo) < 2 or not centralizado or max(larguras) < DESCRICAO_LARGA * altura:
+            continue
+        cheia = DESCRICAO_CHEIA * max(larguras)
+        for indice in grupo[:-1]:
+            anterior, seguinte = linhas[indice], linhas[indice + 1]
+            if (
+                FRASE_FECHADA.search(anterior.texto.rstrip())
+                or seguinte.texto.lstrip()[:1].islower()
+                or anterior.texto.rstrip().endswith((",", "，", "、"))
+            ):
+                continue
+            if (seguinte.topo - anterior.topo - anterior.altura) / altura >= DESCRICAO_VAO:
+                quebras.add(indice)
+                continue
+            fecha = (
+                seguinte.dir - seguinte.esq >= cheia
+                or FRASE_FECHADA.search(seguinte.texto.rstrip()) is not None
+            )
+            if anterior.dir - anterior.esq >= cheia and fecha:
+                continue
+            quebras.add(indice)
+    return quebras
+
+
 def _quebras_por_passo(linhas: list, altura: float) -> set:
     """Quebra onde o passo vertical é bem maior que o típico do bloco.
 
@@ -1330,6 +1396,7 @@ def _paragrafos_do_bloco(linhas: list, margem_dir: float, altura: float, letra: 
         | _quebras_de_menu(linhas, altura)
         | de_itens
         | _quebras_por_passo(linhas, altura)
+        | _quebras_centralizadas(linhas, altura)
     )
     atuais = [[linhas[0].texto]]
     for indice, (anterior, seguinte) in enumerate(zip(linhas, linhas[1:])):
