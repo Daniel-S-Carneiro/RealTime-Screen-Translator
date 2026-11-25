@@ -1292,7 +1292,10 @@ palavras ("youmight"), com a probabilidade que o próprio reconhecedor calcula, 
 ChatGPT: 213 de 290 (73,4%) na validação e 550 de 661 nos 90 prints. A sétima separa duas
 caixas da mesma linha que são itens independentes, como o botão "Return" ao lado da
 porcentagem da galeria do Katawa. Saiu na 2ª rodada de perguntas às IAs, com a regra do
-Grok, e levou a validação a 216 de 290 (74,5%). A classificação, as correções e esse
+Grok, e levou a validação a 216 de 290 (74,5%). A oitava tira os ícones que o OCR lê como
+símbolo do tamanho do texto: os "+" dos botões numa coluna, o "≡" do menu, o ">" do cursor
+antes de um atalho. Também é do Grok, e levou os 90 prints a 560 de 661 linhas inteiras e a
+validação a 217 de 290 (74,8%). A classificação, as correções e esse
 diagnóstico estão em
 [Por que as linhas se perderam](classificacao-linhas-perdidas.md).
 
@@ -1541,6 +1544,11 @@ aberto](problemas-em-aberto.md). Em resumo:
     seis propostas perderam de 5 a 76 linhas, em desenhos que a pergunta não mostrava.
     Na 2ª, a pergunta trouxe esses desenhos com as coordenadas, e todas as IAs chegaram
     às mesmas três travas; a melhor proposta foi de 5 linhas perdidas para 1.
+43. **Tirar a sobra certa ainda pode estragar a tela.** No problema 14, uma proposta tirou
+    o "1" antes de "Missiles" na grade de skills do EVE, e ele era mesmo um ícone. Sem essa
+    caixa, as regras de colunas montaram a grade de outro jeito, e 9 linhas se perderam.
+    Contar só as remoções certas teria aprovado a regra; foi a medida de ponta a ponta, as
+    linhas que chegam inteiras ao tradutor, que mostrou a perda.
 
 ## Como reproduzir
 
