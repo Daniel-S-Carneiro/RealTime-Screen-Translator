@@ -1280,8 +1280,15 @@ fim de frase não quebra. Nos 90 prints, as linhas inteiras foram de 541 para 54
 nenhuma perda nas duas leituras. A quarta correção separa as propriedades das descrições
 de item centralizadas do Path of Exile, pela pontuação e pela "linha cheia", com peças do
 Mistral e do Grok e duas travas que nenhuma IA propôs: 10 linhas a mais na validação, que
-foi de 190 para 207 linhas inteiras (65,5% para 71,4%) desde a medida. A classificação e as
-correções estão em [Por que as linhas se perderam](classificacao-linhas-perdidas.md).
+foi de 190 para 207 linhas inteiras (65,5% para 71,4%) desde a medida. O último padrão,
+itens lado a lado colados, ficou sem regra: são cinco mecanismos para 7 linhas, e o único
+que se repete (o menu inteiro numa caixa só, no Butterfly Soup e no Katawa Shoujo) só
+acerta os dois prints numa faixa estreita de limiares. Ele foi às outras IAs como problema
+11, com uma segunda medida: as caixas por palavra que o próprio reconhecedor dá. A quinta
+correção, do Mistral com uma trava do Grok, corta o menu pelos espaços entre essas
+palavras, sem olhar a tinta: 3 linhas a mais, e a validação chegou a 210 de 290 linhas
+inteiras (72,4%). A classificação, as correções e esse diagnóstico estão em
+[Por que as linhas se perderam](classificacao-linhas-perdidas.md).
 
 ## 8. De onde vem o erro que sobrou
 
@@ -1504,6 +1511,20 @@ aberto](problemas-em-aberto.md). Em resumo:
     300 px antes. Duas IAs montaram a regra em cima do número que eu dei e perderam o
     caso na medida real. As cinco disseram acertar os 13 casos da pergunta; só os 140
     prints mostraram quem acertava de verdade.
+38. **Nenhum falso positivo não basta: a medida também tem de ser estável.** A regra do
+    menu numa caixa só não errou em nenhuma outra caixa dos 140 prints. Mas, no Butterfly
+    Soup, os traços do desenho passam atrás das letras, e só 3 de 15 combinações de
+    limiar mediam os espaços certo nos dois prints. Uma regra que acerta os dois exemplos
+    só numa janela estreita foi ajustada a eles, e ficou fora do app.
+39. **A medida que faltava pode já estar no motor.** Eu media o espaço entre palavras na
+    tinta, e o desenho atrás das letras estragava a medida. O reconhecedor já sabia onde
+    cada palavra estava: é dele que sai o texto. Pedir essa informação custou 15 ms por
+    print, e a regra sobre ela acerta os dois menus em 48 de 140 combinações de limiar,
+    contra 3 de 15 pela tinta.
+40. **Tempo se compara na mesma rodada, com a ordem alternada.** Ler o mesmo print duas
+    vezes, sempre na mesma ordem, dizia que as palavras deixavam a leitura mais rápida.
+    Dois benchmarks em dias diferentes diziam que ela ficava 0,11 s mais lenta. Alternando
+    a ordem na mesma rodada, a diferença foi de 15 ms.
 
 ## Como reproduzir
 

@@ -87,13 +87,18 @@ pergunta passou a pedir que cada IA aplicasse a própria regra, à mão, a cada 
 |---|---|---|---|---|---|---|
 | 9 | Frase que termina no fim da linha corta o parágrafo | 24/11 | ChatGPT, Grok, DeepSeek, Mistral, Qwen | Fim de frase não quebra se as linhas estão coladas (**Mistral**; o mesmo sinal do **ChatGPT**) | 541 → 546 | 69 → 63 |
 | 10 | Descrição de item centralizada, uma propriedade por linha | 24/11 | as mesmas cinco | Pontuação e linha cheia (**Mistral**) + prova de centralização (**Grok**) + travas da vírgula e da largura (minhas) | igual nos 90; validação 197 → 207 | igual |
+| 11 | Menu inteiro lido numa caixa só, itens de mais de uma palavra | 25/11 | Grok, Mistral, Qwen | Espaços pelas palavras do reconhecedor, salto de 2,2x e itens com maiúscula (**Mistral**) + regularidade de 2x (**Grok**) | igual nos 90; validação 207 → 210 | igual |
 
 As cinco disseram acertar os 13 casos da pergunta. Nos 140 prints, só o Mistral e o
 ChatGPT não perderam nenhuma linha; Grok, DeepSeek e Qwen perderam de 2 a 6, quase sempre
 no mesmo título de cartaz e numa resposta do Katawa Shoujo. No problema 10, nenhuma
 proposta passou sem perder linhas: a que entrou junta peças de duas IAs e duas travas que
-nenhuma propôs, como já tinha acontecido nos problemas 3 e 6. Os detalhes estão em [Por que
-as linhas se perderam](classificacao-linhas-perdidas.md).
+nenhuma propôs, como já tinha acontecido nos problemas 3 e 6. No problema 11, a medida veio
+de mim (as palavras que o próprio reconhecedor dá, que o desenho atrás das letras não
+atrapalha), e a regra, das IAs. O que separou as três propostas foi uma trava de forma:
+item começa com maiúscula. Sem ela, o Grok e o Qwen cortavam frases na fonte de largura
+fixa do Caves of Qud. Os detalhes estão em [Por que as linhas se
+perderam](classificacao-linhas-perdidas.md).
 
 ## O que decidiu cada rodada
 
