@@ -2,7 +2,9 @@
 
 *Levantamento de 25/11/2026. Cada item foi conferido no `requirements.txt`, nos imports do
 código, no histórico do git, nos docs e nos scripts de `laboratorios/`. Os números vêm dos
-docs ligados em cada seção; nada foi medido de novo para este levantamento.*
+docs ligados em cada seção; nada foi medido de novo para este levantamento. Revisto no mesmo
+dia com sugestões de outra IA: OpenVINO, Windows ML, Rust e uma auditoria de licenças, que
+virou o doc de [licenças](licencas.md).*
 
 Este doc responde a uma pergunta que vai voltar: **"isso já foi testado?"**. Antes de trocar
 uma peça ou de seguir uma sugestão de outra IA, vale olhar aqui se ela já passou pelo
@@ -17,8 +19,8 @@ projeto e por que ficou ou saiu.
 | **Na medição e no desenvolvimento** | Levenshtein, RapidFuzz, unittest, Pylint, Pyright, Git e GitHub CLI |
 | **Testado e descartado** | Binarizar, inverter, suavizar e ampliar a imagem; Pillow na captura e no tratamento da imagem; beam search; modelos maiores do PaddleOCR; OCR do Windows; combinar motores; SymSpell; BERT sozinho; regex agressivo; as classes do deep-translator para as APIs pagas |
 | **Descartado sem medir** | Tesseract, KenLM, JamSpell, LanguageTool e LLM como corretor (o teto medido não justificava) |
-| **Nunca testado** | Super-resolução neural, `onnxruntime-gpu` e DirectML, modelos do RapidOCR por escrita |
-| **Instalado, sem uso** | langdetect, language_tool_python, pipreqs (no `requirements.txt`); TextBlob, scikit-learn, torchaudio (só no env) |
+| **Nunca testado** | Super-resolução neural; aceleração na placa pelo ONNX Runtime (`onnxruntime-gpu`, DirectML, OpenVINO, Windows ML); modelos do RapidOCR por escrita; Rust na montagem do texto |
+| **Instalado, sem uso** | langdetect, language_tool_python, pipreqs (no `requirements.txt`); TextBlob, scikit-learn, torchaudio (só no env); IPython, Jupyter, astroid, jedi, scikit-learn, torchaudio e Levenshtein (dentro do instalador) |
 
 ## 1. O que o app usa hoje
 
@@ -216,13 +218,17 @@ projeto até o dono pedir.
 |---|---|---|
 | Super-resolução neural (FSRCNN, ESPCN, Real-ESRGAN; o OpenCV tem `dnn_superres`) | Problemas em aberto e o Grok, no problema dos letreiros | A segunda leitura com Lanczos resolveu. O Grok sugeriu o FSRCNN só se o Lanczos não bastasse |
 | `onnxruntime-gpu` e DirectML | Comparação de motores | O RapidOCR na CPU já é mais rápido que o EasyOCR na placa |
-| Modelos PP-OCRv5 por escrita (cirílico, árabe, coreano...), cerca de 8 MB cada | Comparação de motores | Ainda não há prints com gabarito nessas línguas |
+| OpenVINO (Intel), licença Apache-2.0 | Sugestão de outra IA, em 25/11 | Ainda não houve motivo. É o teste mais barato desta lista: o RapidOCR instalado já tem o motor OpenVINO dentro do pacote, e basta instalar o `openvino` e trocar o motor na configuração. Se houver ganho, é aqui que ele aparece: o OCR é 99,5% do tempo de cada print (815 de 820 ms no benchmark de 25/11) |
+| Windows ML | Sugestão de outra IA, em 25/11 | Os provedores para NPU e placas específicas só vêm no Windows 11 24H2 (build 26100) ou mais novo, pelo Windows Update, e dependem do driver; a CPU e o DirectML funcionam nas outras versões. Seria uma aceleração opcional, com o ONNX Runtime de CPU como base |
+| Modelos PP-OCRv5 por escrita (cirílico, árabe, coreano...), cerca de 8 MB cada | Comparação de motores | Ainda não há prints com gabarito nessas línguas. Mesmo trocando o EasyOCR por eles, o PyTorch continuaria no instalador: o Argos (pelo Stanza) e o BERT opcional também o usam |
+| Rust com PyO3, para a montagem do texto | Sugestão de outra IA, em 25/11 | A medida já responde: nos 90 prints, a montagem leva 4,1 ms por print em média (no máximo 30 ms), contra 815 ms do OCR. Mesmo zerando a montagem, o print ficaria menos de 1% mais rápido |
 | TrOCR, SwinIR, waifu2x, Ollama com Phi ou Qwen | Listas de sugestões de outras IAs, em 16/11 | Nenhum foi medido. A troca para o RapidOCR, no mesmo dia, e o teto da correção tiraram a urgência |
 
 ## 6. Instalado, mas sem uso
 
-Não fazem parte do app, mas continuam no PC de desenvolvimento. Ficam listados para uma
-limpeza futura, com o instalador refeito e testado depois.
+O código do app não usa nada desta lista. A maioria só está no PC de desenvolvimento, mas
+a última linha vai dentro do instalador. Ficam listados para uma limpeza futura, com o
+instalador refeito e testado depois.
 
 | O quê | Onde está | Situação |
 |---|---|---|
@@ -233,6 +239,7 @@ limpeza futura, com o instalador refeito e testado depois.
 | Modelo `vennify/t5-base-grammar-correction` | Cache do Hugging Face | Um corretor de gramática baixado em algum teste. Não há script nem resultado registrado |
 | `craft_mlt_25k.pth` e `latin_g2.pth` | Pasta `modelos/`, fora do git | Modelos do EasyOCR dos laboratórios de julho. O app não usa essa pasta |
 | `winrt` | Ambiente separado em `laboratorios/ocr_alternativos/` | Usado só para medir o OCR do Windows |
+| IPython, Jupyter (`nbconvert`, `nbformat`, `jupyter_client`), `astroid`, `jedi`, scikit-learn, torchaudio e `Levenshtein` | **Dentro do instalador** de 16/11 | O PyInstaller põe no pacote o que alguma biblioteca importa: o `Levenshtein` vem por um tokenizador do Transformers, e o `astroid`, pelo `asttokens` do IPython. O código do app não usa nenhum deles. Tirá-los no `.spec` diminui o instalador e, no caso do `Levenshtein` (GPL), abre caminho para uma versão fechada ([licenças](licencas.md)) |
 
 ## 7. Programas do processo
 
@@ -267,3 +274,9 @@ limpeza futura, com o instalador refeito e testado depois.
   funcionou nas regras de leitura e de parágrafo.
 - [Verificação de código](verificacao-de-codigo.md): a regra do Pylint e do Pyright.
 - [Consulta a outras IAs](consulta-outras-ias.md).
+- [Licenças](licencas.md): a licença de cada biblioteca, modelo e serviço, e o que isso
+  permite para vender o app.
+
+Fontes da revisão de 25/11: [provedores do Windows ML](https://learn.microsoft.com/en-us/windows/ai/new-windows-ml/supported-execution-providers),
+[visão geral do Windows ML](https://learn.microsoft.com/windows/ai/new-windows-ml/overview) e
+[OpenVINO no PyPI](https://pypi.org/project/openvino).

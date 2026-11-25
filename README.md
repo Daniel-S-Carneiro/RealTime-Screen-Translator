@@ -162,3 +162,5 @@ Every library and program the project has used or tested, and why each one staye
 ## 📄 License
 
 This project is licensed under the GNU General Public License v3.0 (GPLv3). This ensures that the software remains free and open source. Anyone can modify and distribute it, provided that the modified source code is also made publicly available under the same license.
+
+The license of every library, model and translation service the app uses, and what that allows when distributing or selling the app, is in [docs/licencas.md](docs/licencas.md) (in Portuguese).
