@@ -515,3 +515,116 @@ no Stardew.
 de 539 para 546; na validação, de 190 para 210 (65,5% para 72,4%); no espanhol, de 8 para
 10. Nenhuma perdeu linha nas duas leituras.
 
+## O que ficou em aberto antes do congelamento (25/11/2026)
+
+Depois das cinco correções, revisei tudo o que ainda se perde nos 150 prints, para fazer
+uma última rodada de perguntas às outras IAs antes de congelar o código para a rodada 2
+(`laboratorios/validacao/abertas.py`). São 206 linhas: 115 nos 90 prints, 80 na validação
+e 11 no espanhol.
+
+Na validação e no espanhol, pela causa da classificação de 24/11:
+
+| Causa | Linhas | Jogos |
+|---|---:|---|
+| L1. Texto não lido | 12 | The Big Con 6, Disco Elysium 6 |
+| L2. Letra trocada | 5 | Disco Elysium 2, Stardew 2, Path of Exile 1 |
+| L3. Espaço ou pontuação | 28 | Disco Elysium 15, Katawa 7, Path of Exile 3, The Big Con 2, Stardew 1 |
+| L4. Ícone colado | 4 | The Big Con 2, Butterfly Soup 1, Disco Elysium 1 |
+| M1. Itens lado a lado | 4 | Path of Exile 2, Katawa 1, Stardew 1 |
+| M2. Descrição centralizada | 3 | Path of Exile 2, Stardew 1 |
+| M3. Itens de lista colados | 5 | Disco Elysium 3, Butterfly Soup 2 |
+| M4. Última linha curta separada | 5 | The Big Con 3, Stardew 2 |
+| M5. Rótulo quebrado em duas linhas | 5 | Stardew 4, Disco Elysium 1 |
+| M6. Grade de atributos | 19 | Disco Elysium 19 |
+| M7. Palavras espalhadas pela placa | 1 | The Big Con 1 |
+
+Nos 90 prints, 67 das 115 linhas faltam palavras (leitura, sobretudo nas tabelas miúdas do
+EVE Online), 31 saem com sobra e 17 saem partidas.
+
+Juntando os 150 prints, quatro padrões se repetem em vários jogos e foram para as IAs como
+problemas 12 a 15:
+
+| Problema | Ocorrências | Jogos |
+|---|---|---:|
+| 12. O OCR engole o espaço entre duas palavras ("youmight", "CONSUMES7") | 33 espaços, 31 linhas | 10 |
+| 13. Duas caixas na mesma linha: dois itens, ou rótulo e valor? | 7 linhas, contra 121 pares que têm de continuar juntos | 6 |
+| 14. Ícone lido como símbolo e colado à linha ("+", "8", "≡", ">") | 16 linhas | 6 |
+| 15. Frase ou rótulo quebrado em linhas curtas e coladas ("REWIND / FOR / HUMANKIND!") | 14 pares, contra 56 que só o "caberia" separa | 7 |
+
+Os dados vêm de três medidas novas: as letras do reconhecedor
+(`laboratorios/quebras/cache_letras.py`, `laboratorios/validacao/espacos_engolidos.py`), as
+linhas com caixas distantes e a vizinhança delas (`pares_na_linha.py`) e os pares de linhas
+coladas, com o motivo de cada quebra (`pares_colados.py`). Duas descobertas mudaram a
+classificação de 24/11:
+- **O M1 não era de um jogo só.** Contando os 90 prints, as duas caixas distantes que
+  deviam se separar aparecem também no EVE Online, no Caves of Qud e no Fallout.
+- **O espaço engolido é a maior causa que se repete.** Ele estava espalhado por L3 e M5, e
+  aparece em 10 jogos.
+
+Ficaram de fora: a grade do Disco Elysium (19 linhas, um jogo só); o texto não lido (12
+linhas, leitura nos letreiros tortos do The Big Con e num menu do Disco); as colunas
+misturadas da reputação do Caves of Qud (um jogo só); o "¡" lido como "i" no espanhol
+(pequeno, dá para corrigir sem as IAs); e o travessão lido como hífen e as aspas trocadas,
+que quase não mudam a tradução.
+
+## A sexta correção: o espaço engolido (com as outras IAs)
+
+*Feita em 25/11/2026 no branch `regra-espaco-engolido`, a partir do problema 12, respondido
+pelas cinco IAs.*
+
+As propostas foram medidas nos 150 prints (`laboratorios/validacao/variantes_p12.py`),
+sobre as letras do reconhecedor e a tinta, contando cada espaço inserido contra o gabarito
+e as linhas inteiras:
+
+| Proposta | Espaços certos | Espaços errados | Linhas inteiras |
+|---|---:|---:|---|
+| Grok: vão de tinta dominante, passo fora do normal com tinta, palavra colada a número | 22 | 686 | +3, −167 |
+| Qwen: tinta acima de 0,15 altura ou passo 1,5x a mediana | 27 | 2.663 | +3, −424 |
+| DeepSeek: passo 1,15x o maior do resto da palavra, ou tinta com passo perto dele | 30 | 2.918 | +0, −545 |
+| Mistral: gatilho pelo passo, decisão pela releitura do trecho ampliado | 4 | 1 | +1, −1 |
+| ChatGPT: candidatos pela geometria, decisão pela probabilidade do CTC (limite 0) | 5 | 0 | +2, −0 |
+| ChatGPT, limite −1 | 13 | 0 | +6, −0 |
+| ChatGPT, limite −2 | 19 | 0 | +8, −1 |
+
+As regras geométricas cortaram palavras como "New", "Investor" e "removed": em muitas
+fontes, o vão normal entre duas letras passa de 0,15 altura. O único sinal que separou foi
+o do próprio reconhecedor. Para cada candidato, a diferença de log-probabilidade entre o
+texto com e sem o espaço ficou em −2,0 ou menos nos 4.564 errados, e com mediana −0,4 nos
+certos.
+
+Entrou a proposta do ChatGPT (`espacos.py`), numa versão barata. Em vez do algoritmo
+forward na linha inteira, ela olha a margem do espaço, log p(espaço) − log p(melhor
+classe), na melhor coluna do CTC entre as duas letras. Com o limite −1, deu o mesmo
+resultado que o forward. Os candidatos são os do ChatGPT: passo 1,15 vez a mediana dos
+passos da palavra, ou um vão de tinta de 0,20 altura. Ficam fora o apóstrofo, o hífen, o
+"×", a "/", dígito com dígito, o separador decimal e a escrita sem espaço. O limite −1
+foi escolhido olhando os resultados; o limite natural, 0, ganha 2 linhas.
+
+No laboratório, a conta custava 435 ms por print, porque relia cada caixa. No app, as
+probabilidades são as da leitura principal: o motor de OCR envolve o reconhecedor do
+RapidOCR (`GravadorDoReconhecedor`) e guarda cada lote antes de o RapidOCR descartá-lo. Não
+há segunda chamada, e o tempo ficou dentro do ruído. A posição de cada letra sai da coluna
+do CTC, como o RapidOCR faz nas caixas por letra, sem pedir essas caixas: as caixas por
+palavra do problema 11 continuam iguais.
+
+No benchmark real, que lê as caixas em lotes como o app, o resultado foi melhor que no
+laboratório:
+
+| Conjunto | Linhas inteiras | Letras | Quebras |
+|---|---|---|---|
+| 90 prints | 546 → 550 | 95,79% → 95,85% | iguais |
+| Validação | 210 → 213 | 91,33% → 91,35% | iguais |
+| Espanhol | igual (10) | igual | iguais |
+
+O app inseriu 17 espaços. Quinze estão certos ou deixam o texto mais perto do gabarito:
+"they sound", "Press to", "day ever", "ACE'S LOW", "Archaeology I", "& Boosters",
+"NPC 2,500" e "PISTOLS (9MM)". Os outros dois caem em texto que já estava errado: o OCR
+leu "Agily" no lugar de "Agility", e o app separou "Agil y"; e "★New!★" virou "★New! ★".
+Nenhuma linha se perdeu. Ficam de fora os casos sem sinal nenhum, como "Rest easy." (Mass
+Effect) e "WHITE MOURNING" (Disco Elysium). Entraram 9 testes (`tests/test_espacos.py`);
+agora são 135.
+
+**Desde a medida da validação, seis correções:** nos 90 prints, as linhas inteiras foram
+de 539 para 550; na validação, de 190 para 213 (65,5% para 73,4%); no espanhol, de 8 para
+10. Nenhuma perdeu linha.
+

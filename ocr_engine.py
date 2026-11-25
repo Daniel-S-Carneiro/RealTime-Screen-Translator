@@ -20,6 +20,7 @@ from typing import Any, List, Optional
 import cv2
 import numpy as np
 
+from espacos import GravadorDoReconhecedor, espacos_engolidos, inserir_espacos, leituras_por_caixa
 from paragrafos import agrupar_em_linhas
 from quantidades import completar_quantidades, tirar_icones
 from releitura import conferir_caixas_pequenas
@@ -49,6 +50,18 @@ LADO_MAXIMO = 2016
 def ordenar_por_linhas(resultados):
     """Põe as caixas do OCR em ordem de leitura: linha a linha, da esquerda para a direita."""
     return [item for linha in agrupar_em_linhas(resultados) for item in linha]
+
+
+def gravar_reconhecedor(motor) -> Optional[GravadorDoReconhecedor]:
+    """Põe o gravador de probabilidades no reconhecedor do RapidOCR (que ele só carrega
+    na primeira leitura: aqui ele é carregado antes). None se a versão do RapidOCR não
+    tem esse caminho: aí o espaço engolido só não é procurado."""
+    carregar = getattr(motor, "_load_rec_model", None)
+    if carregar is None:
+        return None
+    gravador = GravadorDoReconhecedor(carregar())
+    motor.text_rec = gravador
+    return gravador
 
 
 def _palavras_por_caixa(saida) -> list:
@@ -123,6 +136,8 @@ class MotorOCR:
         # o motor que _carregar criou para a língua atual
         self.rapidocr: Any = None
         self.easyocr: Any = None
+        # guarda as probabilidades do reconhecedor do RapidOCR, para achar o espaço engolido
+        self.gravador: Optional[GravadorDoReconhecedor] = None
         self.nome = ""
         self._carregar()
 
@@ -132,6 +147,7 @@ class MotorOCR:
             if self.rapidocr is None:
                 print(f"Inicializando {self.nome}...")
                 self.rapidocr = criar_rapidocr()
+                self.gravador = gravar_reconhecedor(self.rapidocr)
             return
 
         import easyocr
@@ -205,8 +221,9 @@ class MotorOCR:
 
         latina = not any(idioma in LINGUAS_CJK for idioma in self.idiomas_atuais)
         resultados = []
+        palavras_das_caixas = self._palavras_e_espacos(saida, cinza)  # antes: muda saida.txts
         for caixa, texto, confianca, palavras in zip(
-            saida.boxes, saida.txts, saida.scores, _palavras_por_caixa(saida)
+            saida.boxes, saida.txts, saida.scores, palavras_das_caixas
         ):
             if confianca < CONFIANCA_MINIMA:
                 continue
@@ -224,6 +241,24 @@ class MotorOCR:
         # Inventários: o "1" e o "×" que o detector não marcou; depois, ícones lidos como letra
         resultados, protegidas = completar_quantidades(cinza, resultados, reler)
         return tirar_icones(resultados, cinza.shape[1], protegidas)
+
+    def _palavras_e_espacos(self, saida, cinza) -> list:
+        """As palavras do reconhecedor de cada caixa e, antes, o espaço que ele engoliu
+        ("youmight"), achado pela probabilidade dele (problema 12). saida.txts ganha os
+        espaços; a caixa que ganhou espaço perde as palavras, que não batem mais."""
+        palavras = _palavras_por_caixa(saida)
+        if self.gravador is None:
+            return palavras
+        textos = list(saida.txts)
+        leituras = leituras_por_caixa(textos, self.gravador.leituras)
+        for k, (caixa, leitura) in enumerate(zip(saida.boxes, leituras)):
+            if leitura is None:
+                continue
+            posicoes = espacos_engolidos(leitura, self.gravador.caracteres, caixa, cinza)
+            if posicoes:
+                textos[k], palavras[k] = inserir_espacos(str(textos[k]), posicoes), None
+        saida.txts = tuple(textos)
+        return palavras
 
     @staticmethod
     def _limpar(texto: str, latina: bool) -> str:
