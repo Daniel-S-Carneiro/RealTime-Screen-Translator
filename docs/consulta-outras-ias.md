@@ -86,10 +86,13 @@ pergunta passou a pedir que cada IA aplicasse a própria regra, à mão, a cada 
 | # | Problema | Data | Quem respondeu | O que entrou (de quem) | Linhas inteiras (90 prints) | Quebras a mais |
 |---|---|---|---|---|---|---|
 | 9 | Frase que termina no fim da linha corta o parágrafo | 24/11 | ChatGPT, Grok, DeepSeek, Mistral, Qwen | Fim de frase não quebra se as linhas estão coladas (**Mistral**; o mesmo sinal do **ChatGPT**) | 541 → 546 | 69 → 63 |
+| 10 | Descrição de item centralizada, uma propriedade por linha | 24/11 | as mesmas cinco | Pontuação e linha cheia (**Mistral**) + prova de centralização (**Grok**) + travas da vírgula e da largura (minhas) | igual nos 90; validação 197 → 207 | igual |
 
 As cinco disseram acertar os 13 casos da pergunta. Nos 140 prints, só o Mistral e o
 ChatGPT não perderam nenhuma linha; Grok, DeepSeek e Qwen perderam de 2 a 6, quase sempre
-no mesmo título de cartaz e numa resposta do Katawa Shoujo. Os detalhes estão em [Por que
+no mesmo título de cartaz e numa resposta do Katawa Shoujo. No problema 10, nenhuma
+proposta passou sem perder linhas: a que entrou junta peças de duas IAs e duas travas que
+nenhuma propôs, como já tinha acontecido nos problemas 3 e 6. Os detalhes estão em [Por que
 as linhas se perderam](classificacao-linhas-perdidas.md).
 
 ## O que decidiu cada rodada

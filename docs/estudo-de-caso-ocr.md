@@ -1277,7 +1277,10 @@ quando ela fica sozinha na linha ("...para tu / llegada."): 1 linha a mais na va
 corta parágrafos em 5 jogos. Levei esse erro às outras IAs, e entrou a proposta do
 Mistral, com o mesmo sinal que o ChatGPT achou: se a linha de baixo encosta na de cima, o
 fim de frase não quebra. Nos 90 prints, as linhas inteiras foram de 541 para 546, sem
-nenhuma perda nas duas leituras. A classificação e as
+nenhuma perda nas duas leituras. A quarta correção separa as propriedades das descrições
+de item centralizadas do Path of Exile, pela pontuação e pela "linha cheia", com peças do
+Mistral e do Grok e duas travas que nenhuma IA propôs: 10 linhas a mais na validação, que
+foi de 190 para 207 linhas inteiras (65,5% para 71,4%) desde a medida. A classificação e as
 correções estão em [Por que as linhas se perderam](classificacao-linhas-perdidas.md).
 
 ## 8. De onde vem o erro que sobrou

@@ -331,4 +331,67 @@ saíram certos. Entraram dois casos nos testes: um parágrafo com linhas coladas
 na `main`, e um título de letra 1,45x maior colado ao subtítulo, que falha se a trava de
 fonte for tirada. Agora são 112 testes.
 
-**Continua para a consulta:** as descrições centralizadas (problema 10).
+## A quarta correção: as descrições centralizadas (com as outras IAs)
+
+*Feita em 24/11/2026 no branch `regra-descricao-centralizada`, a partir do problema 10,
+respondido pelas mesmas cinco IAs.*
+
+As cinco chegaram à mesma ideia: propriedade de item não termina em ponto, frase de
+descrição termina, e uma trava de "linha cheia" protege a frase quebrada no meio. As
+propostas viraram variantes (`laboratorios/validacao/variantes_p10.py`) e foram medidas
+nos 140 prints, nas duas leituras:
+
+| Proposta | Ganhos | Perdas |
+|---|---:|---:|
+| Mistral | 19 | 3 |
+| Grok | 19 | 4 |
+| Qwen | 19 | 6 |
+| ChatGPT, como escrito | 17 | 19 |
+| DeepSeek, como escrito | 27 | 23 |
+
+O ChatGPT e o DeepSeek definem o grupo centralizado só pelo centro das linhas, e um
+parágrafo comum, alinhado à esquerda, também tem os centros perto. Com a prova de
+centralização do Grok (a margem esquerda varia em algum par), as perdas caem para 3 e 6.
+
+As perdas que sobraram vinham de dois casos que nenhuma IA tratou:
+- uma frase centralizada que continua depois de vírgula, com nome próprio embaixo
+  ("...Funeral Parlor," / "Cattrosser & Cattrosser Attorneys,", no cartaz do Night in the
+  Woods): **vírgula no fim da linha não quebra**;
+- um rótulo curto quebrado em duas linhas, sem pontuação ("POINTS / TO GO", no Fallout):
+  **o grupo precisa de alguma linha com 8 alturas de letra ou mais**. Qualquer valor de 6
+  a 9,7 dá o mesmo resultado.
+
+Com as duas travas, nenhuma das três melhores perde linha nas duas leituras:
+
+| Proposta com as travas | Ganhos | Quebras a mais |
+|---|---:|---:|
+| Mistral | 18 | 2 |
+| Grok | 19 | 5 |
+| ChatGPT (só em grupo centralizado) | 17 | 3 |
+
+A do Grok ganha o painel do Stardew inteiro, mas põe mais quebras erradas (um menu do Disco
+Elysium e o Path of Exile no EasyOCR). Entrou a estrutura do Mistral
+(`_quebras_centralizadas`, em `paragrafos.py`), com a prova de centralização do Grok e as
+duas travas. As travas foram escolhidas depois de ver os resultados; a rodada 2 é que vai
+dizer se a regra generaliza.
+
+Ficou um erro no painel do Stardew: "Granja SpanishBoost" e "Fondos actuales: 280o"
+continuam juntas. As duas são cheias (9,4 e 9,7 alturas) e o vão entre elas é 0,43 altura,
+logo abaixo do limite de 0,45. Baixar o limite só por esse caso seria ajustar a regra a
+um print.
+
+| Conjunto | Linhas inteiras | Quebras certas | Quebras a mais |
+|---|---|---|---|
+| 90 prints | igual (546) | igual | igual |
+| Validação | 197 → 207 | 289 → 297 | igual |
+| Espanhol | igual | 19 → 20 | igual |
+
+As letras não mudaram, e nenhuma linha se perdeu nas duas leituras. Na leitura do
+EasyOCR, apareceram 2 quebras a mais, e as duas vêm de erro de leitura dele: um "wielding"
+lido com maiúscula e um ponto final que sumiu. Entraram três casos nos testes: uma
+descrição do Path of Exile (falha na `main`), um cartaz com vírgula (falha sem a trava da
+vírgula) e o rótulo "POINTS / TO GO" (falha sem a trava da largura). Agora são 115 testes.
+
+**Desde a medida da validação, quatro correções:** nos 90 prints, as linhas inteiras foram
+de 539 para 546; na validação, de 190 para 207 (65,5% para 71,4%); no espanhol, de 8 para
+10. Nenhuma perdeu linha nas duas leituras.
