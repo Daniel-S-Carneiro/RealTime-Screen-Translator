@@ -157,6 +157,8 @@ The project is written in **Python** and uses these libraries for image processi
 | **Distribution**      | [PyInstaller](https://www.pyinstaller.org/)                                                                 |
 | **Installer**         | [NSIS](https://nsis.sourceforge.io/)                                                                        |
 
+Every library and program the project has used or tested, and why each one stayed or left, is in [docs/bibliotecas-e-ferramentas.md](docs/bibliotecas-e-ferramentas.md) (in Portuguese).
+
 ## 📄 License
 
 This project is licensed under the GNU General Public License v3.0 (GPLv3). This ensures that the software remains free and open source. Anyone can modify and distribute it, provided that the modified source code is also made publicly available under the same license.
