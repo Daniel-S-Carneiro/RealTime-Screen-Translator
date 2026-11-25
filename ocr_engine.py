@@ -51,6 +51,42 @@ def ordenar_por_linhas(resultados):
     return [item for linha in agrupar_em_linhas(resultados) for item in linha]
 
 
+def _palavras_por_caixa(saida) -> list:
+    """As palavras do reconhecedor de cada caixa, na ordem das caixas (None quando faltam).
+
+    Com return_word_box, o RapidOCR 3.10 dá o x de cada palavra pelo alinhamento do CTC:
+    as colunas da imagem em que as letras dela foram lidas. A lista dele pula as caixas sem
+    palavra, então cada lista só vale para a caixa cujo texto ela forma.
+    """
+    fila: List[Any] = list(getattr(saida, "word_results", None) or ())
+    saida_lista, proxima = [], 0
+    for texto in saida.txts:
+        alvo = "".join(str(texto).split())
+        if proxima < len(fila) and alvo and "".join(
+            "".join(str(palavra[0]).split()) for palavra in fila[proxima]
+        ) == alvo:
+            saida_lista.append(fila[proxima])
+            proxima += 1
+        else:
+            saida_lista.append(None)
+    return saida_lista
+
+
+def _palavras_do_texto(palavras, texto: str):
+    """((palavra, x inicial, x final), ...) se as palavras formam o texto limpo da caixa."""
+    if not palavras:
+        return None
+    saida = []
+    for palavra, _, cantos in palavras:
+        if cantos is None:
+            return None
+        xs = [float(ponto[0]) for ponto in cantos]
+        saida.append((" ".join(str(palavra).split()), min(xs), max(xs)))
+    if [p[0] for p in saida] != texto.split():
+        return None
+    return tuple(saida)
+
+
 def usa_rapidocr(idiomas: List[str]) -> bool:
     """True se o RapidOCR lê todas as línguas pedidas."""
     return all(idioma in LINGUAS_RAPID for idioma in idiomas)
@@ -129,7 +165,7 @@ class MotorOCR:
         imagem = cv2.imread(caminho_imagem)
         if imagem is None:
             return "Erro: Imagem não encontrada."
-        return " ".join(texto for _, texto, _ in self.extrair_dados_completos(imagem))
+        return " ".join(item[1] for item in self.extrair_dados_completos(imagem))
 
     def extrair_dados_completos(self, imagem):
         """Retorna a lista completa de resultados do OCR, já em ordem de leitura.
@@ -159,21 +195,27 @@ class MotorOCR:
             imagem = cv2.cvtColor(imagem, cv2.COLOR_GRAY2BGR)
         else:
             cinza = cv2.cvtColor(imagem, cv2.COLOR_BGR2GRAY)
-        # use_det e use_rec sempre explícitos: o RapidOCR guarda o modo da última chamada,
-        # e a releitura (_reler) chama só o reconhecedor
-        saida = self.rapidocr(imagem, use_det=True, use_cls=False, use_rec=True)
+        # use_det, use_rec e return_word_box sempre explícitos: o RapidOCR guarda o modo da
+        # última chamada, e a releitura (_reler) chama só o reconhecedor
+        saida = self.rapidocr(
+            imagem, use_det=True, use_cls=False, use_rec=True, return_word_box=True
+        )
         if getattr(saida, "boxes", None) is None or saida.txts is None:
             return []
 
         latina = not any(idioma in LINGUAS_CJK for idioma in self.idiomas_atuais)
         resultados = []
-        for caixa, texto, confianca in zip(saida.boxes, saida.txts, saida.scores):
+        for caixa, texto, confianca, palavras in zip(
+            saida.boxes, saida.txts, saida.scores, _palavras_por_caixa(saida)
+        ):
             if confianca < CONFIANCA_MINIMA:
                 continue
             texto = self._limpar(str(texto), latina)
             if texto:
                 cantos = [[float(x), float(y)] for x, y in caixa]
-                resultados.append((cantos, texto, float(confianca)))
+                palavras = _palavras_do_texto(palavras, texto)
+                item = (cantos, texto, float(confianca))
+                resultados.append(item + (palavras,) if palavras else item)
         def reler(recorte):
             return self._reler(recorte, latina)
 
@@ -192,7 +234,11 @@ class MotorOCR:
     def _reler(self, recorte: np.ndarray, latina: bool) -> tuple:
         """Só o reconhecedor, num recorte em cinza: (texto, confiança)."""
         saida = self.rapidocr(
-            cv2.cvtColor(recorte, cv2.COLOR_GRAY2BGR), use_det=False, use_cls=False, use_rec=True
+            cv2.cvtColor(recorte, cv2.COLOR_GRAY2BGR),
+            use_det=False,
+            use_cls=False,
+            use_rec=True,
+            return_word_box=False,
         )
         if not saida.txts:
             return "", 0.0

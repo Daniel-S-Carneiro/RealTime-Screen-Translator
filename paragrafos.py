@@ -204,6 +204,20 @@ TINTA = 20
 TINTA_COLUNA = 3  # pixels de tinta para uma coluna contar
 ESPACO_CONFIAVEL = 0.08  # um "espaço" menor que isso é fresta de letra: a medida falhou
 
+# Barra de menu com itens de uma ou duas palavras, lida numa caixa só ("New Game  Load Game
+# Settings", Butterfly Soup; "Act 1  Emi  Hanako", abas do Katawa Shoujo), problema 11 da
+# consulta às IAs (25/11/2026): proposta do Mistral, com a regularidade do Grok. Os espaços
+# vêm das palavras do reconhecedor (return_word_box), que o desenho atrás das letras não
+# atrapalha, e a régua é a própria caixa: espaços pequenos dentro do item, grandes entre os
+# itens. Não precisa de fala no print.
+ITENS_PALAVRAS = 4  # palavras na caixa, no mínimo
+ITENS_PISO = 0.15  # espaço menor (em alturas da caixa) conta como 0,15: abaixo disso o x
+# do CTC não é confiável ("Load Game" leu 0,09 em vez de 0,25) e 0,00 aparece em frase
+ITENS_SALTO = 2.2  # o menor espaço grande contra o maior pequeno
+ITENS_CORTES = 3  # espaços grandes, no mínimo: 4+ itens
+ITENS_REGULAR = 2.0  # o maior espaço grande contra o menor (abas do Katawa: 1,65)
+ITENS_TAMANHO = 2  # palavras por item, no máximo
+
 
 def _limites(item) -> tuple:
     """(esquerda, direita, topo, base) de uma caixa do EasyOCR."""
@@ -565,26 +579,87 @@ def _barra_de_menu(item, itens: list, fundo: Fundo) -> list:
     return []
 
 
-def _separar_barras(itens: list, fundo) -> tuple:
-    """Corta cada barra de menu numa caixa por palavra. Devolve as caixas e os ids dos
-    pedaços que começam um item novo (todos menos o primeiro de cada barra)."""
-    if fundo is None:
-        return itens, frozenset()
+def _palavras_lidas(item):
+    """As palavras do reconhecedor, ((texto, x inicial, x final), ...), ou None. Só as
+    caixas do RapidOCR trazem esse 4º elemento."""
+    if len(item) < 4 or not item[3]:
+        return None
+    return item[3] if len(item[3]) == len(_texto(item).split()) else None
+
+
+def _menu_pelas_palavras(item) -> list:
+    """Cortes de uma barra de itens de uma ou duas palavras: [(palavra que começa o item,
+    x do corte)], ou [] se não for barra.
+
+    Os espaços entre as palavras, com o piso de ITENS_PISO, são ordenados; o maior salto
+    (razão) entre dois seguidos separa os pequenos dos grandes. É barra se o salto tem
+    ITENS_SALTO ou mais, há ITENS_CORTES+ grandes e algum pequeno, os grandes são regulares
+    e cada item tem até 2 palavras e começa com letra que não é minúscula, sem vírgula no
+    fim. A maiúscula é a trava decisiva: na fonte de largura fixa do Caves of Qud, os
+    espaços de uma frase alternam 0,35 e 0,5 altura e a cortavam em "Welcome to / the Caves".
+    """
+    palavras = _palavras_lidas(item)
+    altura = _altura_caixa(item)
+    if not palavras or len(palavras) < ITENS_PALAVRAS or altura <= 0:
+        return []
+    espacos = [
+        max((depois[1] - antes[2]) / altura, ITENS_PISO)
+        for antes, depois in zip(palavras, palavras[1:])
+    ]
+    ordem = sorted(espacos)
+    salto, k = max((ordem[i + 1] / ordem[i], i) for i in range(len(ordem) - 1))
+    limite = ordem[k + 1]
+    grandes = [i for i, espaco in enumerate(espacos) if espaco >= limite]
+    if salto < ITENS_SALTO or not ITENS_CORTES <= len(grandes) < len(espacos):
+        return []
+    if max(espacos[i] for i in grandes) > ITENS_REGULAR * limite:
+        return []
+    textos = [palavra[0] for palavra in palavras]
+    inicios = [0] + [i + 1 for i in grandes]
+    for inicio, fim in zip(inicios, inicios[1:] + [len(textos)]):
+        parte = textos[inicio:fim]
+        letra = parte[0][:1]
+        if len(parte) > ITENS_TAMANHO or not letra.isalpha() or letra.islower():
+            return []
+        if parte[-1].endswith((",", "，", "、")):
+            return []
+    return [(i + 1, (palavras[i][2] + palavras[i + 1][1]) / 2) for i in grandes]
+
+
+def _separar_barras(itens: list, fundo, palavras: bool = True) -> tuple:
+    """Corta cada barra de menu lida numa caixa só em itens: uma palavra por item pela
+    tinta e pela fala do print (_barra_de_menu, precisa do print) ou, se ela não cortar,
+    itens de uma ou duas palavras pelas palavras do reconhecedor (_menu_pelas_palavras;
+    palavras=False quando as caixas foram giradas ou espelhadas e o x delas não vale mais).
+    Devolve as caixas e os ids dos pedaços que começam um item novo (todos menos o primeiro
+    de cada barra)."""
     saida, novos = [], set()
     for item in itens:
-        cortes = _barra_de_menu(item, itens, fundo)
-        if not cortes:
+        cortes = _barra_de_menu(item, itens, fundo) if fundo is not None else []
+        if cortes:
+            grupos = list(enumerate(cortes, start=1))
+        else:
+            grupos = _menu_pelas_palavras(item) if palavras else []
+        if not grupos:
             saida.append(item)
             continue
-        esq, dir_, topo, base = _limites(item)
-        xs = [esq] + list(cortes) + [dir_]
-        for k, palavra in enumerate(_texto(item).split()):
-            pontos = [[xs[k], topo], [xs[k + 1], topo], [xs[k + 1], base], [xs[k], base]]
-            pedaco = (pontos, palavra) + tuple(item[2:])
-            if k > 0:
-                novos.add(id(pedaco))
-            saida.append(pedaco)
+        pedacos = _pedacos(item, grupos)
+        novos.update(id(pedaco) for pedaco in pedacos[1:])
+        saida += pedacos
     return saida, frozenset(novos)
+
+
+def _pedacos(item, grupos: list) -> list:
+    """Os itens de uma barra cortada: grupos = [(palavra que começa o item, x do corte)]."""
+    esq, dir_, topo, base = _limites(item)
+    textos = _texto(item).split()
+    inicios = [0] + [k for k, _ in grupos]
+    xs = [esq] + [x for _, x in grupos] + [dir_]
+    pedacos = []
+    for j, (inicio, fim) in enumerate(zip(inicios, inicios[1:] + [len(textos)])):
+        pontos = [[xs[j], topo], [xs[j + 1], topo], [xs[j + 1], base], [xs[j], base]]
+        pedacos.append((pontos, " ".join(textos[inicio:fim])) + tuple(item[2:3]))
+    return pedacos
 
 
 def _cortar_nos_itens(parte: Linha, comeca: frozenset) -> list:
@@ -1427,7 +1502,7 @@ def montar_paragrafos(resultados, idioma: str = "", imagem=None) -> list:
     itens = _endireitar(filtrados)
     # Caixas giradas não batem mais com a imagem: aí as regras da imagem ficam de fora
     fundo = _fundo(imagem, espelhada) if itens is filtrados else None
-    itens, pedacos = _separar_barras(itens, fundo)
+    itens, pedacos = _separar_barras(itens, fundo, palavras=itens is filtrados and not espelhada)
     vizinhanca = replace(_vizinhanca(itens), comeca_item=pedacos)
     todas = _linhas(itens, vizinhanca, fundo)
     if not todas:

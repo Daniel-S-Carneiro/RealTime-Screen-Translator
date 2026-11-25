@@ -395,3 +395,123 @@ vírgula) e o rótulo "POINTS / TO GO" (falha sem a trava da largura). Agora sã
 **Desde a medida da validação, quatro correções:** nos 90 prints, as linhas inteiras foram
 de 539 para 546; na validação, de 190 para 207 (65,5% para 71,4%); no espanhol, de 8 para
 10. Nenhuma perdeu linha nas duas leituras.
+
+## O M1, itens lado a lado: diagnóstico sem regra segura
+
+*Feito em 25/11/2026 depois da quarta correção. Nenhuma regra entrou; o menu numa caixa só
+foi às outras IAs como problema 11.*
+
+As 7 linhas do M1 (6 na validação e 1 no espanhol) continuam perdidas. Olhando as caixas e
+os prints, elas vêm de cinco jeitos diferentes, e quase todos aparecem num jogo só:
+
+| Caso | Linhas | O que acontece | Jogos com o padrão |
+|---|---:|---|---|
+| Menu do título do Butterfly Soup | 2 | O OCR lê os cinco itens numa caixa só, e dois têm duas palavras ("New Game", "Load Game") | Butterfly Soup e Katawa Shoujo |
+| Abas do Katawa Shoujo | 1 | Também numa caixa só: "Act 1 Emi Hanako Lilly Rin Shizune" | (o mesmo padrão) |
+| "Completion: 100%" e "Return" (Katawa) | 1 | Duas caixas na mesma linha, a 7,3 alturas uma da outra | Katawa Shoujo |
+| Path of Exile | 2 | Um texto apagado no fundo ("AILITH, FIRST OF THE KEEPERS") fica entre as duas colunas e impede o corte | Path of Exile |
+| Stardew | 1 | O nome do personagem e a data na mesma linha, a 2,1 alturas | Stardew Valley |
+
+**O menu numa caixa só (Butterfly e Katawa).** É o único padrão de dois jogos. A regra da
+barra de menu (Problema 4) não pega: ela corta uma palavra por item e mede o espaço normal
+pela fala do print, e essas telas não têm fala. Testei uma versão que usa a própria caixa
+como medida: os espaços entre as palavras, medidos na tinta, formam dois grupos (dentro do
+item e entre os itens), com um salto de 2,5x ou mais entre eles. A regra também pede 3 ou
+mais espaços grandes, parecidos entre si, e itens de até 2 palavras. Nos 140 prints, em
+todos os limiares testados, ela não cortou nenhuma outra caixa (`laboratorios/validacao/barra_de_itens.py`).
+
+O problema é medir o espaço no Butterfly. O menu é lilás claro sobre fundo branco, com
+traços do desenho passando atrás das letras. Com a medida de tinta do app (20 níveis de
+cinza, 3 pixels por coluna), os traços enchem os espaços e a medida falha. Das 15
+combinações de limiar testadas, só 3 acertam os dois prints: tinta de 45 a 50 níveis com
+coluna de 12% a 15% da altura. Um limiar relativo ao contraste da caixa acerta o
+Butterfly e perde o Katawa, porque a aba escolhida é preta e as outras são cinza. Uma
+janela tão estreita, ajustada em dois prints, é a definição de regra que não generaliza.
+Com a medida do app, a regra só pega o Katawa: 1 linha, de um jogo.
+
+**Duas caixas longe uma da outra.** O vão não separa os casos. O gabarito junta pares de
+configuração como "VOICE OVER MODE | Psychological" (5,6 alturas, Disco Elysium),
+"Default Mouse Cursor | Regular" (4,8, Path of Exile) e o cabeçalho "Spells | Cost/Chance"
+(8,0, Morrowind). E separa "Completion: 100% | Return" (7,3, Katawa) e "The Keepers |
+Purchase Graft" (12,7, Path of Exile). O alinhamento com as linhas vizinhas também não
+separa: "Return" e "Psychological" estão soltos do mesmo jeito. Medido com
+`laboratorios/validacao/sinais_lado_a_lado.py`. Isso confirma uma medida antiga: o vão
+sozinho não separa itens de rótulo e valor.
+
+**Uma medida que não olha a tinta.** O reconhecedor do RapidOCR é CTC: cada letra sai de
+uma faixa de colunas da imagem. A versão 3.10 usa esse alinhamento para dar uma caixa a
+cada palavra (`return_word_box=True`), quase sem custo de tempo (15 ms por print, medidos
+depois; ver a quinta correção). Por ela, o menu do Butterfly sai limpo, com o
+desenho atrás: espaços de 0,25 altura dentro do item e de 0,75 entre os itens. Mas a
+medida é grossa. Os espaços vêm em degraus, 0,00 aparece em texto comum, e a mesma
+palavra muda 11 px entre a leitura em cores e a em cinza. No texto comum dos 150 prints,
+a mediana do espaço é 0,28 altura e o p99 é 0,63, então os espaços entre os itens (0,48 a
+0,79) não se separam por um limite fixo. A regra do salto, com os espaços pequenos
+levados a no mínimo 0,17 altura, só corta o Butterfly e o Katawa nos 150 prints; com
+0,08, corta também uma legenda do Night in the Woods, um nome do Disco Elysium e uma
+propriedade do Path of Exile. Medido com `laboratorios/quebras/cache_palavras.py` e
+`laboratorios/validacao/espacos_por_palavra.py`.
+
+**Conclusão.** Nenhuma regra entrou. São 7 linhas (cerca de 2% da validação), em cinco
+mecanismos, e o único que se repete depende de limiares escolhidos olhando os dois
+exemplos. O menu numa caixa só foi para as outras IAs como problema 11 (25/11), com as
+duas medidas, a da tinta e a das palavras. Se nada seguro vier, ele espera a rodada 2:
+com outro jogo com o mesmo menu, a regra pode ser medida de novo com mais exemplos. (Veio uma
+regra segura: ver a quinta correção, abaixo.)
+
+## A quinta correção: o menu numa caixa só (com as outras IAs)
+
+*Feita em 25/11/2026 no branch `regra-menu-numa-caixa`, a partir do problema 11. Responderam
+o Grok, o Mistral e o Qwen; o ChatGPT e o DeepSeek comentaram outro texto.*
+
+As três propostas usam as palavras do reconhecedor e a própria caixa como régua: os
+espaços se dividem em pequenos (dentro do item) e grandes (entre os itens). Medidas nos
+150 prints (`laboratorios/validacao/variantes_p11.py`), contra o app de hoje:
+
+| Proposta | Ganhos | Perdas | Quebras a mais |
+|---|---:|---:|---:|
+| Mistral: piso de 0,15 altura, salto de 2,2x, 3+ grandes regulares, itens com maiúscula | 3 | 0 | 0 |
+| Qwen: limites fixos (grande acima de 0,45, pequeno até 0,30) | 3 | 2 | 10 |
+| Grok: salto pela diferença (0,15) e mediana dos grandes de 0,50 | 3 | 6 | 61 |
+
+As três ganham as mesmas linhas: "New Game" e "Load Game" no Butterfly Soup e "Act 1" no
+Katawa Shoujo. O que separou as propostas foi uma trava de forma, e não de medida. O Grok
+e o Qwen aceitam item que começa com minúscula. Na fonte de largura fixa do Caves of Qud,
+os espaços de uma frase alternam 0,35 e 0,5 altura, e "Welcome to the Caves of Qud
+tutorial." virava cinco itens. O Mistral exige que cada item comece com letra que não é
+minúscula; sem essa trava, a regra dele também corta uma ficha do EVE Online.
+
+**Se a regra depende dos limites.** Varri o piso (0,08 a 0,25), o salto (1,8 a 2,8) e a
+regularidade (1,5 a 2,5): 48 das 140 combinações cortam só os dois menus, e certo. Pela
+tinta, eram 3 de 15. Os valores do Mistral ficam dentro dessa região, mas a regularidade
+de 1,7 estava colada no Katawa (1,65x). Com os 2x do Grok, nenhuma combinação da região
+corta outra caixa. Entrou a regra do Mistral com a regularidade do Grok
+(`_menu_pelas_palavras`, em `paragrafos.py`). O motor de OCR (`ocr_engine.py`) passou a
+pedir as palavras e a entregá-las como 4º elemento de cada caixa, casadas pelo texto,
+porque a lista do RapidOCR pula as caixas sem palavra.
+
+| Conjunto | Linhas inteiras | Quebras certas | Quebras a mais |
+|---|---|---|---|
+| 90 prints | igual (546) | igual | igual |
+| Validação | 207 → 210 | 297 → 307 | igual |
+| Espanhol | igual (10) | igual | igual |
+
+As letras não mudaram. Na leitura do EasyOCR, que não tem palavras, nada muda. Entraram 11
+testes (`tests/test_menu_palavras.py`): os dois menus, seis casos que não podem ser
+cortados e o casamento das palavras com as caixas. Agora são 126 testes.
+
+**O tempo.** A primeira medida, no cache, dizia que pedir as palavras não custava nada
+(0,79 s por print com elas e 0,91 s sem). Ela estava viciada: lia cada print duas vezes,
+sempre na mesma ordem, e a segunda leitura sai favorecida. O benchmark desta rodada deu o
+contrário (0,92 s contra 0,81 s ontem), mas compara dias diferentes. Com a mesma máquina,
+na mesma rodada e a ordem alternada (30 prints, duas vezes cada), a diferença é de 15 ms
+por print, com a mediana até menor: dentro do ruído.
+
+Ficam 4 linhas do M1, de três mecanismos de um jogo só cada: "Completion: 100%" e
+"Return" (Katawa), o texto apagado entre as colunas do Path of Exile e o nome com a data
+no Stardew.
+
+**Desde a medida da validação, cinco correções:** nos 90 prints, as linhas inteiras foram
+de 539 para 546; na validação, de 190 para 210 (65,5% para 72,4%); no espanhol, de 8 para
+10. Nenhuma perdeu linha nas duas leituras.
+
