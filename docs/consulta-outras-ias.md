@@ -89,6 +89,7 @@ pergunta passou a pedir que cada IA aplicasse a própria regra, à mão, a cada 
 | 10 | Descrição de item centralizada, uma propriedade por linha | 24/11 | as mesmas cinco | Pontuação e linha cheia (**Mistral**) + prova de centralização (**Grok**) + travas da vírgula e da largura (minhas) | igual nos 90; validação 197 → 207 | igual |
 | 11 | Menu inteiro lido numa caixa só, itens de mais de uma palavra | 25/11 | Grok, Mistral, Qwen | Espaços pelas palavras do reconhecedor, salto de 2,2x e itens com maiúscula (**Mistral**) + regularidade de 2x (**Grok**) | igual nos 90; validação 207 → 210 | igual |
 | 12 | O OCR engole o espaço entre duas palavras | 25/11 | as cinco | Candidatos pela geometria e decisão pela probabilidade do CTC (**ChatGPT**), na versão barata (a margem do espaço na coluna) | 546 → 550; validação 210 → 213 | igual |
+| 13 | Duas caixas na mesma linha: dois itens ou rótulo e valor? | 25/11, duas rodadas | as cinco (o Qwen com duas respostas) | Censo de colunas com valor curto, cabeçalho e vão de 2,1 h (**Grok**, 2ª rodada) | 550 → 550; validação 213 → 216; espanhol 10 → 11 | 63 → 65 |
 
 As cinco disseram acertar os 13 casos da pergunta. Nos 140 prints, só o Mistral e o
 ChatGPT não perderam nenhuma linha; Grok, DeepSeek e Qwen perderam de 2 a 6, quase sempre
@@ -107,7 +108,7 @@ o espaço engolido pelo OCR, duas caixas distantes na mesma linha, o ícone lido
 símbolo e a frase quebrada em linhas curtas e coladas. No problema 12, três das cinco
 propostas eram regras de passo e de tinta, e cada uma inseriu centenas de espaços errados;
 a que entrou, do ChatGPT, deixa o próprio reconhecedor decidir, pela probabilidade que ele
-já calcula. As respostas dos problemas 13 a 15 ainda não chegaram.
+já calcula. No problema 13, a 1ª rodada não deu regra segura: todas as propostas separavam pares que o gabarito junta. A 2ª rodada mostrou os cinco desenhos em que elas erravam, com as coordenadas, e as perdas caíram de dezenas de linhas para uma. As respostas dos problemas 14 e 15 ainda não chegaram.
 
 ## O que decidiu cada rodada
 

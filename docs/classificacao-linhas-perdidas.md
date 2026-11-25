@@ -628,3 +628,82 @@ agora são 135.
 de 539 para 550; na validação, de 190 para 213 (65,5% para 73,4%); no espanhol, de 8 para
 10. Nenhuma perdeu linha.
 
+## A sétima correção: duas caixas na mesma linha (em duas rodadas com as outras IAs)
+
+*Feita em 25/11/2026 no branch `regra-itens-distantes`, a partir do problema 13: duas
+caixas na mesma linha, longe uma da outra, são dois itens ou rótulo e valor?*
+
+Na 1ª rodada, as cinco IAs (o Qwen deu duas respostas) propuseram o mesmo caminho: contar,
+nas colunas em volta, quantas linhas têm par no mesmo y. Medidas nas quatro leituras
+(`laboratorios/validacao/variantes_p13.py`), todas perderam linhas:
+
+| Proposta, 1ª rodada | Ganhos | Perdas | Quebras a mais |
+|---|---:|---:|---:|
+| Grok | 13 | 5 | 60 |
+| Qwen, 2ª resposta | 11 | 18 | 59 |
+| ChatGPT | 9 | 22 | 63 |
+| Mistral | 9 | 53 | 97 |
+| DeepSeek | 13 | 54 | 161 |
+| Qwen, 1ª resposta | 5 | 76 | 121 |
+
+Os erros caíam em cinco desenhos que a pergunta não mostrava
+(`laboratorios/validacao/erros_p13.py`):
+- **E1:** o nome e o nível das técnicas do Immortal Clan ("Kunlun Seal | Lv.10"), em 11
+  prints;
+- **E2:** uma opção com o valor escrito ("Default Mouse Cursor | Regular");
+- **E3:** o título de uma dica com o nível ("Dream of Realms | lv5");
+- **E4:** os cabeçalhos de tabela do EVE Online;
+- **E5:** frases que o EasyOCR lê em pedaços, com vão de cerca de 1 altura.
+
+Na 2ª rodada, a pergunta mostrou esses erros com as coordenadas
+(`laboratorios/validacao/variantes_p13b.py`):
+
+| Proposta, 2ª rodada | Ganhos | Perdas | Quebras a mais |
+|---|---:|---:|---:|
+| Grok | 7 | 1 | 9 |
+| Qwen | 7 | 1 | 11 |
+| ChatGPT | 3 | 0 | 0 |
+| DeepSeek | 9 | 8 | 28 |
+| Mistral | 0 | 0 | 0 |
+
+Todas adotaram as mesmas três travas: um vão mínimo de cerca de 2 alturas (acaba com E5),
+um valor curto como "Lv.10" contado como número (E1 e E3) e o cabeçalho que o app já
+marca (E4). A proposta do Mistral não mudou nada: na regra dele, a barra de abas do
+Katawa e o título da janela do Path of Exile atravessam as duas colunas e bloqueiam a
+separação.
+
+Entrou a regra do Grok (`_pares_distantes` e `_itens_distantes`, em `paragrafos.py`):
+- **Quais linhas entram:** só a linha que, cortada nos vãos de 2,1 alturas, dá
+  exatamente dois segmentos.
+- **Junta:** valor curto; o cabeçalho de tabela; a tabela de rótulo e valor (pares em 2+
+  linhas, rótulos fechando à direita e valores abrindo à esquerda); e o rótulo de 2+
+  palavras com um valor de uma palavra, sem par em outra linha.
+- **Separa:**
+  - duas listas alinhadas à esquerda (Caves of Qud);
+  - duas colunas com pares em até metade das linhas (Path of Exile);
+  - a caixa sozinha ao lado de uma coluna (o "Return" do Katawa);
+  - duas caixas sozinhas quando a maior é frase de 4+ palavras com número (Stardew).
+
+As colunas são encadeadas pela mesma borda (1 altura) com passo de até 3 alturas.
+
+| Conjunto | Linhas inteiras | Quebras certas | Quebras a mais |
+|---|---|---|---|
+| 90 prints | 550 → 550 | 685 → 687 | 63 → 65 |
+| Validação | 213 → 216 | 307 → 309 | 30 → 32 |
+| Espanhol | 10 → 11 | igual | 14 → 15 |
+
+As letras não mudaram. A única linha perdida é da loja do Immortal Clan, onde o gabarito
+junta "Lasts 30 days Cat Ledger". No print, são dois itens: o texto embaixo do botão de
+investir e o rótulo de outro ícone, no canto. O mesmo gabarito junta "Become Investor
+Enjoy Privileges", dois títulos sobre ícones diferentes. Pela regra de uma linha por
+item, esse gabarito precisa ser relido; fica para a releitura dos gabaritos antes da
+rodada 2.
+
+Entraram 5 casos nos testes: a galeria com o botão no canto, duas listas com uma placa no
+meio, o nome com a data, a opção com o valor escrito e o nome da técnica com o nível.
+Agora são 140 testes.
+
+**Desde a medida da validação, sete correções:** nos 90 prints, as linhas inteiras foram
+de 539 para 550; na validação, de 190 para 216 (65,5% para 74,5%); no espanhol, de 8 para
+11.
+

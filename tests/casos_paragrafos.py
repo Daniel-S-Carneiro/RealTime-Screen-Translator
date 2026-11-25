@@ -728,4 +728,66 @@ CASOS = [
             "through their coats."
         ],
     ),
+    Caso(
+        "inglês: galeria com o botão no canto, na linha da porcentagem (Katawa Shoujo)",
+        "en",
+        coluna(["Prologue", "Out Cold", "Bundle of Hisao", "Gateway Effect"], x=90, passo=50)
+        + [caixa(50, 200, 14 * 16, "Completion: 100%"), caixa(600, 200, 14 * 6, "Return")],
+        ["Prologue", "Out Cold", "Bundle of Hisao", "Gateway Effect", "Completion: 100%", "Return"],
+    ),
+    Caso(
+        "inglês: duas listas lado a lado, com uma placa apagada no meio (Path of Exile)",
+        "en",
+        [
+            caixa(54, 0, 123, "The Hiveborn"),
+            caixa(53, 30, 135, "The Monastery"),
+            caixa(54, 60, 110, "The Keepers"),
+            caixa(475, 60, 132, "Purchase Graft"),
+            caixa(220, 75, 240, "FADED NAME PLATE"),
+            caixa(516, 110, 92, "Sell Items"),
+            caixa(54, 110, 114, "Introduction"),
+            caixa(524, 170, 85, "Goodbye"),
+        ],
+        ["The Hiveborn", "The Monastery", "The Keepers", "Purchase Graft", "FADED NAME PLATE",
+         "Introduction", "Sell Items", "Goodbye"],
+    ),
+    Caso(
+        "espanhol: nome do personagem e a data na mesma linha (Stardew Valley)",
+        "es",
+        [caixa(86, 0, 113, "Messi"), caixa(303, 0, 14 * 25, "Día 2 de primavera, año 1")],
+        ["Messi", "Día 2 de primavera, año 1"],
+    ),
+    Caso(
+        "inglês: opção com o valor escrito numa lista de opções fica junta",
+        "en",
+        [
+            caixa(20, 0, 14 * 16, "Always Highlight"),
+            caixa(20, 50, 14 * 20, "Default Mouse Cursor"),
+            caixa(400, 50, 14 * 7, "Regular"),
+            caixa(20, 100, 14 * 11, "Cursor Size"),
+            caixa(20, 150, 14 * 19, "Enable Hover Cursor"),
+        ],
+        ["Always Highlight", "Default Mouse Cursor Regular", "Cursor Size", "Enable Hover Cursor"],
+    ),
+    Caso(
+        "inglês: nome da técnica e o nível (Lv.10) ficam juntos, com a descrição embaixo",
+        "en",
+        [
+            caixa(148, 0, 14 * 11, "Kunlun Seal"),
+            caixa(426, 0, 14 * 5, "Lv.10"),
+            caixa(148, 45, 340, "Deals 390% damage to enemies in"),
+            caixa(148, 80, 340, "a row, and the damage cannot be"),
+            caixa(148, 115, 200, "dodged at all."),
+            caixa(148, 200, 14 * 6, "Relief"),
+            caixa(439, 200, 14 * 4, "Lv.3"),
+            caixa(148, 245, 340, "When dealing damage, a chance to"),
+            caixa(148, 280, 200, "remove one buff."),
+        ],
+        [
+            "Kunlun Seal Lv.10",
+            "Deals 390% damage to enemies in a row, and the damage cannot be dodged at all.",
+            "Relief Lv.3",
+            "When dealing damage, a chance to remove one buff.",
+        ],
+    ),
 ]

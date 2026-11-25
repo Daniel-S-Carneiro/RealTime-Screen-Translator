@@ -1289,8 +1289,11 @@ correção, do Mistral com uma trava do Grok, corta o menu pelos espaços entre 
 palavras, sem olhar a tinta: 3 linhas a mais, e a validação chegou a 210 de 290 linhas
 inteiras (72,4%). A sexta correção põe de volta o espaço que o OCR engole entre duas
 palavras ("youmight"), com a probabilidade que o próprio reconhecedor calcula, proposta do
-ChatGPT: 213 de 290 (73,4%) na validação e 550 de 661 nos 90 prints. A classificação, as
-correções e esse diagnóstico estão em
+ChatGPT: 213 de 290 (73,4%) na validação e 550 de 661 nos 90 prints. A sétima separa duas
+caixas da mesma linha que são itens independentes, como o botão "Return" ao lado da
+porcentagem da galeria do Katawa. Saiu na 2ª rodada de perguntas às IAs, com a regra do
+Grok, e levou a validação a 216 de 290 (74,5%). A classificação, as correções e esse
+diagnóstico estão em
 [Por que as linhas se perderam](classificacao-linhas-perdidas.md).
 
 ## 8. De onde vem o erro que sobrou
@@ -1534,6 +1537,10 @@ aberto](problemas-em-aberto.md). Em resumo:
     reconhecedor já sabia: entre as duas letras, o espaço quase ganhou na coluna dele.
     Esse sinal separou os 4.564 candidatos errados dos certos sem nenhuma sobreposição, e
     as probabilidades já estavam calculadas, só eram jogadas fora.
+42. **Mostrar o erro rende mais que perguntar de novo.** Na 1ª rodada do problema 13, as
+    seis propostas perderam de 5 a 76 linhas, em desenhos que a pergunta não mostrava.
+    Na 2ª, a pergunta trouxe esses desenhos com as coordenadas, e todas as IAs chegaram
+    às mesmas três travas; a melhor proposta foi de 5 linhas perdidas para 1.
 
 ## Como reproduzir
 
