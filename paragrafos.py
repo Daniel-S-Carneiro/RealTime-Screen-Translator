@@ -166,9 +166,6 @@ ITEM_QUEBRADO_PASSO = 0.80  # passo até essa fração da mediana dos outros
 ITEM_QUEBRADO_PALAVRAS = 2
 CAUDA_PALAVRAS = 4  # cauda em maiúsculas: a de cima tem 4+ palavras, a de baixo até 4
 VIRGULAS_E_ASPAS = frozenset(",;，、،\"“”«»")  # a cauda continua uma frase com vírgula
-TITULO_GRANDE = 1.30  # título deslocado: as duas caixas com essa altura ou mais...
-TITULO_VAO = -0.10  # ...sobrepostas...
-TITULO_SOBREPOSTO = 1.0  # ...e com essa largura em comum
 
 # Margem do "caberia" num painel estreito sem borda visível (o diálogo do Morrowind, o
 # tutorial do Qud): a borda do print fica longe e quase toda linha parece acabar cedo.
@@ -1884,14 +1881,13 @@ def _centro_x(linha: Linha) -> float:
 
 
 def _continua_minuscula(anterior: Linha, seguinte: Linha, altura: float) -> bool:
-    """R1: uma palavra minúscula, sem dígito, sobreposta à linha de cima, de 2+ palavras
-    ("Tu cosa / favorita"). O dígito barra a quantidade ("x300,000")."""
+    """R1: uma palavra minúscula sobreposta à linha de cima, de 2+ palavras ("Tu cosa /
+    favorita", "Harvest Magic Paper / x300,000(152K/300K)")."""
     return (
         _vao_vertical(anterior, seguinte, altura) < 0
         and _razao_alturas(anterior, seguinte) <= FIM_FONTE
         and seguinte.texto[:1].islower()
         and _palavras(seguinte.texto) == 1
-        and not any(c.isdigit() for c in seguinte.texto)
         and _palavras(anterior.texto) >= 2
         and not FRASE_FECHADA.search(anterior.texto)
         and abs(anterior.esq - seguinte.esq) <= MESMA_ESQUERDA * altura
@@ -2032,33 +2028,14 @@ def _cauda_em_maiusculas(linhas: list, k: int, altura: float) -> bool:
     return True
 
 
-def _titulo_deslocado(anterior: Linha, seguinte: Linha, altura: float) -> bool:
-    """R6: título grande em duas linhas, a de baixo deslocada para a direita e sobreposta
-    ("Noble Investor 15x / Earnings")."""
-    texto = seguinte.texto
-    return (
-        _vao_vertical(anterior, seguinte, altura) <= TITULO_VAO
-        and anterior.altura >= TITULO_GRANDE * altura
-        and seguinte.altura >= TITULO_GRANDE * altura
-        and _razao_alturas(anterior, seguinte) <= LETREIRO_RAZAO
-        and seguinte.esq - anterior.esq > RECUO * altura
-        and min(anterior.dir, seguinte.dir) - max(anterior.esq, seguinte.esq)
-        >= TITULO_SOBREPOSTO * altura
-        and _palavras(texto) <= 2 <= _palavras(anterior.texto)
-        and any(c.isalpha() for c in texto)
-        and not texto[:1].isdigit()
-        and texto[:1] not in MARCADORES_DE_LISTA
-    )
-
-
 def _frases_quebradas(linhas: list, altura: float) -> set:
     """Índices i em que linhas[i + 1] continua a frase de linhas[i], quebrada de propósito
     em linhas curtas e coladas (problema 15). Valem mais que o "caberia", o menu de uma
     palavra, o recuo e o marcador, como as junções dos itens em duas linhas.
 
-    Proposta do Grok (25/11/2026), com uma trava a mais: a palavra minúscula da R1 não tem
-    dígito, como já pedia a R3. Nos 150 prints, com as duas leituras: 9 linhas inteiras a
-    mais e nenhuma a menos, e 14 quebras a mais de menos.
+    Proposta do Grok (25/11/2026). Na releitura dos gabaritos (26/11), saíram duas peças
+    feitas para casos em que o gabarito estava errado: a trava do dígito na R1 (minha) e
+    o título deslocado (R6). A medida está em docs/classificacao-linhas-perdidas.md.
     """
     juntar = set()
     nos_letreiros = set()
@@ -2068,7 +2045,6 @@ def _frases_quebradas(linhas: list, altura: float) -> set:
     juntar |= _itens_que_quebraram(linhas, altura)
     for k, (anterior, seguinte) in enumerate(zip(linhas, linhas[1:])):
         if (_continua_minuscula(anterior, seguinte, altura)
-                or _titulo_deslocado(anterior, seguinte, altura)
                 or _cauda_em_maiusculas(linhas, k, altura)):
             juntar.add(k)
         elif (k not in nos_letreiros and k + 1 not in nos_letreiros

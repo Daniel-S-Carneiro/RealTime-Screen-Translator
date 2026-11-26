@@ -142,6 +142,11 @@ têm alguma palavra mal lida, e 3 saem em pedaços.
 espanhol pareciam ter sido todas juntadas pelo app. Com o gabarito certo, só 3 das 6
 falas saem inteiras. Duas saem cortadas em duas linhas e uma perde uma palavra.
 
+**A releitura de 25/11.** Antes da rodada 2, os 150 gabaritos foram conferidos de novo
+contra as imagens. Os 50 da validação e os 10 do espanhol passaram sem mudança; os 12
+corrigidos são do Immortal Clan, nos 90 prints (veja [A releitura dos
+gabaritos](classificacao-linhas-perdidas.md#a-releitura-dos-gabaritos-25112026)).
+
 ## O jogo em espanhol (fora do portão)
 
 Stardew Valley, 10 prints, com a Origem do app em espanhol. É a primeira medida do app
