@@ -14,10 +14,10 @@ projeto e por que ficou ou saiu.
 
 | Situação | O quê |
 |---|---|
-| **No app** | PySide6, mss, OpenCV, numpy, RapidOCR com ONNX Runtime, EasyOCR com PyTorch, pyspellchecker, Transformers (BERT, opcional), deep-translator, Requests, Argos Translate |
+| **No app** | PySide6, mss, OpenCV, numpy, RapidOCR com ONNX Runtime, EasyOCR com PyTorch, pyspellchecker, Transformers (BERT, opcional), Requests, Argos Translate |
 | **No build** | PyInstaller, NSIS |
 | **Na medição e no desenvolvimento** | Levenshtein, RapidFuzz, unittest, Pylint, Pyright, Git e GitHub CLI |
-| **Testado e descartado** | Binarizar, inverter, suavizar e ampliar a imagem; Pillow na captura e no tratamento da imagem; beam search; modelos maiores do PaddleOCR; OCR do Windows; combinar motores; SymSpell; BERT sozinho; regex agressivo; as classes do deep-translator para as APIs pagas |
+| **Testado e descartado** | Binarizar, inverter, suavizar e ampliar a imagem; Pillow na captura e no tratamento da imagem; beam search; modelos maiores do PaddleOCR; OCR do Windows; combinar motores; SymSpell; BERT sozinho; regex agressivo; o deep-translator (as classes das APIs pagas e, desde 26/11, a do Google grátis) |
 | **Descartado sem medir** | Tesseract, KenLM, JamSpell, LanguageTool e LLM como corretor (o teto medido não justificava) |
 | **Nunca testado** | Super-resolução neural; aceleração na placa pelo ONNX Runtime (`onnxruntime-gpu`, DirectML, OpenVINO, Windows ML); modelos do RapidOCR por escrita; Rust na montagem do texto |
 | **Instalado, sem uso** | langdetect, language_tool_python, pipreqs (no `requirements.txt`); TextBlob, scikit-learn, torchaudio (só no env); IPython, Jupyter, astroid, jedi, scikit-learn, torchaudio e Levenshtein (dentro do instalador) |
@@ -88,7 +88,7 @@ As regras de parágrafo rodam em qualquer língua e não usam biblioteca de fora
 
 | Biblioteca ou serviço | Versão | Para quê | Por que |
 |---|---|---|---|
-| **deep-translator** | 1.11.4 | Só o Google Tradutor grátis (`GoogleTranslator`) | Não pede conta. É o primeiro motor de reserva |
+| **Requests**, na página do Google Tradutor | 2.34.2 | O Google Tradutor grátis | Não pede conta. É o primeiro motor de reserva. Até 26/11 era o deep-translator 1.11.4, que faz o mesmo pedido sem tempo limite e sem distinguir o bloqueio da rede (a página do CAPTCHA) de uma página que mudou |
 | **Requests**, direto nas APIs REST | 2.34.2 | Azure Translator, DeepL e Google Cloud Translation, com a chave do usuário | As classes do deep-translator para essas APIs faziam pedidos extras, usavam um formato antigo de autenticação do DeepL e não tratavam os erros de cota |
 | **Argos Translate** | 1.11.0 | Tradução offline, a última reserva | Roda no PC, sem limite. Baixa cerca de 80 a 100 MB por par de línguas na primeira vez. É importado só quando usado, porque carrega spaCy, Stanza e CTranslate2 e deixaria a abertura lenta |
 
@@ -263,6 +263,7 @@ instalador refeito e testado depois.
 | 17 a 25/11 | Regras de leitura e de parágrafo com propostas de outras IAs, sem biblioteca nova |
 | 23/11 | Entram o Pylint e o Pyright em todo script editado |
 | 25/11 | O app passa a usar as caixas de palavra e as probabilidades do CTC do RapidOCR |
+| 26/11 | Sai o deep-translator: o Google grátis vira um pedido do próprio app à mesma página, com tempo limite e o bloqueio reconhecido |
 
 ## Onde estão os detalhes
 

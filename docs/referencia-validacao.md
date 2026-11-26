@@ -14,21 +14,28 @@ erros da rodada 1 (PRs #33 a #39, #41, #43 e #44; veja [Por que as linhas se
 perderam](classificacao-linhas-perdidas.md)). Os gabaritos dos 150 prints foram relidos em
 25/11, antes do congelamento.
 
-Até a rodada 2 ser medida, **nenhum arquivo `.py` da raiz do projeto muda**. O teste é
-este comando, que precisa sair vazio:
+Até a rodada 2 ser medida, **os módulos de leitura e montagem não mudam**:
+`paragrafos.py`, `espacos.py`, `quantidades.py`, `releitura.py`, `ocr_engine.py`,
+`pipeline_ocr.py` e `processador_texto.py`. São eles que o benchmark mede. O teste é este
+comando, que precisa sair vazio:
 
 ```
-git diff referencia-validacao-2026-11-26 -- ":(glob)*.py"
+git diff referencia-validacao-2026-11-26 -- paragrafos.py espacos.py quantidades.py releitura.py ocr_engine.py pipeline_ocr.py processador_texto.py
 ```
 
-**Se alguma coisa falhar, volta para este ponto.** Este comando descarta as mudanças nos
-arquivos `.py` da raiz e devolve os da tag:
+**Se alguma coisa falhar, volta para este ponto.** Este comando descarta as mudanças nesses
+módulos e devolve os da tag:
 
 ```
-git restore --source=referencia-validacao-2026-11-26 -- ":(glob)*.py"
+git restore --source=referencia-validacao-2026-11-26 -- paragrafos.py espacos.py quantidades.py releitura.py ocr_engine.py pipeline_ocr.py processador_texto.py
 ```
 
-Podem mudar: a régua (`benchmark/benchmark.py` só ganha medidas novas, sem mudar as que
+**O resto do app pode mudar** (26/11, decisão do dono do projeto): a interface, os motores
+de tradução, a captura e a configuração, para a primeira build. Cada build é medida no
+benchmark antes de sair, e a que piorar as letras ou as linhas inteiras não sai. Até 26/11,
+o congelamento valia para todo `.py` da raiz.
+
+Também podem mudar: a régua (`benchmark/benchmark.py` só ganha medidas novas, sem mudar as que
 existem), os testes, a documentação, as ferramentas em `ferramentas/` e os prints e
 gabaritos da rodada 2. O gabarito da rodada 2 é escrito olhando só a imagem, sem abrir o
 rascunho do app, pela regra de uma linha por parágrafo ou item.
