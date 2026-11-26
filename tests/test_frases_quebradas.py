@@ -1,12 +1,11 @@
 """Frase ou rótulo quebrado de propósito em linhas curtas e coladas (problema 15, 25/11/2026).
 
 As coordenadas do formulário do Stardew Valley, do letreiro e da anotação do The Big Con, da
-lista do Pip-Boy, da dica do Disco Elysium, do título da loja do Immortal Clan e da
-quantidade da missão são as dos prints. As linhas de contexto (os outros itens da lista,
-o texto normal em volta do título) e os casos que têm de continuar separados são
-desenhados para cada trava. Cada teste tem, longe, uma linha larga (CONTEXTO): nos prints,
-o letreiro e o formulário são bem mais estreitos que a tela, e é por isso que o "caberia"
-os separava.
+lista do Pip-Boy, da dica do Disco Elysium e do objetivo da missão do Immortal Clan são as
+dos prints. As linhas de contexto (os outros itens da lista, a linha de baixo da missão) e
+os casos que têm de continuar separados são desenhados para cada trava. Cada teste tem,
+longe, uma linha larga (CONTEXTO): nos prints, o letreiro e o formulário são bem mais
+estreitos que a tela, e é por isso que o "caberia" os separava.
 """
 
 import unittest
@@ -72,27 +71,27 @@ class TestJunta(unittest.TestCase):
         self.assertEqual(montar(caixas),
                          ['TAP "Q" OR "L" TO SEAMLESSLY SWITCH LANGUAGES IN GAME'])
 
-    def test_titulo_grande_deslocado(self):
-        """Immortal Clan: título de letra grande, a 2ª linha deslocada e sobreposta."""
-        caixas = [caixa(175, 51, 395, "Noble Investor 15x", 59),
-                  caixa(457, 103, 132, "Earnings", 50),
-                  caixa(100, 300, 200, "Daily Earnings", 38),
-                  caixa(100, 360, 300, "How Enviable", 38),
-                  caixa(100, 420, 250, "Limit Up", 38)]
-        self.assertIn("Noble Investor 15x Earnings", montar(caixas))
+    def test_objetivo_com_quantidade(self):
+        """Immortal Clan: o objetivo da missão não coube na caixa, e a quantidade, que
+        começa com "x" minúsculo, continua o item (releitura dos gabaritos, 26/11)."""
+        caixas = [caixa(39, 100, 177, "Harvest Magic Paper", 31),
+                  caixa(38, 126, 213, "x300,000(152K/300K)", 31),
+                  caixa(39, 300, 600, "Achieve the daily goal to unlock the chapter reward", 31)]
+        self.assertIn("Harvest Magic Paper x300,000(152K/300K)", montar(caixas))
 
 
 class TestSepara(unittest.TestCase):
     """O que tem de continuar separado, mesmo colado."""
 
-    def test_quantidade_com_x_minusculo(self):
-        """Immortal Clan: "x300,000" começa com minúscula, mas é quantidade (tem dígito)."""
-        caixas = [caixa(39, 100, 177, "Harvest Magic Paper", 31),
-                  caixa(38, 126, 213, "x300,000(152K/300K)", 31),
-                  caixa(39, 300, 600, "Achieve the daily goal to unlock the chapter reward", 31)]
+    def test_atributo_com_multiplicador(self):
+        """Morrowind, desenhado colado: "x2 Willpower 40" começa com minúscula, mas tem
+        mais de uma palavra; é outro atributo, não o fim da linha de cima."""
+        caixas = [caixa(40, 100, 150, "Intelligence 42", 30),
+                  caixa(40, 126, 160, "x2 Willpower 40", 30),
+                  caixa(40, 300, 600, "Affects your ability to dodge and hit targets", 30)]
         paragrafos = montar(caixas)
-        self.assertIn("Harvest Magic Paper", paragrafos)
-        self.assertIn("x300,000(152K/300K)", paragrafos)
+        self.assertIn("Intelligence 42", paragrafos)
+        self.assertIn("x2 Willpower 40", paragrafos)
 
     def test_topicos_de_uma_palavra(self):
         """Morrowind: tópico minúsculo embaixo de outro tópico de uma palavra."""

@@ -697,7 +697,7 @@ junta "Lasts 30 days Cat Ledger". No print, são dois itens: o texto embaixo do 
 investir e o rótulo de outro ícone, no canto. O mesmo gabarito junta "Become Investor
 Enjoy Privileges", dois títulos sobre ícones diferentes. Pela regra de uma linha por
 item, esse gabarito precisa ser relido; fica para a releitura dos gabaritos antes da
-rodada 2.
+rodada 2. (Relido em 25/11: veja [A releitura dos gabaritos](#a-releitura-dos-gabaritos-25112026).)
 
 Entraram 5 casos nos testes: a galeria com o botão no canto, duas listas com uma placa no
 meio, o nome com a data, a opção com o valor escrito e o nome da técnica com o nível.
@@ -917,3 +917,108 @@ testes.
 **Desde a medida da validação, nove correções:** nos 90 prints, as linhas inteiras foram de
 539 para 562; na validação, de 190 para 219 (65,5% para 75,5%); no espanhol, de 8 para 14.
 
+## A releitura dos gabaritos (25/11/2026)
+
+Antes de congelar o código para a rodada 2, os 150 gabaritos (os 90 prints, a validação e
+o espanhol) foram relidos contra as imagens, pela regra do [README do
+benchmark](../benchmark/README.md): uma linha por parágrafo ou item. Primeiro, um script
+apontou onde o app e o gabarito discordam de um jeito que pode ser erro do gabarito: 22
+sinais em 16 prints. Depois, cada print foi aberto e comparado com o gabarito.
+
+**12 gabaritos estavam fora da regra, todos do Immortal Clan, da primeira coleta (02/11):**
+- **A loja do investidor** juntava itens de lugares diferentes da tela: o título com o selo
+  "15x Earnings", os títulos sobre ícones diferentes ("Become Investor" e "Enjoy
+  Privileges"), as legendas de quatro ícones, os rótulos de dois ícones com o "Limit Up"
+  da seta, e o texto embaixo do botão com o rótulo do ícone do canto ("Lasts 30 days" e
+  "Cat Ledger"). Foi de 9 para 18 linhas.
+- **A lista de missões** juntava o rótulo embaixo do ícone com a barra de progresso
+  ("Exile Decree" e "7/12"). Também separava um objetivo que não coube na caixa: "Harvest
+  Magic Paper x300,000 (152K/300K)" é um item só, como o "Repair Sumeru Tower (0/1)" logo
+  abaixo.
+- **Os 10 tomos de técnica** juntavam a etiqueta do elemento com o selo do tipo, que é
+  outro desenho ("Wood Technique" e "Sword Art").
+
+Os outros 138 já seguiam a regra. Nos outros prints, os sinais eram erros do app ou
+alarmes falsos:
+- **Erros do app:** as abas juntadas no EVE Online; o título com a primeira opção no Disco
+  Elysium e no Butterfly Soup; a assinatura do prefeito separada da fala no Stardew.
+- **Alarmes falsos:** os tópicos em minúscula do Morrowind.
+
+**O que ficou como estava, por convenção:**
+- o nome da técnica com o nível na mesma barra ("Azureblade Array Lv.15", "Lotus Heart
+  Unlocks: Lv.6"), como no gabarito de referência da pasta `base` ("Dream of Realms
+  Lv.5");
+- a linha de tabela, com o nome e os valores (EVE Online, Morrowind, Persona 4);
+- a opção de configuração com o valor ao lado ("DISPLAY MODE Fullscreen", no Disco
+  Elysium).
+
+As versões antigas estão em `relatorios/validacao/gabaritos_antes_da_releitura/`. Um
+script conferiu, em cada um dos 12, que as palavras continuam as mesmas e na mesma ordem:
+só mudou onde a linha quebra. Por isso as letras não mudaram.
+
+| Conjunto | Linhas inteiras | Quebras achadas | Quebras a mais |
+|---|---|---|---|
+| 90 prints | 562 de 661 (85,0%) → 549 de 671 (81,8%) | 688 de 744 → 689 de 763 | 61 → 60 |
+| Validação | 219 de 290, igual | igual | igual |
+| Espanhol | 14 de 21, igual | igual | igual |
+
+O número caiu porque o gabarito antigo concordava com erros do app. O app junta a
+etiqueta e o selo nos 10 tomos, e "Exile Decree 7/12" nas missões. Na loja, "Lasts 30 days"
+e "Cat Ledger" agora contam como certas. O CSV é o `benchmark_20261125_234919.csv`.
+
+**O laboratório guardava o gabarito no cache.** O `testar_regras.py` lia o gabarito copiado
+para o cache de cada leitura, e as duas leituras dos 90 prints ainda tinham a versão
+antiga dos 12. Agora ele lê o gabarito do dataset; o do cache só vale para um print que
+saiu do dataset. Nos outros 138, as duas versões já eram iguais.
+
+**Duas peças da nona correção perderam o caso que as sustentava.** As duas foram feitas em
+cima de gabaritos que a releitura mostrou errados:
+- **A trava do dígito (minha).** O único par que ela barrava, "Harvest Magic Paper" com
+  "x300,000(152K/300K)", agora é uma junção certa. Sem a trava, com a R1 como o Grok
+  escreveu, o laboratório põe uma quebra errada a menos nesse print, na leitura do app.
+  Nada muda nas outras três leituras nem nos outros 149 prints. A linha não passa a contar
+  inteira porque o OCR lê "x300,000(152K/300K)" sem o espaço.
+- **O título deslocado (R6, do Grok).** O caso dela era o título da loja, que o gabarito
+  antigo juntava como "Noble Investor 15x Earnings" e que foi às IAs na pergunta do
+  problema 15. No print, "Noble Investor" é o título e "15x Earnings" é o selo. O OCR põe
+  "Noble Investor 15x" numa caixa só, e juntar "Earnings" a ela não acerta nenhum dos dois
+  itens. A R6 só muda a decisão do app nesse print, na leitura do EasyOCR, sem mudar
+  nenhuma medida.
+
+Os testes `test_quantidade_com_x_minusculo` e `test_titulo_grande_deslocado`
+(`tests/test_frases_quebradas.py`) foram escritos sobre esses dois casos e guardam a
+resposta do gabarito antigo.
+
+**As duas peças saíram (26/11).** Antes, cada uma foi medida sozinha e junto com a outra,
+nas quatro leituras dos 150 prints (`laboratorios/validacao/variantes/p15_sem_trava`,
+`p15_sem_r6` e `p15_sem_trava_sem_r6`):
+
+| Variante | O que muda |
+|---|---|
+| Sem a trava do dígito | Missões do Immortal Clan, leitura do app: uma quebra errada a menos |
+| Sem a R6 | Loja do Immortal Clan, leitura do EasyOCR: uma quebra certa a mais |
+| Sem as duas | As duas melhoras; nenhum print piora |
+
+O risco fora do dataset é pequeno:
+- **Sem a trava:** a R1 passa a juntar uma palavra minúscula com dígito ("x5", "v2") colada
+  embaixo de um nome. É o nome com a quantidade ou o nível, que o gabarito já trata como uma
+  linha só ("Medicine x 1", "Azureblade Array Lv.15"). Um número puro ("300", "5m") não
+  entra, porque não começa com minúscula. A trava da R3 continua.
+- **Sem a R6:** um título estilizado em duas linhas, com a de baixo deslocada, volta a
+  sair em dois pedaços. Se a rodada 2 mostrar esse formato com casos reais, ele volta às
+  IAs.
+
+No laboratório, o código do app reproduziu a variante print a print. O benchmark do app
+não mudou em nenhum dos três conjuntos (549 de 671, 219 de 290 e 14 de 21). Nas missões,
+o app lê "x300,000 (152K/300K)" com o espaço que o reconhecedor devolve (problema 12).
+São duas palavras, e a R1 só junta uma; o cache do laboratório guardou esse trecho sem o
+espaço. A leitura do EasyOCR não entra no benchmark do app.
+
+Os dois testes mudaram:
+- **A quantidade agora junta:** `test_objetivo_com_quantidade`, com as coordenadas do
+  print, espera "Harvest Magic Paper x300,000(152K/300K)".
+- **O título deslocado saiu.** No lugar dele, `test_atributo_com_multiplicador` garante que
+  a R1 não junta uma linha minúscula de mais de uma palavra ("Intelligence 42 / x2
+  Willpower 40", desenhado colado). Sem a exigência de uma palavra, ele falha.
+
+Continuam 162 testes.

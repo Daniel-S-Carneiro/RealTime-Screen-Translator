@@ -1298,7 +1298,12 @@ antes de um atalho. Também é do Grok, e levou os 90 prints a 560 de 661 linhas
 validação a 217 de 290 (74,8%). A nona junta a frase que letreiros, balões e rótulos
 quebram de propósito em linhas curtas e coladas ("REWIND / FOR / HUMANKIND!"), com uma regra
 estreita para cada formato, também do Grok: 562 de 661 nos 90 prints, 219 de 290 na
-validação (75,5%) e 14 de 21 no espanhol. A classificação, as correções e esse
+validação (75,5%) e 14 de 21 no espanhol. Antes da rodada 2, a releitura dos 150
+gabaritos achou 12 do Immortal Clan que juntavam itens distintos; com eles corrigidos,
+os 90 prints ficam em 549 de 671 (81,8%), e a validação e o espanhol não mudam. Duas
+peças da nona correção tinham sido feitas para esses gabaritos errados e saíram, sem
+mudar nenhuma medida do app. A
+classificação, as correções e esse
 diagnóstico estão em
 [Por que as linhas se perderam](classificacao-linhas-perdidas.md).
 
@@ -1557,6 +1562,11 @@ aberto](problemas-em-aberto.md). Em resumo:
     a frase", "a de cima é bem mais larga") juntaram de 104 a 139 pares errados, quase todos
     itens de menu e de lista. A que entrou tem uma regra estreita para cada formato, cada
     uma com um segundo sinal além do vão, e não juntou nenhum par errado.
+45. **Um gabarito errado vira regra.** No problema 15, duas peças da regra que entrou foram
+    feitas para casos em que o gabarito errava. A trava do dígito protegia uma separação
+    errada, e o título deslocado juntava um título com metade de um selo. A releitura dos
+    gabaritos estava marcada para antes da rodada 2; ela devia ter vindo antes das
+    perguntas às IAs. As duas peças saíram sem piorar nenhum print.
 
 ## Como reproduzir
 
