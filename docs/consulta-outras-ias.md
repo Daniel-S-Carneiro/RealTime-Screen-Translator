@@ -91,6 +91,7 @@ pergunta passou a pedir que cada IA aplicasse a própria regra, à mão, a cada 
 | 12 | O OCR engole o espaço entre duas palavras | 25/11 | as cinco | Candidatos pela geometria e decisão pela probabilidade do CTC (**ChatGPT**), na versão barata (a margem do espaço na coluna) | 546 → 550; validação 210 → 213 | igual |
 | 13 | Duas caixas na mesma linha: dois itens ou rótulo e valor? | 25/11, duas rodadas | as cinco (o Qwen com duas respostas) | Censo de colunas com valor curto, cabeçalho e vão de 2,1 h (**Grok**, 2ª rodada) | 550 → 550; validação 213 → 216; espanhol 10 → 11 | 63 → 65 |
 | 14 | Ícone lido como símbolo e colado à linha | 25/11 | as cinco | Coluna de 3+ símbolos iguais, glifo baixo e longe, e o cursor só antes de atalho (**Grok**) | 550 → 560; validação 216 → 217 | 65 → 64 |
+| 15 | Frase ou rótulo quebrado em linhas curtas e coladas | 25/11 | as cinco | Uma regra estreita por formato: minúscula colada, letreiro, balão, item que quebrou na lista, cauda em maiúsculas e título deslocado (**Grok**) + a palavra de baixo sem dígito (minha) | 560 → 562; validação 217 → 219; espanhol 11 → 14 | 64 → 61 |
 
 As cinco disseram acertar os 13 casos da pergunta. Nos 140 prints, só o Mistral e o
 ChatGPT não perderam nenhuma linha; Grok, DeepSeek e Qwen perderam de 2 a 6, quase sempre
@@ -109,7 +110,7 @@ o espaço engolido pelo OCR, duas caixas distantes na mesma linha, o ícone lido
 símbolo e a frase quebrada em linhas curtas e coladas. No problema 12, três das cinco
 propostas eram regras de passo e de tinta, e cada uma inseriu centenas de espaços errados;
 a que entrou, do ChatGPT, deixa o próprio reconhecedor decidir, pela probabilidade que ele
-já calcula. No problema 13, a 1ª rodada não deu regra segura: todas as propostas separavam pares que o gabarito junta. A 2ª rodada mostrou os cinco desenhos em que elas erravam, com as coordenadas, e as perdas caíram de dezenas de linhas para uma. No problema 14, a proposta que entrou, do Grok, foi a mais exigente com o contexto: só tira o ">" de cursor quando vem antes de um atalho entre colchetes. Qwen, DeepSeek e Mistral tiravam todo ">" no começo da linha e apagaram um que, no Persona 4, é texto. A resposta do problema 15 ainda não chegou.
+já calcula. No problema 13, a 1ª rodada não deu regra segura: todas as propostas separavam pares que o gabarito junta. A 2ª rodada mostrou os cinco desenhos em que elas erravam, com as coordenadas, e as perdas caíram de dezenas de linhas para uma. No problema 14, a proposta que entrou, do Grok, foi a mais exigente com o contexto: só tira o ">" de cursor quando vem antes de um atalho entre colchetes. Qwen, DeepSeek e Mistral tiravam todo ">" no começo da linha e apagaram um que, no Persona 4, é texto. No problema 15, juntar linhas coladas se mostrou mais arriscado que separar: as propostas com um sinal largo (a linha de cima bem mais larga, a de baixo fechando a frase) juntaram de 104 a 139 pares que o gabarito separa, quase todos itens de menu e de lista. A do Grok tinha uma regra estreita para cada formato, sempre com um segundo sinal além das caixas coladas, e não juntou nenhum par errado depois de uma trava (a palavra de baixo sem dígito).
 
 ## O que decidiu cada rodada
 

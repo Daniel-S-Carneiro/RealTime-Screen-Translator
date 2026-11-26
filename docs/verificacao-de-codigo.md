@@ -88,6 +88,21 @@ A maioria é ruído, e a regra precisa contar com isso. Ainda assim, vale: resol
 foi feito uma vez, sem mudar o comportamento, e agora a base está em **zero alertas**. Com a
 base limpa, qualquer alerta novo aponta para a edição que acabou de ser feita.
 
+## Outro caso: a função com o nome de outra (25/11)
+
+Ao escrever a regra das frases quebradas (problema 15), criei em `paragrafos.py` uma função
+`_empilhadas`, para saber se duas linhas estão uma embaixo da outra. Já havia uma função com
+esse nome no módulo, usada pela regra das listas de rótulo e valor, com outro critério.
+
+Em Python, a segunda definição substitui a primeira no módulo inteiro, sem erro nenhum. A
+regra das listas passaria a usar a função nova, e o efeito só apareceria, se aparecesse, como
+uma mudança pequena no benchmark, difícil de explicar.
+
+O gancho mostrou o aviso do Pyright (`reportRedeclaration`) na mesma edição, antes de
+qualquer teste rodar. A função nova virou `_em_fileiras_seguidas`. Foi a segunda vez que um
+nome repetido apareceu no `paragrafos.py`, que passa de duas mil linhas: no problema 11, uma
+`_palavras` nova também foi pega assim.
+
 ## Como a regra roda
 
 O Pylance só funciona dentro do VS Code. Fora dele, a verificação usa o **Pyright**, o motor

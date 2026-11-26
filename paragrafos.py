@@ -151,6 +151,25 @@ DESCRICAO_VAO = 0.45  # vão entre as caixas (em alturas) que separa itens mesmo
 FRASE_FECHADA = re.compile(r"[.!?…。！？؟][\"'”’»)\]]*$")  # fim de frase, talvez com fecho
 TITULO_PALAVRAS = 5  # um título tem até 5 palavras
 
+# Frase ou rótulo quebrado de propósito em linhas curtas e coladas: letreiro, balão, rótulo
+# de formulário, item de lista que não coube (problema 15, proposta do Grok, 25/11/2026).
+# O "caberia" os separava, porque o letreiro é mais estreito que o print. Medidas na altura
+# típica do texto; os vãos negativos são caixas que se sobrepõem.
+LETREIRO_VAO = -0.15  # letreiro e balão: as caixas se sobrepõem tanto (o menu, não)
+LETREIRO_LINHAS = (3, 4)  # linhas do letreiro; o balão tem 2
+LETREIRO_RAZAO = 1.5  # alturas das caixas do letreiro, a maior contra a menor
+LETREIRO_BORDAS = 0.5  # as duas bordas variam mais que isso: é centralizado de verdade
+BALAO_PALAVRAS = 3  # a linha de baixo do balão fecha a frase em até tantas palavras
+ITEM_QUEBRADO_VAO = -0.10  # o item que quebrou na lista se sobrepõe tanto...
+ITEM_SOLTO_VAO = 0.20  # ...e 2+ outros pares da coluna têm esse respiro
+ITEM_QUEBRADO_PASSO = 0.80  # passo até essa fração da mediana dos outros
+ITEM_QUEBRADO_PALAVRAS = 2
+CAUDA_PALAVRAS = 4  # cauda em maiúsculas: a de cima tem 4+ palavras, a de baixo até 4
+VIRGULAS_E_ASPAS = frozenset(",;，、،\"“”«»")  # a cauda continua uma frase com vírgula
+TITULO_GRANDE = 1.30  # título deslocado: as duas caixas com essa altura ou mais...
+TITULO_VAO = -0.10  # ...sobrepostas...
+TITULO_SOBREPOSTO = 1.0  # ...e com essa largura em comum
+
 # Margem do "caberia" num painel estreito sem borda visível (o diálogo do Morrowind, o
 # tutorial do Qud): a borda do print fica longe e quase toda linha parece acabar cedo.
 # As linhas longas vizinhas, com a mesma esquerda, mostram onde o painel acaba.
@@ -1834,9 +1853,234 @@ def _itens_quebrados(linhas: list, altura: float) -> tuple:
     return quebras, juntas
 
 
+def _vao_vertical(anterior: Linha, seguinte: Linha, altura: float) -> float:
+    """Passo menos a altura da linha de cima, em alturas de letra (negativo: as caixas se
+    sobrepõem). O mesmo vão das linhas coladas."""
+    return (seguinte.topo - anterior.topo - anterior.altura) / altura
+
+
+def _em_fileiras_seguidas(anterior: Linha, seguinte: Linha, altura: float) -> bool:
+    """Fileiras diferentes, uma embaixo da outra, que se sobrepõem na horizontal."""
+    return (
+        not seguinte.item_novo
+        and seguinte.topo - anterior.topo >= PASSO_MESMA_FILEIRA * altura
+        and min(anterior.dir, seguinte.dir) > max(anterior.esq, seguinte.esq)
+    )
+
+
+def _razao_alturas(anterior: Linha, seguinte: Linha) -> float:
+    menor = max(min(anterior.altura, seguinte.altura), 1.0)
+    return max(anterior.altura, seguinte.altura) / menor
+
+
+def _so_maiusculas(texto: str) -> bool:
+    """Tem letra com caixa e nenhuma minúscula ("HISTORICAL, BUT HER FRIEND")."""
+    letras = [c for c in texto if c.isalpha() and c.upper() != c.lower()]
+    return bool(letras) and not any(c.islower() for c in letras)
+
+
+def _centro_x(linha: Linha) -> float:
+    return (linha.esq + linha.dir) / 2
+
+
+def _continua_minuscula(anterior: Linha, seguinte: Linha, altura: float) -> bool:
+    """R1: uma palavra minúscula, sem dígito, sobreposta à linha de cima, de 2+ palavras
+    ("Tu cosa / favorita"). O dígito barra a quantidade ("x300,000")."""
+    return (
+        _vao_vertical(anterior, seguinte, altura) < 0
+        and _razao_alturas(anterior, seguinte) <= FIM_FONTE
+        and seguinte.texto[:1].islower()
+        and _palavras(seguinte.texto) == 1
+        and not any(c.isdigit() for c in seguinte.texto)
+        and _palavras(anterior.texto) >= 2
+        and not FRASE_FECHADA.search(anterior.texto)
+        and abs(anterior.esq - seguinte.esq) <= MESMA_ESQUERDA * altura
+    )
+
+
+def _elo_de_letreiro(anterior: Linha, seguinte: Linha, altura: float) -> bool:
+    return (
+        _vao_vertical(anterior, seguinte, altura) <= LETREIRO_VAO
+        and abs(_centro_x(anterior) - _centro_x(seguinte)) <= CENTRALIZADO * altura
+        and _razao_alturas(anterior, seguinte) <= LETREIRO_RAZAO
+        and (anterior.dir - anterior.esq) / altura < DESCRICAO_LARGA
+        and (seguinte.dir - seguinte.esq) / altura < DESCRICAO_LARGA
+        and _em_fileiras_seguidas(anterior, seguinte, altura)
+    )
+
+
+def _letreiros(linhas: list, altura: float) -> list:
+    """R2: 3 ou 4 linhas curtas, centralizadas e sobrepostas, em que só a última pode fechar
+    a frase ("REWIND / FOR / HUMANKIND!"). Devolve os índices de cada letreiro."""
+    sequencias, atual = [], [0]
+    for k in range(len(linhas) - 1):
+        if _elo_de_letreiro(linhas[k], linhas[k + 1], altura):
+            atual.append(k + 1)
+        else:
+            sequencias.append(atual)
+            atual = [k + 1]
+    sequencias.append(atual)
+    letreiros = []
+    for sequencia in sequencias:
+        grupo = [linhas[i] for i in sequencia]
+        if not LETREIRO_LINHAS[0] <= len(grupo) <= LETREIRO_LINHAS[1]:
+            continue
+        esquerdas = [linha.esq for linha in grupo]
+        direitas = [linha.dir for linha in grupo]
+        if (max(esquerdas) - min(esquerdas) <= LETREIRO_BORDAS * altura
+                or max(direitas) - min(direitas) <= LETREIRO_BORDAS * altura):
+            continue
+        if any(linha.texto[:1] in MARCADORES_DE_LISTA for linha in grupo):
+            continue
+        if not any(FRASE_FECHADA.search(linha.texto) for linha in grupo[:-1]):
+            letreiros.append(sequencia)
+    return letreiros
+
+
+def _balao(anterior: Linha, seguinte: Linha, altura: float) -> bool:
+    """R2b: duas linhas curtas, centralizadas e sobrepostas; a de baixo fecha a frase em
+    até 3 palavras ("Whoa, I'm / INFORMATION.")."""
+    return (
+        _elo_de_letreiro(anterior, seguinte, altura)
+        and abs(anterior.esq - seguinte.esq) > LETREIRO_BORDAS * altura
+        and _palavras(anterior.texto) >= 2
+        and not FRASE_FECHADA.search(anterior.texto)
+        and bool(FRASE_FECHADA.search(seguinte.texto))
+        and _palavras(seguinte.texto) <= BALAO_PALAVRAS
+    )
+
+
+def _colunas_de_linhas(linhas: list, altura: float) -> list:
+    """Índices das linhas de cada coluna: borda esquerda a até 1 altura, em cadeia, cortada
+    onde o passo topo a topo passa de 3 alturas (as mesmas colunas das caixas distantes)."""
+    grupos = []
+    for i in sorted(range(len(linhas)), key=lambda i: linhas[i].esq):
+        if grupos and linhas[i].esq - linhas[grupos[-1][-1]].esq <= DISTANTES_BORDA * altura:
+            grupos[-1].append(i)
+        else:
+            grupos.append([i])
+    colunas = []
+    for grupo in grupos:
+        grupo.sort(key=lambda i: linhas[i].topo)
+        colunas.append([grupo[0]])
+        for anterior, seguinte in zip(grupo, grupo[1:]):
+            if linhas[seguinte].topo - linhas[anterior].topo <= DISTANTES_PASSO * altura:
+                colunas[-1].append(seguinte)
+            else:
+                colunas.append([seguinte])
+    return colunas
+
+
+def _item_que_quebrou(linhas: list, pares: list, par: tuple, altura: float) -> bool:
+    """R3: na coluna, o par sobreposto com passo curto entre itens com respiro (o "Rifle"
+    de "Mercenary's Grenade / Rifle", numa lista de passo regular)."""
+    anterior, seguinte = linhas[par[0]], linhas[par[1]]
+    outros = [p for p in pares if p != par
+              and _vao_vertical(linhas[p[0]], linhas[p[1]], altura) >= ITEM_SOLTO_VAO]
+    if len(outros) < 2 or _vao_vertical(anterior, seguinte, altura) > ITEM_QUEBRADO_VAO:
+        return False
+    passo_dos_outros = statistics.median(linhas[q].topo - linhas[p].topo for p, q in outros)
+    texto = seguinte.texto
+    return (
+        seguinte.topo - anterior.topo <= ITEM_QUEBRADO_PASSO * passo_dos_outros
+        and abs(anterior.esq - seguinte.esq) <= TOPICO_BORDA * altura
+        and seguinte.dir - seguinte.esq <= MENU_CURTA * (anterior.dir - anterior.esq)
+        and _palavras(texto) <= ITEM_QUEBRADO_PALAVRAS
+        and any(c.isalpha() for c in texto)
+        and not any(c.isdigit() for c in texto)
+        and not FRASE_FECHADA.search(anterior.texto)
+    )
+
+
+def _itens_que_quebraram(linhas: list, altura: float) -> set:
+    juntar = set()
+    for coluna in _colunas_de_linhas(linhas, altura):
+        pares = list(zip(coluna, coluna[1:]))
+        for par in pares:
+            if par[1] == par[0] + 1 and _item_que_quebrou(linhas, pares, par, altura):
+                juntar.add(par[0])
+    return juntar
+
+
+def _cauda_em_maiusculas(linhas: list, k: int, altura: float) -> bool:
+    """R4: frase longa em maiúsculas, com vírgula ou aspas, e uma cauda curta embaixo, sem
+    outra linha da coluna em volta ("HISTORICAL, BUT HER FRIEND / DOESN'T.")."""
+    anterior, seguinte = linhas[k], linhas[k + 1]
+    largura = anterior.dir - anterior.esq
+    if not (
+        _vao_vertical(anterior, seguinte, altura) < FIM_COLADO
+        and abs(anterior.esq - seguinte.esq) <= TOPICO_BORDA * altura
+        and _razao_alturas(anterior, seguinte) <= LETREIRO_RAZAO
+        and largura >= DESCRICAO_LARGA * altura
+        and seguinte.dir - seguinte.esq <= MENU_CURTA * largura
+        and _palavras(seguinte.texto) <= CAUDA_PALAVRAS <= _palavras(anterior.texto)
+        and _so_maiusculas(anterior.texto)
+        and _so_maiusculas(seguinte.texto)
+        and not FRASE_FECHADA.search(anterior.texto)
+        and any(c in VIRGULAS_E_ASPAS for c in anterior.texto)
+    ):
+        return False
+    for i, linha in enumerate(linhas):
+        if i in (k, k + 1):
+            continue
+        mesma = (abs(linha.esq - anterior.esq) <= DISTANTES_BORDA * altura
+                 or abs(_centro_x(linha) - _centro_x(anterior)) <= DISTANTES_BORDA * altura)
+        perto = (0 < anterior.topo - linha.topo <= DISTANTES_PASSO * altura
+                 or 0 < linha.topo - seguinte.topo <= DISTANTES_PASSO * altura)
+        if mesma and perto:
+            return False
+    return True
+
+
+def _titulo_deslocado(anterior: Linha, seguinte: Linha, altura: float) -> bool:
+    """R6: título grande em duas linhas, a de baixo deslocada para a direita e sobreposta
+    ("Noble Investor 15x / Earnings")."""
+    texto = seguinte.texto
+    return (
+        _vao_vertical(anterior, seguinte, altura) <= TITULO_VAO
+        and anterior.altura >= TITULO_GRANDE * altura
+        and seguinte.altura >= TITULO_GRANDE * altura
+        and _razao_alturas(anterior, seguinte) <= LETREIRO_RAZAO
+        and seguinte.esq - anterior.esq > RECUO * altura
+        and min(anterior.dir, seguinte.dir) - max(anterior.esq, seguinte.esq)
+        >= TITULO_SOBREPOSTO * altura
+        and _palavras(texto) <= 2 <= _palavras(anterior.texto)
+        and any(c.isalpha() for c in texto)
+        and not texto[:1].isdigit()
+        and texto[:1] not in MARCADORES_DE_LISTA
+    )
+
+
+def _frases_quebradas(linhas: list, altura: float) -> set:
+    """Índices i em que linhas[i + 1] continua a frase de linhas[i], quebrada de propósito
+    em linhas curtas e coladas (problema 15). Valem mais que o "caberia", o menu de uma
+    palavra, o recuo e o marcador, como as junções dos itens em duas linhas.
+
+    Proposta do Grok (25/11/2026), com uma trava a mais: a palavra minúscula da R1 não tem
+    dígito, como já pedia a R3. Nos 150 prints, com as duas leituras: 9 linhas inteiras a
+    mais e nenhuma a menos, e 14 quebras a mais de menos.
+    """
+    juntar = set()
+    nos_letreiros = set()
+    for letreiro in _letreiros(linhas, altura):
+        juntar.update(letreiro[:-1])
+        nos_letreiros.update(letreiro)
+    juntar |= _itens_que_quebraram(linhas, altura)
+    for k, (anterior, seguinte) in enumerate(zip(linhas, linhas[1:])):
+        if (_continua_minuscula(anterior, seguinte, altura)
+                or _titulo_deslocado(anterior, seguinte, altura)
+                or _cauda_em_maiusculas(linhas, k, altura)):
+            juntar.add(k)
+        elif (k not in nos_letreiros and k + 1 not in nos_letreiros
+                and _balao(anterior, seguinte, altura)):
+            juntar.add(k)
+    return {k for k in juntar if _em_fileiras_seguidas(linhas[k], linhas[k + 1], altura)}
+
+
 def _paragrafos_do_bloco(linhas: list, margem_dir: float, altura: float, letra: float) -> list:
     """Junta as linhas de um bloco em parágrafos."""
     de_itens, juntas = _itens_quebrados(linhas, altura)
+    juntas |= _frases_quebradas(linhas, altura)
     de_lista = (
         _quebras_de_lista(linhas, altura)
         | _quebras_de_menu(linhas, altura)
