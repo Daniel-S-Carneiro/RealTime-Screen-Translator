@@ -1295,7 +1295,10 @@ porcentagem da galeria do Katawa. Saiu na 2ª rodada de perguntas às IAs, com a
 Grok, e levou a validação a 216 de 290 (74,5%). A oitava tira os ícones que o OCR lê como
 símbolo do tamanho do texto: os "+" dos botões numa coluna, o "≡" do menu, o ">" do cursor
 antes de um atalho. Também é do Grok, e levou os 90 prints a 560 de 661 linhas inteiras e a
-validação a 217 de 290 (74,8%). A classificação, as correções e esse
+validação a 217 de 290 (74,8%). A nona junta a frase que letreiros, balões e rótulos
+quebram de propósito em linhas curtas e coladas ("REWIND / FOR / HUMANKIND!"), com uma regra
+estreita para cada formato, também do Grok: 562 de 661 nos 90 prints, 219 de 290 na
+validação (75,5%) e 14 de 21 no espanhol. A classificação, as correções e esse
 diagnóstico estão em
 [Por que as linhas se perderam](classificacao-linhas-perdidas.md).
 
@@ -1549,6 +1552,11 @@ aberto](problemas-em-aberto.md). Em resumo:
     caixa, as regras de colunas montaram a grade de outro jeito, e 9 linhas se perderam.
     Contar só as remoções certas teria aprovado a regra; foi a medida de ponta a ponta, as
     linhas que chegam inteiras ao tradutor, que mostrou a perda.
+44. **Para juntar, peça dois sinais.** No problema 15, um letreiro quebrado e um menu são
+    linhas coladas do mesmo jeito. As propostas com um sinal largo ("a linha de baixo fecha
+    a frase", "a de cima é bem mais larga") juntaram de 104 a 139 pares errados, quase todos
+    itens de menu e de lista. A que entrou tem uma regra estreita para cada formato, cada
+    uma com um segundo sinal além do vão, e não juntou nenhum par errado.
 
 ## Como reproduzir
 

@@ -800,7 +800,120 @@ Entraram 13 testes (`tests/test_icones_colados.py`): 6 com os casos que saem, a 
 com as coordenadas dos prints, e 7 com o que tem de ficar. Sem a regra, os 6 primeiros
 falham. Agora são 153 testes.
 
-**Desde a medida da validação, oito correções:** nos 90 prints, as linhas inteiras foram
-de 539 para 560; na validação, de 190 para 217 (65,5% para 74,8%); no espanhol, de 8 para
-11.
+## A nona correção: a frase quebrada em linhas curtas (com as outras IAs)
+
+*Feita em 25/11/2026 no branch `regra-frases-quebradas`, a partir do problema 15: letreiros,
+balões e rótulos quebram a frase de propósito em linhas curtas e coladas, e o app deixava
+cada pedaço numa linha.*
+
+Eram 14 pares em 7 jogos:
+- "Tu cosa / favorita", no formulário do Stardew em espanhol;
+- "REWIND / FOR / HUMANKIND!", num letreiro do The Big Con;
+- "Mercenary's Grenade / Rifle", na lista do Pip-Boy do Fallout.
+
+Na maioria, só o "caberia" pedia a quebra: o letreiro é mais estreito que o print, então a
+primeira palavra de baixo cabia na margem do print.
+
+O vão sozinho não separa os casos. No mesmo formulário, "la granja / Tu cosa" (tem de
+separar) tem vão de 0,00, e "Tu cosa / favorita" (tem de juntar), de −0,12. Nos 150 prints,
+entre os pares de linhas coladas, 275 o app já separava certo, e 56 deles só pelo
+"caberia".
+
+Cada proposta entrou como foi escrita (`laboratorios/validacao/variantes_p15.py`): quando o
+app quebraria o par e a proposta pede a junção, junta. Cada par juntado foi conferido contra
+o gabarito (`erros_p15.py`). As linhas ganhas e perdidas são das quatro leituras.
+
+| Proposta | Pares juntados | Certos | Errados | Linhas ganhas | Perdidas |
+|---|---:|---:|---:|---:|---:|
+| **Grok, com a trava do dígito** | 14 | 10 | **0** | **9** | **0** |
+| Grok, como escrita | 15 | 10 | 1 | 9 | 1 |
+| DeepSeek | 43 | 10 | 15 | 8 | 6 |
+| ChatGPT, só os padrões que ele mandou testar primeiro | 32 | 6 | 9 | 6 | 20 |
+| Qwen | 99 | 9 | 53 | 5 | 63 |
+| ChatGPT, todos os padrões | 177 | 14 | 104 | 9 | 141 |
+| Mistral | 210 | 15 | 139 | 9 | 165 |
+
+Dos 4 pares sem veredito do Grok com a trava, 3 são leituras do EasyOCR que não batem letra
+por letra com o gabarito ("Tu coso / fovorito"), e o quarto junta um "C" de lixo a
+"Configure", no menu do EVE, sem mudar nenhuma linha.
+
+**Por que as propostas largas perderam linhas.** Juntar é mais arriscado que separar: um
+menu ou uma lista são pares colados do mesmo jeito que um letreiro.
+- **Mistral e ChatGPT com todos os padrões:** os dois juntam o par colado quando a linha de
+  cima é bem mais larga que a de baixo, e o Mistral também quando a de baixo fecha a frase.
+  Isso pega menus e listas inteiras: as fichas do Morrowind, o menu do Butterfly Soup e as
+  tarefas do Disco Elysium.
+- **ChatGPT, só a palavra minúscula e o passo da lista:** o passo curto juntou atributos do
+  Morrowind ("Willpower 40 / Agility 73").
+- **Qwen:** a "palavra curta em minúscula" e o bloco centralizado de 2 linhas juntam menus
+  do EVE e do Butterfly Soup.
+- **DeepSeek:** a palavra única sobreposta junta itens de menu de uma palavra ("Planets /
+  Stargates", "Display / Window").
+
+**A proposta do Grok**, por outro lado, tem uma regra estreita para cada formato e
+sempre pede um segundo sinal além das caixas coladas.
+
+Entrou a regra do Grok (`_frases_quebradas`, em `paragrafos.py`), com uma trava minha. As
+junções valem mais que o "caberia", o menu de uma palavra, o recuo e o marcador, como as dos
+itens em duas linhas:
+- **Minúscula colada (R1):** uma palavra minúscula, sem dígito, sobreposta a uma linha de 2+
+  palavras que não fecha a frase, com a mesma esquerda (1 altura) e alturas a até 1,4 vez
+  ("Tu cosa / favorita", "Color de / pelo:").
+- **Letreiro (R2):** 3 ou 4 linhas com menos de 8 alturas, centralizadas (centros a 1
+  altura, as duas bordas variando mais de 0,5), sobrepostas em 0,15 altura ou mais, sem
+  marcador; só a última fecha a frase ("REWIND / FOR / HUMANKIND!").
+- **Balão (R2b):** duas linhas assim, em que a de baixo fecha a frase em até 3 palavras.
+- **Item que quebrou na lista (R3):** na coluna (borda a 1 altura, passo de até 3), o par
+  sobreposto em 0,10 altura ou mais, com passo de até 0,80 do passo dos outros itens (2+
+  pares com vão de 0,20 ou mais). A linha de baixo tem até 2 palavras, letra e nenhum
+  dígito, e até 0,85 da largura da de cima ("Mercenary's Grenade / Rifle").
+- **Cauda em maiúsculas (R4):** uma frase de 8+ alturas e 4+ palavras em maiúsculas, com
+  vírgula ou aspas, e uma cauda de até 4 palavras embaixo, sem outra linha da coluna a 3
+  alturas ("TAP "Q" OR "L" TO SEAMLESSLY SWITCH / LANGUAGES IN GAME").
+- **Título deslocado (R6):** duas caixas de 1,30 altura ou mais, sobrepostas, a de baixo
+  deslocada mais de 1,5 altura para a direita e com 1 ou 2 palavras.
+
+**A trava minha:** a única perda do Grok veio da R1. Ela juntou "Harvest Magic Paper" com
+"x300,000(152K/300K)", na lista de missões do Immortal Clan, porque a quantidade começa com
+"x" minúsculo. A R3 do próprio Grok já exigia linha de baixo sem dígito; a mesma exigência
+na R1 tirou a perda sem mudar nenhum ganho.
+
+No laboratório, o app reproduziu a variante print a print, nas quatro leituras. No
+benchmark do app:
+
+| Conjunto | Linhas inteiras | Linhas partidas | Quebras a mais |
+|---|---|---|---|
+| 90 prints | 560 → 562 | 19 → 17 | 64 → 61 |
+| Validação | 217 → 219 (75,5%) | 20 → 18 | 31 → 28 |
+| Espanhol | 11 → 14 | 4 → 1 | 15 → 12 |
+
+As letras não mudaram, e nenhum print piorou. As linhas ganhas são:
+- os três rótulos do formulário do Stardew;
+- o letreiro do The Big Con;
+- a dica do Disco Elysium;
+- o "Rifle" do Pip-Boy;
+- "Neural Remap Available: Now", da ficha do EVE, que não estava entre os casos da
+  pergunta.
+
+Os 50 prints da validação entram no ajuste desde 24/11, então os 75,5% não valem como
+aprovação no portão de 75%: quem prova as correções é a rodada 2, com jogos novos.
+
+**O que ficou de fora:**
+- **O balão "Whoa, I'm / INFORMATION."** A linha de baixo começa só 27 px abaixo, menos de
+  meia altura típica do print (67 px), e o par não conta como linhas empilhadas. O Grok
+  tinha previsto isso.
+- **"HISTORICAL, BUT HER FRIEND / DOESN'T."** A R4 pede o par isolado na coluna, e há outras
+  linhas perto. Também previsto.
+- **O título da loja do Immortal Clan.** A caixa de baixo tem 1,298 da altura típica, contra
+  o mínimo de 1,30 da R6. Na leitura do EasyOCR, o par se junta.
+- **"SOCIAL SECURITY / ADMINISTRATION".** Fica no limite do vão (0,18) e as duas linhas têm
+  quase a mesma largura, como dois itens; o Grok deixou de fora de propósito.
+
+Entraram 9 testes (`tests/test_frases_quebradas.py`): 5 do que junta, com as coordenadas dos
+prints, e 4 do que tem de continuar separado (a quantidade com "x", os tópicos de uma
+palavra, o menu centralizado com respiro e o item de lista só encostado). Agora são 162
+testes.
+
+**Desde a medida da validação, nove correções:** nos 90 prints, as linhas inteiras foram de
+539 para 562; na validação, de 190 para 219 (65,5% para 75,5%); no espanhol, de 8 para 14.
 
