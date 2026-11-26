@@ -1022,3 +1022,17 @@ Os dois testes mudaram:
   Willpower 40", desenhado colado). Sem a exigência de uma palavra, ele falha.
 
 Continuam 162 testes.
+
+**As propostas das IAs com o gabarito corrigido.** As propostas dos problemas 9 a 15,
+menos as do 12 (que conta espaços), foram medidas de novo, cada uma contra o app da época,
+nas mesmas leituras, com o gabarito antigo e com o corrigido. O `GABARITO_DO_CACHE=1` faz
+o `testar_regras.py` usar o antigo, e o script é o
+`laboratorios/validacao/remedir_propostas.py`. Com o gabarito antigo, a medida reproduz os
+números de cada rodada.
+- **Os problemas 9, 10, 11 e 14** não mudam.
+- **No 13**, a regra do Grok, que entrou, vai de +7 −1 para +10 −0: a única perda era
+  "Lasts 30 days | Cat Ledger".
+- **No 15**, a regra do Grok como ele escreveu vai de +9 −1 para +9 −0.
+
+As outras mudanças estão em [Quinze problemas, cinco IAs e uma
+régua](consulta-outras-ias.md); os relatórios, em `relatorios/releitura/`.
