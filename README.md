@@ -43,7 +43,7 @@ The tray icon shows or hides the overlay and closes the app.
 
 | Engine                         | Account needed | Free tier                               | Notes                                                       |
 | :----------------------------- | :------------- | :-------------------------------------- | :---------------------------------------------------------- |
-| **Google Translate**           | No             | Free                                    | Unofficial endpoint; Google may block it for a while        |
+| **Google Translate**           | No             | Free                                    | Unofficial endpoint. Google may block your whole network with a captcha for hours or days; the app then leaves it out for 10 minutes, doubling up to 6 hours, and uses the next engine. It does not try to get past the captcha |
 | **Microsoft Azure Translator** | Yes            | 2 million characters/month (F0 plan)    | Largest free quota of the official APIs                     |
 | **DeepL**                      | Yes            | 500,000 characters/month (API Free)     | Free keys end in `:fx`                                      |
 | **Google Cloud Translation**   | Yes            | 500,000 characters/month (US$10 credit) | Requires billing enabled; set a budget alert                |
@@ -152,7 +152,7 @@ The project is written in **Python** and uses these libraries for image processi
 | **Screen capture**    | [MSS](https://pypi.org/project/mss/)                                                                        |
 | **OCR**               | [RapidOCR](https://pypi.org/project/rapidocr/) ([PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR) models on [ONNX Runtime](https://onnxruntime.ai/)), [EasyOCR](https://pypi.org/project/easyocr/) & [PyTorch](https://pytorch.org/) for the other scripts, [OpenCV](https://pypi.org/project/opencv-python-headless/) |
 | **Text cleanup**      | [pyspellchecker](https://pypi.org/project/pyspellchecker/)                                                  |
-| **Translation**       | [Deep-Translator](https://pypi.org/project/deep-translator/), official REST APIs via [Requests](https://pypi.org/project/requests/) |
+| **Translation**       | The Google Translate web page and the official REST APIs, via [Requests](https://pypi.org/project/requests/) |
 | **Offline translation** | [Argos Translate](https://pypi.org/project/argostranslate/)                                               |
 | **Distribution**      | [PyInstaller](https://www.pyinstaller.org/)                                                                 |
 | **Installer**         | [NSIS](https://nsis.sourceforge.io/)                                                                        |

@@ -52,7 +52,6 @@ entrou ou saiu.*
 | python-bidi | 0.6.10 | LGPL | Vem com o EasyOCR (escrita da direita para a esquerda) |
 | pyspellchecker | 0.9.0 | MIT | Dicionário das letras confundidas |
 | transformers | 5.12.1 | Apache-2.0 | BERT, opcional |
-| deep-translator | 1.11.4 | MIT | Google grátis |
 | requests | 2.34.2 | Apache-2.0 | APIs da Azure, do DeepL e do Google Cloud |
 | argostranslate | 1.11.0 | MIT (o projeto diz MIT ou CC0) | Tradução offline |
 | ctranslate2, sentencepiece, stanza, spaCy, sacremoses | — | MIT, Apache-2.0, Apache-2.0, MIT, MIT | Vêm com o Argos |
@@ -99,7 +98,7 @@ quando usa, o que é diferente de o app redistribuir os arquivos.
 
 | Serviço | Quem tem o contrato | O que se sabe |
 |---|---|---|
-| **Google Tradutor grátis** | Ninguém: não há contrato de API | O deep-translator usa a página do Google Tradutor, que não é uma API oficial. Os termos de serviço do Google de 2017 a 2020 proibiam acessar os serviços por outro meio que não a interface e as instruções do próprio Google; o texto atual não foi conferido. O app já trata o bloqueio (pausa de 10 minutos depois de um CAPTCHA). **É o ponto mais frágil para vender** |
+| **Google Tradutor grátis** | Ninguém: não há contrato de API | O app pede a tradução à página do Google Tradutor (até 26/11, pelo deep-translator), que não é uma API oficial. Os termos de serviço do Google de 2017 a 2020 proibiam acessar os serviços por outro meio que não a interface e as instruções do próprio Google; o texto atual não foi conferido. O app já trata o bloqueio: depois de um CAPTCHA, o Google fica de fora 10 minutos, e a pausa dobra a cada bloqueio seguido, até 6 horas. O app não contorna o CAPTCHA nem se passa por navegador. **É o ponto mais frágil para vender** |
 | **Azure Translator** | O usuário, com a chave dele | O app só chama a API em nome do usuário. Os termos não foram lidos para este doc |
 | **DeepL API** | O usuário, com a chave dele | Os termos dos serviços grátis do DeepL dizem que o texto pode ser usado para treinar os modelos e proíbem conteúdo confidencial ou pessoal. O documento específico da API Free não foi lido |
 | **Google Cloud Translation** | O usuário, com a chave dele | Os termos não foram lidos para este doc |

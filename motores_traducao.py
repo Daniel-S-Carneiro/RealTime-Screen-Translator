@@ -7,23 +7,19 @@ Os motores pagos somam no uso_motores os caracteres que o serviço vai cobrar.
 O texto chega com um parágrafo por linha (paragrafos.py). As APIs oficiais recebem
 um item por parágrafo no mesmo pedido, e a tradução volta com as mesmas quebras.
 
-As APIs oficiais (Azure, DeepL e Google Cloud) são chamadas direto pela REST, com
-tempo limite: as classes do deep-translator para elas fazem pedidos extras, usam
-um formato de autenticação antigo do DeepL e não tratam os erros de cota.
+Todos os serviços são chamados direto, com tempo limite. As APIs oficiais (Azure, DeepL e
+Google Cloud) pela REST: as classes do deep-translator para elas faziam pedidos extras,
+usavam um formato de autenticação antigo do DeepL e não tratavam os erros de cota. O
+Google grátis pela página móvel do Google Tradutor, a mesma que o deep-translator lia,
+mas com tempo limite e com o bloqueio reconhecido (26/11/2026).
 """
 
+import html
+import re
 from dataclasses import dataclass
 from typing import Callable
 
 import requests
-from deep_translator import GoogleTranslator
-from deep_translator.exceptions import (
-    LanguageNotSupportedException,
-    NotValidPayload,
-    RequestError,
-    TooManyRequests,
-    TranslationNotFound,
-)
 
 import uso_motores
 from tradutor_offline import traduzir_offline
@@ -31,7 +27,8 @@ from tradutor_offline import traduzir_offline
 TEMPO_LIMITE = 15  # segundos por pedido às APIs
 
 # Por quanto tempo um motor fica de fora depois de cada tipo de recusa
-PAUSA_BLOQUEIO = 10 * 60  # Google web pediu CAPTCHA
+PAUSA_BLOQUEIO = 10 * 60  # Google web pediu CAPTCHA; dobra a cada bloqueio seguido...
+PAUSA_BLOQUEIO_MAXIMA = 6 * 60 * 60  # ...até isso
 PAUSA_COTA = 60 * 60  # cota grátis do mês esgotada
 PAUSA_RAJADA = 60  # pedidos demais em pouco tempo
 
@@ -39,6 +36,16 @@ PAUSA_RAJADA = 60  # pedidos demais em pouco tempo
 MAXIMO_TEXTOS_AZURE = 1000
 MAXIMO_TEXTOS_DEEPL = 50
 MAXIMO_TEXTOS_GOOGLE_CLOUD = 128
+
+# Google grátis: a página móvel do Google Tradutor, que aceita até 5000 letras por pedido
+GOOGLE_WEB = "https://translate.google.com/m"
+MAXIMO_LETRAS_GOOGLE_WEB = 5000
+_RESULTADO_GOOGLE_WEB = re.compile(
+    r'<div[^>]*\bclass="[^"]*\b(?:t0|result-container)\b[^"]*"[^>]*>(.*?)</div>', re.DOTALL
+)
+_QUEBRA_HTML = re.compile(r"<br\s*/?>", re.IGNORECASE)
+_TAG_HTML = re.compile(r"<[^>]+>")
+_bloqueios_do_google = {"seguidos": 0}
 
 # Códigos do app (vindos do EasyOCR) que cada serviço escreve de outro jeito
 _CODIGOS_GOOGLE = {"ch_sim": "zh-CN", "ch_tra": "zh-TW", "rs_cyrillic": "sr", "rs_latin": "sr"}
@@ -97,24 +104,72 @@ def _mensagem_da_api(resposta: requests.Response) -> str:
     return str(erro)[:200]
 
 
-def traduzir_google_web(texto: str, _origem: str, destino: str, _credenciais: dict) -> str:
-    """Google Tradutor pela página web (grátis, sem chave, sem garantia)."""
+def _trechos(texto: str, maximo: int) -> list:
+    """As linhas do texto em trechos de até `maximo` letras, sem partir uma linha que caiba."""
+    trechos: list = []
+    atual = ""
+    for linha in texto.split("\n"):
+        for inicio in range(0, max(len(linha), 1), maximo):
+            pedaco = linha[inicio : inicio + maximo]
+            juntos = f"{atual}\n{pedaco}" if atual else pedaco
+            if len(juntos) > maximo:
+                trechos.append(atual)
+                juntos = pedaco
+            atual = juntos
+    if atual.strip():
+        trechos.append(atual)
+    return trechos
+
+
+def _pausa_do_bloqueio(resposta: requests.Response) -> int:
+    """Quanto tempo o Google fica de fora depois de um bloqueio.
+
+    O Google mantém o bloqueio enquanto vê pedidos automáticos da rede, então a pausa dobra
+    a cada bloqueio seguido (10 min, 20 min, 40 min...), até 6 h. Se ele disser quanto
+    esperar (Retry-After), vale o maior dos dois.
+    """
+    _bloqueios_do_google["seguidos"] += 1
+    pausa = PAUSA_BLOQUEIO * 2 ** (_bloqueios_do_google["seguidos"] - 1)
     try:
-        alvo = _CODIGOS_GOOGLE.get(destino, destino)
-        return GoogleTranslator(source="auto", target=alvo).translate(texto)
-    except TooManyRequests as e:
-        # O Google responde 429 e pede CAPTCHA quando acha o tráfego do IP suspeito.
-        # O bloqueio é da rede, não de um clique a mais, e costuma passar sozinho.
-        raise ErroMotor("o Google bloqueou temporariamente esta rede", PAUSA_BLOQUEIO) from e
-    except LanguageNotSupportedException as e:
-        raise ErroMotor(f"o Google não traduz para '{destino}'") from e
-    except (TranslationNotFound, NotValidPayload) as e:
-        raise ErroMotor(f"tradução não encontrada ({e})") from e
-    except RequestError as e:
-        raise ErroMotor("o Google recusou o pedido") from e
-    except (ConnectionError, requests.RequestException) as e:
-        # requests.ConnectionError e Timeout não herdam do ConnectionError do Python
+        pausa = max(pausa, int(resposta.headers.get("Retry-After", "0")))
+    except ValueError:
+        pass  # Retry-After também pode vir como data; aí vale a pausa dobrada
+    return min(pausa, PAUSA_BLOQUEIO_MAXIMA)
+
+
+def _traduzir_trecho_google_web(trecho: str, alvo: str) -> str:
+    try:
+        resposta = requests.get(
+            GOOGLE_WEB, params={"sl": "auto", "tl": alvo, "q": trecho}, timeout=TEMPO_LIMITE
+        )
+    except requests.RequestException as e:
         raise ErroMotor("sem conexão com o Google") from e
+    # O Google acha automático o tráfego da rede e manda para a página do CAPTCHA
+    # (google.com/sorry), às vezes com 429, às vezes com 200. O bloqueio é do IP da rede
+    # inteira: outra biblioteca ou outro User-Agent não mudam nada, e o app não tenta
+    # passar pelo CAPTCHA.
+    if resposta.status_code == 429 or "/sorry/" in resposta.url:
+        raise ErroMotor(
+            "o Google bloqueou esta rede e pediu um captcha; escolha a Azure grátis ou o modo "
+            "offline nas configurações, ou espere",
+            _pausa_do_bloqueio(resposta),
+        )
+    if resposta.status_code != 200:
+        raise ErroMotor(f"o Google recusou o pedido (código {resposta.status_code})")
+    achado = _RESULTADO_GOOGLE_WEB.search(resposta.text)
+    if not achado:
+        raise ErroMotor("o Google não devolveu a tradução (a página dele pode ter mudado)")
+    _bloqueios_do_google["seguidos"] = 0
+    return html.unescape(_TAG_HTML.sub("", _QUEBRA_HTML.sub("\n", achado.group(1)))).strip()
+
+
+def traduzir_google_web(texto: str, _origem: str, destino: str, _credenciais: dict) -> str:
+    """Google Tradutor pela página móvel (grátis, sem chave, sem garantia)."""
+    alvo = _CODIGOS_GOOGLE.get(destino, destino)
+    return "\n".join(
+        _traduzir_trecho_google_web(trecho, alvo)
+        for trecho in _trechos(texto, MAXIMO_LETRAS_GOOGLE_WEB)
+    )
 
 
 def traduzir_azure(texto: str, _origem: str, destino: str, credenciais: dict) -> str:
