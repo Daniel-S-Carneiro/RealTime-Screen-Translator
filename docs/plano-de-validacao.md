@@ -125,7 +125,8 @@ os 14 jogos escolhidos ficam divididos, e a segunda parte é a prova das correç
 - Nenhum print da rodada 2 é aberto, recebe gabarito ou é usado numa correção antes de a
   rodada 1 estar corrigida.
 - A rodada 2 é medida uma vez, com o ponto de congelamento que existir depois das correções
-  e com os mesmos portões.
+  e com os mesmos portões. Esse ponto é a tag `referencia-validacao-2026-11-26`, de
+  26/11, antes da coleta (veja a [referência da validação](referencia-validacao.md)).
 - Baldur's Gate 3 e Cyberpunk 2077 são pesados para a MX350. Se não rodarem, ficam de fora,
   sem prejuízo para a rodada.
 
