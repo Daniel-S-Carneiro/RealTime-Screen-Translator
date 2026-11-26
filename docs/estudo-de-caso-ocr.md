@@ -1241,7 +1241,8 @@ dos 8 problemas, mas a melhor resposta não veio sempre dele: o ChatGPT ganhou o
 trouxe a peça que faltava no último, o Mistral trouxe a medida que resolveu as abas, e o
 Qwen, as travas do menu. Em quatro problemas, a regra que entrou junta peças de duas IAs.
 O relatório completo, com o placar por IA, o que decidiu cada rodada e o que aprendi sobre
-o método, está em [Oito problemas, cinco IAs e uma régua](consulta-outras-ias.md).
+o método, está em [Quinze problemas, cinco IAs e uma régua](consulta-outras-ias.md),
+que também cobre os problemas 9 a 15, depois da validação.
 
 ### A validação com jogos novos: não passou
 
@@ -1566,7 +1567,9 @@ aberto](problemas-em-aberto.md). Em resumo:
     feitas para casos em que o gabarito errava. A trava do dígito protegia uma separação
     errada, e o título deslocado juntava um título com metade de um selo. A releitura dos
     gabaritos estava marcada para antes da rodada 2; ela devia ter vindo antes das
-    perguntas às IAs. As duas peças saíram sem piorar nenhum print.
+    perguntas às IAs. As duas peças saíram sem piorar nenhum print. No problema 13, a
+    única linha que a regra do Grok perdia era um desses gabaritos; com ele relido, a
+    regra não perde nenhuma.
 
 ## Como reproduzir
 

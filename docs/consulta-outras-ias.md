@@ -1,6 +1,6 @@
-# Oito problemas, cinco IAs e uma régua
+# Quinze problemas, cinco IAs e uma régua
 
-*Anexo do [estudo de caso](estudo-de-caso-ocr.md). Rodadas de 17 a 19/11/2026. Cada
+*Anexo do [estudo de caso](estudo-de-caso-ocr.md). Rodadas de 17 a 25/11/2026. Cada
 problema, com os dados reais e a tabela de cada proposta, está em [problemas em
 aberto](problemas-em-aberto.md). A numeração aqui é a do arquivo de perguntas às IAs; nos
 problemas em aberto, o 7 e o 8 estão trocados (lá, o Problema 7 é o das quebras verticais,
@@ -91,7 +91,35 @@ pergunta passou a pedir que cada IA aplicasse a própria regra, à mão, a cada 
 | 12 | O OCR engole o espaço entre duas palavras | 25/11 | as cinco | Candidatos pela geometria e decisão pela probabilidade do CTC (**ChatGPT**), na versão barata (a margem do espaço na coluna) | 546 → 550; validação 210 → 213 | igual |
 | 13 | Duas caixas na mesma linha: dois itens ou rótulo e valor? | 25/11, duas rodadas | as cinco (o Qwen com duas respostas) | Censo de colunas com valor curto, cabeçalho e vão de 2,1 h (**Grok**, 2ª rodada) | 550 → 550; validação 213 → 216; espanhol 10 → 11 | 63 → 65 |
 | 14 | Ícone lido como símbolo e colado à linha | 25/11 | as cinco | Coluna de 3+ símbolos iguais, glifo baixo e longe, e o cursor só antes de atalho (**Grok**) | 550 → 560; validação 216 → 217 | 65 → 64 |
-| 15 | Frase ou rótulo quebrado em linhas curtas e coladas | 25/11 | as cinco | Uma regra estreita por formato: minúscula colada, letreiro, balão, item que quebrou na lista, cauda em maiúsculas e título deslocado (**Grok**) + a palavra de baixo sem dígito (minha) | 560 → 562; validação 217 → 219; espanhol 11 → 14 | 64 → 61 |
+| 15 | Frase ou rótulo quebrado em linhas curtas e coladas | 25/11 | as cinco | Uma regra estreita por formato: minúscula colada, letreiro, balão, item que quebrou na lista, cauda em maiúsculas e título deslocado (**Grok**) + a palavra de baixo sem dígito (minha); a trava e o título deslocado saíram em 26/11 | 560 → 562; validação 217 → 219; espanhol 11 → 14 | 64 → 61 |
+
+**Depois da releitura dos gabaritos (26/11).** A releitura achou 12 gabaritos do Immortal
+Clan fora da regra de uma linha por item ([A releitura dos
+gabaritos](classificacao-linhas-perdidas.md#a-releitura-dos-gabaritos-25112026)). Por isso,
+as propostas dos problemas 9 a 15 foram medidas de novo, cada uma contra o app da época e
+nas mesmas quatro leituras, com o gabarito antigo e com o corrigido. Ficou de fora o 12,
+cuja medida é a dos espaços certos e errados. Com o gabarito antigo, a medida reproduz os
+números de cada rodada. Os problemas 9, 10, 11 e 14 não mudam. No 13 e no 15, as mudanças
+são todas a favor da regra que entrou (linhas ganhas e perdidas):
+
+| Proposta | Gabarito antigo | Gabarito corrigido |
+|---|---|---|
+| 13, 2ª rodada: **Grok** (entrou) | +7 −1 | **+10 −0** |
+| 13, 2ª rodada: Qwen | +7 −1 | +7 −1 |
+| 13, 2ª rodada: DeepSeek | +9 −8 | +12 −5 |
+| 13, 1ª rodada: Grok, DeepSeek e Mistral | +13 −5, +13 −54, +9 −53 | +16 −4, +16 −51, +12 −50 |
+| 15: **Grok, como escreveu** | +9 −1 | **+9 −0** |
+| 15: DeepSeek | +8 −6 | +7 −5 |
+| 15: ChatGPT (padrões 1 e 4), Qwen | +6 −20, +5 −63 | +6 −18, +4 −63 |
+| 15: ChatGPT (todos os padrões), Mistral | +9 −141, +9 −165 | +8 −139, +9 −163 |
+
+No 13, a única perda do Grok era "Lasts 30 days | Cat Ledger", na loja: o gabarito
+antigo juntava os dois itens. Com ele relido, a regra separa os dois e não perde nenhuma
+linha, e o Grok desempata com o Qwen. No 15, a trava do dígito, que era minha, só barrava
+uma junção certa. Ela saiu, e o título deslocado também, porque tinha sido feito para o
+título da loja, outro gabarito errado. A regra que está no app é a do Grok como ele
+escreveu, menos o título deslocado. O ChatGPT e o DeepSeek não responderam o problema 11:
+colei o texto errado nas duas conversas.
 
 As cinco disseram acertar os 13 casos da pergunta. Nos 140 prints, só o Mistral e o
 ChatGPT não perderam nenhuma linha; Grok, DeepSeek e Qwen perderam de 2 a 6, quase sempre
@@ -148,24 +176,30 @@ já calcula. No problema 13, a 1ª rodada não deu regra segura: todas as propos
 
 ## Placar por IA
 
-"Entrou" quer dizer que a regra, ou uma peça dela, está no app hoje.
+"Entrou" quer dizer que a regra, ou uma peça dela, está no app hoje. O placar conta os 15
+problemas: de 1 a 8 (17 a 19/11, nos 90 prints) e de 9 a 15 (24 e 25/11, nos 150 prints).
+Os números de 9 a 15 já são os da medida com os gabaritos relidos.
 
 | IA | Rodadas | Entrou em | Onde acertou | Onde errou, em geral |
 |---|---|---|---|---|
-| **Grok** | 9 | 7 dos 8 problemas (2, 3, 4, 5, 6, 7, 8) | Regras com limiares medíveis e um freio; mudou a regra com o retorno (problema 4) | A regra crua às vezes precisava de travas: partiu uma manchete no EasyOCR (7) e juntou linhas de tabela na margem (1) |
-| **ChatGPT** | 9 | 2 (1 inteira, 8 como peça) | Boas ideias de estrutura: a margem do painel, o modo fraco | Pontuação de evidências que deixa passar prosa (7), vetos de tabela (3), descarte sem limite (5), regra para o bloco inteiro (8) |
-| **Qwen** | 7 | 2 (ícones no 6, travas no 7) | O diagnóstico mais preciso no problema 8 | Leu um problema ao contrário (3); regras que cortavam falas (4) ou partiam prosa (8) |
-| **Mistral** | 7 | 2 (a medida das abas no 3, a confirmação do modo fraco no 8) | A medida do fundo dentro da caixa | Regras sem trava de largura ou de palavras (8), detector de novo no recorte (5), linha curta contra o print (7) |
-| **DeepSeek** | 7 | nenhum | — | Vetos e sinais que não aparecem nos prints (sublinhado, tabela embaixo), números errados no diagnóstico; no problema 4, só funcionava por causa do meu dado errado |
+| **Grok** | 17 | 12 dos 15 (2 a 8, 10, 11, 13, 14 e 15) | Regras com limiares medíveis e um freio; uma regra estreita para cada formato (15); o cursor só antes de atalho (14); mudou a própria regra com o retorno (4 e 13) | A regra crua às vezes precisava de travas: juntou linhas de tabela na margem (1), partiu uma manchete no EasyOCR (7), juntou o título do cartaz ao convite (9), cortou frases no Caves of Qud com o salto pela diferença (11) e pôs 686 espaços errados pela tinta (12) |
+| **Mistral** | 15 | 5 (a medida das abas no 3, a confirmação do modo fraco no 8, e as regras do 9, do 10 e do 11) | A medida do fundo dentro da caixa (3); limiares com folga, que entraram como ele escreveu (9 e 11); a trava da maiúscula, que decidiu o 11 | Sinais largos sem trava: juntou menus e listas inteiras no 15 (163 linhas perdidas); tirou um ícone certo e desmontou a grade do EVE (14); regras sem trava de largura ou de palavras (8), com o detector de novo no recorte (5) e com a linha curta medida contra o print (7) |
+| **ChatGPT** | 16 | 3 (1 inteira, 8 como peça, 12 numa versão barata) | Ideias de estrutura: a margem do painel, o modo fraco e a probabilidade do CTC, o único sinal que separou os espaços certos dos errados (12); no 9, o mesmo sinal da regra que entrou | O grupo só pelo centro (10) e os sinais largos para juntar (15); vetos de tabela (3), descarte sem limite (5), pontuação de evidências que deixa passar prosa (7) e regra para o bloco inteiro (8); quando foi cauteloso, não errou nada, mas pegou pouco (13 e 14) |
+| **Qwen** | 15 | 2 (ícones no 6, travas no 7) | O diagnóstico mais preciso no problema 8; no 13, os mesmos ganhos do Grok | Limiares fixos que cortam palavras e frases (11 e 12); a tabela da resposta nem sempre batia com a regra que ele escreveu (11, 14 e 15); leu um problema ao contrário (3); regras que cortavam falas (4) ou partiam prosa (8) |
+| **DeepSeek** | 14 | nenhum | Os maiores ganhos brutos no 10 e no 13; citou como saída a probabilidade do CTC, que entrou no 12 | Ganhos com perdas grandes: o grupo só pelo centro (10), o "senão: separa" (13), o "O" das telas em maiúsculas e o "×" das quantidades (14), a palavra única que junta itens de menu (15); vetos e sinais que não aparecem nos prints (3), números errados no diagnóstico e, no problema 4, uma regra que só funcionava por causa do meu dado errado |
 | **Copilot** | 2 | nenhum | — | Margem por bloco, já descartada; ilustrou a proposta com coordenadas que não estavam no material |
 | **Gemini** | 2 | nenhum | — | Margem por bloco; lista sem exigir repetição (12 quebras erradas) |
 
 O Copilot e o Gemini respondiam muito rápido e repetiam ideias que a pergunta dizia já ter
 testado. Do problema 3 em diante, entraram no lugar deles o DeepSeek, o Mistral e o Qwen.
 
-O Grok ganhou mais vezes, mas a melhor resposta não veio sempre da mesma IA. O ChatGPT
-ganhou o primeiro problema e trouxe a peça que faltava no último. O Mistral trouxe a medida
-que resolveu as abas, e o Qwen trouxe as travas do menu.
+O Grok entrou em mais problemas, mas a melhor resposta não veio sempre dele:
+- o ChatGPT ganhou o 1 e o 12 e trouxe a peça que faltava no 8;
+- o Mistral ganhou o 9 e o 11, deu a estrutura do 10 e trouxe a medida que resolveu as abas;
+- o Qwen trouxe as travas do menu.
+
+Em seis problemas, a regra que entrou junta peças de duas IAs (3, 6, 7, 8, 10 e 11). O
+DeepSeek não entrou em nenhum: as propostas dele ganhavam muito e perdiam muito.
 
 ## O que aprendi sobre perguntar a outras IAs
 
@@ -182,7 +216,8 @@ que resolveu as abas, e o Qwen trouxe as travas do menu.
 4. **O freio vale tanto quanto o sinal.** Nos problemas 2, 7 e 8, várias IAs acharam o
    mesmo sinal. Ganhou a que trouxe a trava que protege a prosa.
 5. **Junte peças de respostas diferentes.** Em quatro dos oito problemas, a regra que
-   entrou combina duas IAs. Medir cada peça separada mostra o que manter e o que tirar.
+   entrou combina duas IAs (em seis dos 15, contando de 9 a 15). Medir cada peça
+   separada mostra o que manter e o que tirar.
 6. **Devolva o resultado.** Depois de cada rodada, cada IA recebeu a tabela de todas e uma
    nota sobre a própria proposta. As respostas seguintes repetiram menos ideias já
    descartadas, e o Grok mudou a própria regra a partir do retorno.
@@ -192,11 +227,28 @@ que resolveu as abas, e o Qwen trouxe as travas do menu.
 8. **O ganho cai a cada rodada.** As duas primeiras rodadas renderam 5 linhas inteiras
    cada; a última, 1. Entre uma linha e a de baixo, o app hoje perde só 2 de 470 quebras. O erro
    que sobra está nas fichas e na leitura, e o próximo passo é medir as regras em jogos
-   novos, não perguntar mais.
+   novos, não perguntar mais. (Foi o que aconteceu: a validação de 24/11 abriu os
+   problemas 9 a 15.)
+9. **Mostre o erro.** Na 1ª rodada do problema 13, todas as propostas separavam pares que o
+   gabarito junta. A 2ª rodada mostrou os cinco desenhos em que elas erravam, com as
+   coordenadas, e as perdas caíram de dezenas de linhas para uma. Com o gabarito relido,
+   caíram para nenhuma.
+10. **Para juntar, peça dois sinais.** No problema 15, as propostas com um sinal largo
+    ("a linha de baixo fecha a frase", "a de cima é bem mais larga") juntaram mais de 100
+    pares errados, quase todos itens de menu e de lista. A do Grok tinha uma regra estreita
+    para cada formato, cada uma com um segundo sinal, e não juntou nenhum par errado.
+11. **O gabarito também é dado.** A releitura de 25/11 achou 12 gabaritos do Immortal Clan
+    fora da regra. Um caso do problema 15 foi às IAs com a resposta errada, e a regra que
+    veio para ele (o título deslocado) saiu depois, junto com uma trava minha feita para
+    outro gabarito errado. No problema 13, a única perda da regra que entrou era um desses
+    gabaritos. A lição 3 vale para o gabarito: confira antes de perguntar.
 
 ## O custo
 
-- Três dias, nove rodadas medidas e mais de 40 propostas testadas.
+- De 17 a 19/11, três dias, nove rodadas medidas e mais de 40 propostas testadas.
+- De 24 a 25/11, mais oito rodadas (problemas 9 a 15) e 39 propostas, medidas nos 150
+  prints e nas duas leituras. Em 26/11, as dos problemas 9 a 15, menos as do 12, foram
+  medidas de novo com os gabaritos relidos; cada uma leva de 10 a 20 segundos.
 - Cada rodada custou o tempo de colar a pergunta em cinco conversas e guardar as respostas.
   A medida de cada proposta, sobre as caixas guardadas, leva segundos.
 - Nenhuma API paga. Nenhum dado pessoal foi enviado: sem chaves de API, sem o arquivo de
