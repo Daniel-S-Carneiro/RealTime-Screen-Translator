@@ -20,6 +20,8 @@ It captures the part of the screen under a transparent window, reads the text wi
 ## 🌟 Features
 
 - **Translate any part of the screen:** a transparent window stays on top of the game; drag it over the text and click once.
+- **Global hotkeys:** translate, show or hide the window, and clear it without leaving the game (**Ctrl+Alt+T**, **Ctrl+Alt+H** and **Ctrl+Alt+L** by default; change them in the settings). The game keeps the keyboard focus.
+- **Invisible to screen capture:** the window stays out of screenshots, recordings and streams, so the app reads the game behind it without hiding the window first (Windows 10 version 2004 or newer). Turn it off in the settings to show the translation on a stream.
 - **OCR tested on 90 game screenshots:** [RapidOCR](https://github.com/RapidAI/RapidOCR), running PaddleOCR's PP-OCRv6 models on the CPU, reads English, Chinese, Japanese and 40 Latin-script languages. EasyOCR reads the other scripts, with GPU acceleration (NVIDIA CUDA) when available.
 - **Cleans up the OCR output:** separates words that the OCR glued together (`DMGto` → `DMG to`, `ofincoming` → `of incoming`) before translating.
 - **Keeps the layout of the text:** titles, paragraphs, menu options and effect lines stay on their own lines in the translation, while sentences that only wrapped to fit the box are translated as a whole. Side-by-side panels, character sheets and grids are read one column at a time, and menu buttons and tabs on the same line become separate items.
@@ -33,8 +35,8 @@ It captures the part of the screen under a transparent window, reads the text wi
 1. Open the app. The overlay window appears on top of everything.
 2. The first time, the app asks how to translate: the free Azure tier (recommended), offline, or another key you already have.
 3. Drag it over the text you want to translate. Use the bottom-right corner to resize it.
-4. Click **Traduzir Área** (Translate Area). The translation appears inside the overlay.
-5. Click **⚙️** to change the languages and the translation engine.
+4. Click **Traduzir Área** (Translate Area), or press **Ctrl+Alt+T** in the game. The translation appears inside the overlay.
+5. Click **⚙️** to change the languages, the translation engine and the hotkeys.
 
 The tray icon shows or hides the overlay and closes the app.
 
@@ -56,6 +58,7 @@ The settings screen has the sign-up link for each service, a field for the key a
 - **Monthly usage and cost guard:** the settings screen shows how much of the free tier you used this month. DeepL reports it officially through its API; for Azure and Google Cloud, which don't report usage through the key, the app counts the characters it sends from your PC. With **"Parar ao chegar no limite grátis do mês"** on (the default), the app stops using Azure and Google Cloud when the next text would go past the free tier, and uses the fallback engines until the month changes.
 - **Extra protection on Google Cloud:** set a daily character quota in the Cloud Console (around 16,000 per day ≈ 500,000 per month). Past it, Google refuses instead of charging, and the app falls back automatically.
 - **Your keys stay on your PC:** they are saved in `%APPDATA%\RealTimeScreenTranslator\config.json`, encrypted with Windows DPAPI (only your Windows account on that PC can read them), and are only sent to the service they belong to.
+- **Hotkeys and window options** are saved in `%APPDATA%\RealTimeScreenTranslator\preferencias.json`, in plain text: they are not secret.
 - **Updates keep your settings:** installing a new version over an old one keeps your keys. Uninstalling asks whether to delete them.
 
 ## 🚀 Getting started
