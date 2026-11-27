@@ -157,6 +157,14 @@ Hy-MT2 fica à frente do Argos, e nas notas dele a distância é maior (3,93 con
   ponto, porque "obtido" não é "que dá para obter". Ele também tirou pontos de "Saldo
   atual" para "Fondos actuales", e eu dei 5.
 
+**O critério dele foi outro, e explica a maior parte das diferenças.** Ele avaliou se a
+tradução dá para entender: quando não conhecia o contexto ou se confundia com um nome,
+preferiu a tradução literal, e as notas 1 e 2 marcam o que atrapalharia o entendimento.
+Eu avaliei também se a tradução está certa para a tela do jogo (o "Auto" como botão, o
+termo de jogo). Mesmo assim, os erros graves coincidiram em 22 traduções. Nas próximas
+conferências, a página vai mostrar o contexto de cada linha: o jogo, as linhas vizinhas
+e se ela é um botão ou um nome.
+
 ## O custo de cada offline
 
 | Motor | Download | No disco | Memória | Carga | Segundos por linha |
