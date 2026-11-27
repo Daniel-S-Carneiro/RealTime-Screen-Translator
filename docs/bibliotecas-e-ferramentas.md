@@ -88,11 +88,11 @@ As regras de parágrafo rodam em qualquer língua e não usam biblioteca de fora
 
 | Biblioteca ou serviço | Versão | Para quê | Por que |
 |---|---|---|---|
-| **Requests**, na página do Google Tradutor | 2.34.2 | O Google Tradutor grátis | Não pede conta. É o primeiro motor de reserva. Até 26/11 era o deep-translator 1.11.4, que faz o mesmo pedido sem tempo limite e sem distinguir o bloqueio da rede (a página do CAPTCHA) de uma página que mudou |
+| ~~Requests, na página do Google Tradutor~~ | 2.34.2 | O Google Tradutor grátis, que **saiu do app em 27/11/2026**: não é API oficial nem tem contrato para um app vendido, e o Google bloqueia com captcha a rede de quem faz pedidos automáticos | Não pedia conta e era o primeiro motor de reserva. Até 26/11 era o deep-translator 1.11.4, que faz o mesmo pedido sem tempo limite e sem distinguir o bloqueio da rede (a página do CAPTCHA) de uma página que mudou |
 | **Requests**, direto nas APIs REST | 2.34.2 | Azure Translator, DeepL e Google Cloud Translation, com a chave do usuário | As classes do deep-translator para essas APIs faziam pedidos extras, usavam um formato antigo de autenticação do DeepL e não tratavam os erros de cota |
 | **Argos Translate** | 1.11.0 | Tradução offline, a última reserva | Roda no PC, sem limite. Baixa cerca de 80 a 100 MB por par de línguas na primeira vez. É importado só quando usado, porque carrega spaCy, Stanza e CTranslate2 e deixaria a abertura lenta |
 
-A ordem de reserva é: o motor escolhido, depois o Google grátis, depois o Argos.
+A ordem de reserva é: o motor escolhido, depois os outros pagos que têm chave, depois o Argos. Quem escolhe o Argos fica só com ele, e o texto não sai do PC. Até 27/11, a primeira reserva era o Google grátis.
 
 Em 26/11, o Argos e três modelos offline foram medidos contra os pagos ([Os tradutores, lado a lado](comparacao-tradutores.md)). O Hy-MT2 1.8B (Tencent, Apache 2.0, pelo llama.cpp) ficou como candidato a offline de qualidade; o M2M100 418M e o OPUS-MT en→pt (pelo CTranslate2) ficaram de fora.
 
@@ -266,6 +266,7 @@ instalador refeito e testado depois.
 | 23/11 | Entram o Pylint e o Pyright em todo script editado |
 | 25/11 | O app passa a usar as caixas de palavra e as probabilidades do CTC do RapidOCR |
 | 26/11 | Sai o deep-translator: o Google grátis vira um pedido do próprio app à mesma página, com tempo limite e o bloqueio reconhecido |
+| 27/11 | Sai o Google Tradutor grátis: sem chave, o app traduz offline, e a primeira execução pergunta como traduzir |
 
 ## Onde estão os detalhes
 

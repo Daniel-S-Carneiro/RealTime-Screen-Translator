@@ -30,9 +30,10 @@ entrou ou saiu.*
   pacote sem o app usar. O PySide6 serviria pela LGPLv3, com as obrigações dela.
 - **Falta conferir antes de vender:**
   - a licença dos pesos dos modelos do EasyOCR;
-  - os termos de cada tradutor, em especial o do Google grátis, que usa um endereço não
-    oficial;
-  - a licença de cada modelo do Argos: só o par inglês → português do Brasil foi visto.
+  - os termos de cada tradutor (o Google grátis, que usava um endereço não oficial, saiu
+    do app em 27/11/2026);
+  - a licença de cada modelo do Argos: os pares inglês → português do Brasil e espanhol →
+    inglês vêm do OPUS-MT (CC-BY 4.0); os outros pares não foram vistos.
 
 ## 1. Bibliotecas que vão no instalador
 
@@ -88,7 +89,7 @@ A lista completa, com versão e licença de cada uma das 137, está no anexo, no
 | PP-OCRv6 small (RapidOCR) | Dentro do instalador | Apache-2.0 (código e modelos) | Sim, em 16/11 ([comparação de motores](comparacao-motores-ocr.md)) |
 | Detector CRAFT e leitores do EasyOCR | Baixados pelo próprio EasyOCR na 1ª vez que a língua é usada | O código do EasyOCR é Apache-2.0, e o do CRAFT, da NAVER, é MIT. A licença dos pesos não está escrita numa fonte primária | **A conferir** |
 | bert-base-uncased | Baixado do Hugging Face na 1ª vez que a correção por contexto é ligada | Apache-2.0, pela marcação do repositório do modelo, que tem um arquivo `LICENSE` | Em parte: o texto do arquivo não foi lido |
-| Modelos do Argos Translate | Baixados do índice do Argos na 1ª tradução de cada par | O par inglês → português do Brasil, baixado neste PC, diz que vem do OPUS-MT e que o original é CC-BY 4.0, que exige dar o crédito. Os outros pares não foram vistos | Só esse par |
+| Modelos do Argos Translate | Baixados do índice do Argos na 1ª tradução de cada par | Os pares inglês → português do Brasil e espanhol → inglês, baixados neste PC, dizem que vêm do OPUS-MT (Jörg Tiedemann e Santhosh Thottingal, Universidade de Helsinque) e que o original é CC-BY 4.0, que exige dar o crédito. O crédito está no README e na descrição do motor offline, na tela de configurações (27/11). Os outros pares não foram vistos | Esses dois pares |
 | PyTorch com CUDA (pacote de GPU) | Baixado do site oficial do PyTorch, se o usuário pedir | BSD-3-Clause; traz bibliotecas da NVIDIA, que têm licença própria | **A conferir** a parte da NVIDIA |
 
 Só o PP-OCRv6 vai dentro do instalador. Os outros o próprio usuário baixa da fonte oficial
@@ -98,7 +99,7 @@ quando usa, o que é diferente de o app redistribuir os arquivos.
 
 | Serviço | Quem tem o contrato | O que se sabe |
 |---|---|---|
-| **Google Tradutor grátis** | Ninguém: não há contrato de API | O app pede a tradução à página do Google Tradutor (até 26/11, pelo deep-translator), que não é uma API oficial. Os termos de serviço do Google de 2017 a 2020 proibiam acessar os serviços por outro meio que não a interface e as instruções do próprio Google; o texto atual não foi conferido. O app já trata o bloqueio: depois de um CAPTCHA, o Google fica de fora 10 minutos, e a pausa dobra a cada bloqueio seguido, até 6 horas. O app não contorna o CAPTCHA nem se passa por navegador. **É o ponto mais frágil para vender** |
+| **Google Tradutor grátis** | Ninguém: não havia contrato de API | **Saiu do app em 27/11/2026**, para o app poder ser vendido sem depender dele. O app pedia a tradução à página do Google Tradutor (até 26/11, pelo deep-translator), que não é uma API oficial. Os termos de serviço do Google de 2017 a 2020 proibiam acessar os serviços por outro meio que não a interface e as instruções do próprio Google; o texto atual não foi conferido. O app já trata o bloqueio: depois de um CAPTCHA, o Google fica de fora 10 minutos, e a pausa dobra a cada bloqueio seguido, até 6 horas. O app não contorna o CAPTCHA nem se passa por navegador. **É o ponto mais frágil para vender** |
 | **Azure Translator** | O usuário, com a chave dele | O app só chama a API em nome do usuário. Os termos não foram lidos para este doc |
 | **DeepL API** | O usuário, com a chave dele | Os termos dos serviços grátis do DeepL dizem que o texto pode ser usado para treinar os modelos e proíbem conteúdo confidencial ou pessoal. O documento específico da API Free não foi lido |
 | **Google Cloud Translation** | O usuário, com a chave dele | Os termos não foram lidos para este doc |
@@ -125,7 +126,7 @@ As ferramentas de desenvolvimento (Pylint, Pyright, Git) não vão para o usuár
 - quem compra tem direito ao código-fonte, sob a mesma licença, e pode redistribuí-lo; o
   repositório público é o jeito usual de entregar o código;
 - os avisos de licença das bibliotecas e os créditos exigidos (como o CC-BY dos modelos do
-  OPUS-MT) têm de ir junto. Hoje o instalador leva só parte dos arquivos de licença das
+  OPUS-MT, que desde 27/11 está no README e na tela de configurações) têm de ir junto. Hoje o instalador leva só parte dos arquivos de licença das
   bibliotecas: um arquivo de avisos de terceiros no instalador resolveria isso.
 
 **Uma versão fechada exigiria, no mínimo:**
@@ -140,10 +141,10 @@ As ferramentas de desenvolvimento (Pylint, Pyright, Git) não vão para o usuár
 1. Tirar do instalador as bibliotecas que vão sem uso (seção 1), refazendo e testando o
    instalador.
 2. Pôr no instalador um arquivo de avisos de terceiros, com as licenças e os créditos.
-3. Conferir na fonte: os pesos do EasyOCR, os termos do Google, da Azure, do DeepL e do
-   Google Cloud, os modelos do Argos que o app baixa e as bibliotecas da NVIDIA do pacote
+3. Conferir na fonte: os pesos do EasyOCR, os termos da Azure, do DeepL e do Google
+   Cloud, os modelos do Argos que o app baixa e as bibliotecas da NVIDIA do pacote
    de GPU.
-4. Decidir o que fazer com o Google grátis numa versão paga.
+4. O Google grátis numa versão paga: resolvido em 27/11/2026, quando ele saiu do app.
 
 ## Fontes
 

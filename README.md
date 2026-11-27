@@ -24,16 +24,17 @@ It captures the part of the screen under a transparent window, reads the text wi
 - **Cleans up the OCR output:** separates words that the OCR glued together (`DMGto` → `DMG to`, `ofincoming` → `of incoming`) before translating.
 - **Keeps the layout of the text:** titles, paragraphs, menu options and effect lines stay on their own lines in the translation, while sentences that only wrapped to fit the box are translated as a whole. Side-by-side panels, character sheets and grids are read one column at a time, and menu buttons and tabs on the same line become separate items.
 - **80+ languages** for translation.
-- **Choose your translation engine:** free Google Translate, the official Azure, DeepL and Google Cloud APIs with your own key, or a fully offline mode.
-- **Automatic fallback:** if the chosen engine fails or hits its limit, the app tries the next one.
+- **Choose your translation engine:** the official Azure, DeepL and Google Cloud APIs with your own key (all three have a free monthly tier), or a fully offline mode that needs no account.
+- **Automatic fallback:** if the chosen engine fails or hits its limit, the app tries your other engines that have a key, then the offline mode. If you chose offline, the text never leaves your PC.
 - **Lives in the system tray:** show or hide the overlay at any time without closing the app.
 
 ## 🎮 How to use
 
 1. Open the app. The overlay window appears on top of everything.
-2. Drag it over the text you want to translate. Use the bottom-right corner to resize it.
-3. Click **Traduzir Área** (Translate Area). The translation appears inside the overlay.
-4. Click **⚙️** to change the languages and the translation engine.
+2. The first time, the app asks how to translate: the free Azure tier (recommended), offline, or another key you already have.
+3. Drag it over the text you want to translate. Use the bottom-right corner to resize it.
+4. Click **Traduzir Área** (Translate Area). The translation appears inside the overlay.
+5. Click **⚙️** to change the languages and the translation engine.
 
 The tray icon shows or hides the overlay and closes the app.
 
@@ -43,7 +44,6 @@ The tray icon shows or hides the overlay and closes the app.
 
 | Engine                         | Account needed | Free tier                               | Notes                                                       |
 | :----------------------------- | :------------- | :-------------------------------------- | :---------------------------------------------------------- |
-| **Google Translate**           | No             | Free                                    | Unofficial endpoint. Google may block your whole network with a captcha for hours or days; the app then leaves it out for 10 minutes, doubling up to 6 hours, and uses the next engine. It does not try to get past the captcha |
 | **Microsoft Azure Translator** | Yes            | 2 million characters/month (F0 plan)    | Largest free quota of the official APIs                     |
 | **DeepL**                      | Yes            | 500,000 characters/month (API Free)     | Free keys end in `:fx`                                      |
 | **Google Cloud Translation**   | Yes            | 500,000 characters/month (US$10 credit) | Requires billing enabled; set a budget alert                |
@@ -51,7 +51,8 @@ The tray icon shows or hides the overlay and closes the app.
 
 The settings screen has the sign-up link for each service, a field for the key and a **Testar** (Test) button.
 
-- **Fallback order:** the engine you chose → Google Translate → Offline.
+- **Fallback order:** the engine you chose → your other engines with a key → Offline. If you chose Offline, it is the only one.
+- **No unofficial engines:** the free Google Translate bridge (the website, used without an API) was removed on 27/11/2026. It is not an official API, and Google blocks whole networks with a captcha.
 - **Monthly usage and cost guard:** the settings screen shows how much of the free tier you used this month. DeepL reports it officially through its API; for Azure and Google Cloud, which don't report usage through the key, the app counts the characters it sends from your PC. With **"Parar ao chegar no limite grátis do mês"** on (the default), the app stops using Azure and Google Cloud when the next text would go past the free tier, and uses the fallback engines until the month changes.
 - **Extra protection on Google Cloud:** set a daily character quota in the Cloud Console (around 16,000 per day ≈ 500,000 per month). Past it, Google refuses instead of charging, and the app falls back automatically.
 - **Your keys stay on your PC:** they are saved in `%APPDATA%\RealTimeScreenTranslator\config.json`, encrypted with Windows DPAPI (only your Windows account on that PC can read them), and are only sent to the service they belong to.
@@ -152,12 +153,16 @@ The project is written in **Python** and uses these libraries for image processi
 | **Screen capture**    | [MSS](https://pypi.org/project/mss/)                                                                        |
 | **OCR**               | [RapidOCR](https://pypi.org/project/rapidocr/) ([PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR) models on [ONNX Runtime](https://onnxruntime.ai/)), [EasyOCR](https://pypi.org/project/easyocr/) & [PyTorch](https://pytorch.org/) for the other scripts, [OpenCV](https://pypi.org/project/opencv-python-headless/) |
 | **Text cleanup**      | [pyspellchecker](https://pypi.org/project/pyspellchecker/)                                                  |
-| **Translation**       | The Google Translate web page and the official REST APIs, via [Requests](https://pypi.org/project/requests/) |
+| **Translation**       | The official REST APIs, via [Requests](https://pypi.org/project/requests/); offline, [Argos Translate](https://github.com/argosopentech/argos-translate) |
 | **Offline translation** | [Argos Translate](https://pypi.org/project/argostranslate/)                                               |
 | **Distribution**      | [PyInstaller](https://www.pyinstaller.org/)                                                                 |
 | **Installer**         | [NSIS](https://nsis.sourceforge.io/)                                                                        |
 
 Every library and program the project has used or tested, and why each one stayed or left, is in [docs/bibliotecas-e-ferramentas.md](docs/bibliotecas-e-ferramentas.md) (in Portuguese).
+
+## 🙏 Credits
+
+The offline translation models that the app downloads through Argos Translate are derived from OPUS-MT, by the University of Helsinki (Jörg Tiedemann and Santhosh Thottingal, "OPUS-MT — Building open translation services for the World", EAMT 2020), and licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 
 ## 📄 License
 

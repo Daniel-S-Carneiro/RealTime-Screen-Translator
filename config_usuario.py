@@ -18,7 +18,8 @@ from pathlib import Path
 PASTA_CONFIG = Path(os.environ.get("APPDATA", Path.home())) / "RealTimeScreenTranslator"
 ARQUIVO_CONFIG = PASTA_CONFIG / "config.json"
 
-CONFIG_PADRAO = {"motor": "google_web", "credenciais": {}}
+# Sem chave, o app traduz offline (até 27/11/2026, o padrão era o Google Tradutor grátis)
+CONFIG_PADRAO = {"motor": "offline", "credenciais": {}}
 
 # Impede o Windows de abrir uma janela pedindo confirmação ao criptografar
 CRYPTPROTECT_UI_FORBIDDEN = 0x1

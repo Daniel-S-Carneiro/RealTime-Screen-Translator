@@ -19,7 +19,13 @@ from PySide6.QtCore import Qt, Signal
 import aceleracao_gpu
 from config_usuario import carregar_config, salvar_config
 from gerenciador_idiomas import JanelaGerenciarIdiomas
-from motores_traducao import MOTORES, ErroMotor, consultar_uso_deepl, traduzir_com
+from motores_traducao import (
+    MOTORES,
+    ErroMotor,
+    consultar_uso_deepl,
+    motor_valido,
+    traduzir_com,
+)
 import uso_motores
 
 ROTULOS_CAMPOS = {"chave": "Chave:", "regiao": "Região:"}
@@ -286,7 +292,8 @@ class JanelaConfiguracao(QWidget):  # pylint: disable=too-many-instance-attribut
         self.combo_motor.setMinimumContentsLength(12)
         for codigo, info in MOTORES.items():
             self.combo_motor.addItem(info.nome, codigo)
-        self.combo_motor.setCurrentIndex(max(self.combo_motor.findData(config["motor"]), 0))
+        motor = motor_valido(config["motor"], self.credenciais)
+        self.combo_motor.setCurrentIndex(max(self.combo_motor.findData(motor), 0))
         self.label_descricao_motor = QLabel()
         self.label_links_motor = QLabel()
         self.campos_motor: dict[str, tuple] = {}  # campo -> (linha, QLineEdit)
@@ -493,6 +500,12 @@ class JanelaConfiguracao(QWidget):  # pylint: disable=too-many-instance-attribut
             f"para baixar o modelo. O app continua lendo {self.combo_origem.currentText()}."
         )
         self.label_aviso_origem.show()
+
+    def selecionar_motor(self, motor: str) -> None:
+        """Deixa o motor escolhido na lista (usado pelo guia da primeira execução)."""
+        indice = self.combo_motor.findData(motor)
+        if indice >= 0:
+            self.combo_motor.setCurrentIndex(indice)
 
     def _guardar_campo(self, campo: str, valor: str) -> None:
         """Guarda o que o usuário digitou na chave/região do motor escolhido."""

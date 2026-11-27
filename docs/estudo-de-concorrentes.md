@@ -173,9 +173,11 @@ montagem do texto é o que só nós temos. Nada aqui mexe nos módulos de leitur
    429 e a página de captcha do Google (`google.com/sorry`): o IP da rede está bloqueado, e
    nenhuma biblioteca muda isso. O motor ganha tempo limite, reconhece o bloqueio mesmo
    quando ele vem como resposta normal, espera o tempo que o Google indicar e diz ao
-   usuário o que fazer. O app não contorna o captcha nem se passa por navegador.
+   usuário o que fazer. O app não contorna o captcha nem se passa por navegador. Em 27/11,
+   o dono do projeto decidiu tirar o Google grátis de vez: ele não é API oficial, e o app
+   pode ser vendido.
 8. **Primeira execução guiada** para um motor que não bloqueia: a chave grátis da Azure (2
-   milhões de caracteres por mês) ou o modo offline.
+   milhões de caracteres por mês) ou o modo offline. Feito em 27/11 (`guia_inicial.py`).
 
 **Bloco 2, a qualidade da tradução:**
 1. **LLMs com chave própria**, por uma API no padrão da OpenAI. Uma integração só cobre
