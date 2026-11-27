@@ -11,12 +11,17 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QFrame,
+    QGridLayout,
+    QKeySequenceEdit,
     QLineEdit,
     QPushButton,
     QScrollArea,
 )
 from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QKeySequence
 import aceleracao_gpu
+import atalhos
+import preferencias
 from config_usuario import carregar_config, salvar_config
 from gerenciador_idiomas import JanelaGerenciarIdiomas
 from motores_traducao import (
@@ -74,7 +79,7 @@ class SecaoUso(QWidget):
         self.check_trava = QCheckBox("Parar ao chegar no limite grátis do mês")
         self.check_trava.setToolTip(
             "Vale para o Azure e o Google Cloud. Ao chegar no limite, o app usa as "
-            "reservas (Google grátis e Offline) até o mês virar."
+            "reservas (os outros motores com chave e o Offline) até o mês virar."
         )
         self.check_trava.setStyleSheet("color: #DDD; font-size: 12px;")
         self.check_trava.setChecked(uso_motores.trava_ligada())
@@ -262,6 +267,104 @@ class SecaoGpu(QWidget):
         self.atualizar()
 
 
+class SecaoAtalhos(QWidget):
+    """Seção "Atalhos e janela": os atalhos globais e a janela fora da captura.
+
+    Lê e grava o preferencias.json; o overlay registra os atalhos quando a tela de
+    configurações fecha.
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(8)
+
+        titulo = QLabel("Atalhos e janela")
+        titulo.setStyleSheet("color: white; font-size: 14px; font-weight: bold; border: none;")
+        layout.addWidget(titulo)
+
+        ajuda = QLabel(
+            "Os atalhos funcionam com o jogo em primeiro plano. Clique no campo e aperte a "
+            "combinação; o X do campo tira o atalho."
+        )
+        ajuda.setWordWrap(True)
+        ajuda.setStyleSheet(ESTILO_TEXTO_AJUDA)
+        layout.addWidget(ajuda)
+
+        grade = QGridLayout()
+        self.campos: dict[str, QKeySequenceEdit] = {}
+        for linha, (acao, nome) in enumerate(atalhos.ACOES.items()):
+            rotulo = QLabel(nome)
+            rotulo.setStyleSheet("color: #DDD; font-size: 13px; border: none;")
+            campo = QKeySequenceEdit()
+            campo.setMaximumSequenceLength(1)
+            campo.setClearButtonEnabled(True)
+            grade.addWidget(rotulo, linha, 0)
+            grade.addWidget(campo, linha, 1)
+            self.campos.update({acao: campo})
+        layout.addLayout(grade)
+
+        self.check_captura = QCheckBox("Esconder a janela de prints e transmissões")
+        self.check_captura.setToolTip(
+            "Assim o app lê o jogo sem ler a própria tradução, e a janela não pisca a cada "
+            "leitura. Desligue se quiser mostrar a tradução numa transmissão ou gravação: aí "
+            "a janela some por um instante a cada leitura, como no Windows anterior ao 10 "
+            "versão 2004."
+        )
+        self.check_captura.setStyleSheet("color: #DDD; font-size: 12px;")
+        layout.addWidget(self.check_captura)
+
+        self.aviso = QLabel()
+        self.aviso.setWordWrap(True)
+        self.aviso.setStyleSheet("color: #FFB74D; font-size: 12px; border: none;")
+        self.aviso.hide()
+        layout.addWidget(self.aviso)
+        self.carregar()
+
+    def carregar(self) -> None:
+        """Mostra o que está salvo (desfaz o que foi mudado sem salvar)."""
+        prefs = preferencias.carregar()
+        for acao, campo in self.campos.items():
+            campo.setKeySequence(QKeySequence.fromString(
+                prefs["atalhos"].get(acao, ""), QKeySequence.SequenceFormat.PortableText
+            ))
+        self.check_captura.setChecked(prefs["fora_da_captura"])
+
+    def ler(self) -> dict:
+        """As preferências como estão na tela."""
+        return {
+            "atalhos": {
+                acao: campo.keySequence().toString(QKeySequence.SequenceFormat.PortableText)
+                for acao, campo in self.campos.items()
+            },
+            "fora_da_captura": self.check_captura.isChecked(),
+        }
+
+    def validar_e_salvar(self) -> bool:
+        """Grava as preferências; com um atalho que não dá para usar, avisa e não grava."""
+        prefs = self.ler()
+        encontrados = atalhos.problemas(prefs["atalhos"])
+        if encontrados:
+            self.mostrar_falhas(encontrados)
+            return False
+        try:
+            preferencias.salvar(prefs)
+        except OSError as erro:
+            self.aviso.setText(f"Não consegui salvar os atalhos: {erro}")
+            self.aviso.show()
+            return False
+        self.aviso.hide()
+        return True
+
+    def mostrar_falhas(self, falhas: dict) -> None:
+        """Os atalhos com problema, {ação: motivo}; sem nenhum, o aviso some."""
+        self.aviso.setText("\n".join(
+            f"{atalhos.ACOES.get(acao, acao)}: {motivo}." for acao, motivo in falhas.items()
+        ))
+        self.aviso.setVisible(bool(falhas))
+
+
 class JanelaConfiguracao(QWidget):  # pylint: disable=too-many-instance-attributes
     """Componente isolado para a interface de configurações."""
 
@@ -301,6 +404,8 @@ class JanelaConfiguracao(QWidget):  # pylint: disable=too-many-instance-attribut
         self.label_teste = QLabel()
         self.label_aviso_origem = QLabel()
         self.secao_uso = SecaoUso()
+        self.secao_atalhos = SecaoAtalhos()
+        self.rolagem = QScrollArea()
 
         # Dados Padrão (Top 10)
         self.top_10 = {
@@ -340,16 +445,8 @@ class JanelaConfiguracao(QWidget):  # pylint: disable=too-many-instance-attribut
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(10)
 
-        rolagem = QScrollArea()
-        rolagem.setWidgetResizable(True)
-        rolagem.setFrameShape(QFrame.Shape.NoFrame)
-        rolagem.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        rolagem.setStyleSheet(
-            "QScrollArea, QWidget#qt_scrollarea_viewport, QWidget#conteudoConfig "
-            "{ background: transparent; border: none; }"
-        )
-        rolagem.setWidget(conteudo)
-        layout_raiz.addWidget(rolagem)
+        self._montar_rolagem(conteudo)
+        layout_raiz.addWidget(self.rolagem)
 
         label_titulo = QLabel("Configurações do Tradutor")
         label_titulo.setStyleSheet(
@@ -383,6 +480,7 @@ class JanelaConfiguracao(QWidget):  # pylint: disable=too-many-instance-attribut
         layout.addWidget(btn_add)
 
         self._montar_secao_motor(layout)
+        layout.addWidget(self.secao_atalhos)
         layout.addWidget(SecaoGpu())
 
         layout.addStretch()
@@ -399,9 +497,26 @@ class JanelaConfiguracao(QWidget):  # pylint: disable=too-many-instance-attribut
 
         layout_raiz.addLayout(layout_botoes)
 
+    def _montar_rolagem(self, conteudo: QWidget) -> None:
+        """A área que rola, transparente, com o conteúdo da tela dentro."""
+        self.rolagem.setWidgetResizable(True)
+        self.rolagem.setFrameShape(QFrame.Shape.NoFrame)
+        self.rolagem.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.rolagem.setStyleSheet(
+            "QScrollArea, QWidget#qt_scrollarea_viewport, QWidget#conteudoConfig "
+            "{ background: transparent; border: none; }"
+        )
+        self.rolagem.setWidget(conteudo)
+
     def _salvar(self) -> None:
-        """Grava o motor e as chaves no config do usuário e aplica tudo no app."""
+        """Grava o motor e as chaves no config do usuário e aplica tudo no app.
+
+        Um atalho que não dá para usar barra o salvamento inteiro, com o aviso à vista.
+        """
         self.label_aviso_origem.hide()
+        if not self.secao_atalhos.validar_e_salvar():
+            self.rolagem.ensureWidgetVisible(self.secao_atalhos.aviso)
+            return
         motor = self.combo_motor.currentData()
         salvar_config(motor, self.credenciais)
         uso_motores.definir_trava(self.secao_uso.check_trava.isChecked())
@@ -501,6 +616,10 @@ class JanelaConfiguracao(QWidget):  # pylint: disable=too-many-instance-attribut
         )
         self.label_aviso_origem.show()
 
+    def mostrar_falhas_atalhos(self, falhas: dict) -> None:
+        """Os atalhos que o Windows recusou ao registrar, {ação: motivo}."""
+        self.secao_atalhos.mostrar_falhas(falhas)
+
     def selecionar_motor(self, motor: str) -> None:
         """Deixa o motor escolhido na lista (usado pelo guia da primeira execução)."""
         indice = self.combo_motor.findData(motor)
@@ -545,6 +664,7 @@ class JanelaConfiguracao(QWidget):  # pylint: disable=too-many-instance-attribut
         super().showEvent(event)
         self.secao_uso.check_trava.setChecked(uso_motores.trava_ligada())
         self.secao_uso.mostrar(self.combo_motor.currentData(), self.credenciais)
+        self.secao_atalhos.carregar()
 
     def _criar_combo(self) -> QComboBox:
         """Cria e preenche um QComboBox com as línguas do sistema."""

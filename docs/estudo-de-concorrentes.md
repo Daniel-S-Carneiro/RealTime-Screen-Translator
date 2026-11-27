@@ -159,9 +159,13 @@ montagem do texto é o que só nós temos. Nada aqui mexe nos módulos de leitur
 
 **Bloco 1, usar sem sair do jogo:**
 1. **Atalhos globais**, configuráveis: traduzir, ligar e desligar o modo automático,
-   mostrar ou esconder, limpar.
+   mostrar ou esconder, limpar. Feito em 27/11 (`atalhos.py`), menos o do modo
+   automático, que entra com ele. Os padrões são Ctrl+Alt+T, Ctrl+Alt+H e Ctrl+Alt+L, e o
+   jogo não perde o foco.
 2. **A janela fora da captura.** É o que deixa o modo automático ler a tela sem ler a
-   própria tradução, e acaba com o piscar da janela a cada captura.
+   própria tradução, e acaba com o piscar da janela a cada captura. Feito em 27/11
+   (`SetWindowDisplayAffinity`), ligado por padrão; quem transmite pode desligar, e aí a
+   janela volta a sumir a cada leitura.
 3. **Modo automático:** compara a área com a captura anterior e só roda o OCR quando a
    imagem muda; espera o texto ficar estável; não traduz de novo a mesma linha; uma
    resposta atrasada não apaga a nova.

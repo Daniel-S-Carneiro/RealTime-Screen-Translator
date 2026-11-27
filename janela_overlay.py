@@ -7,11 +7,13 @@ módulo numa thread, enquanto a tela de carregamento já está aparecendo.
 # pylint: disable=no-member
 
 # 1. Imports da Biblioteca Padrão (Standard Library)
+import ctypes
 import os
 import sys
 import threading
 import traceback
 import warnings
+from ctypes import wintypes
 from datetime import datetime
 
 from typing import Optional
@@ -40,7 +42,9 @@ from PySide6.QtWidgets import (
 
 # 3. Imports Locais do Projeto (Local Application)
 import aceleracao_gpu
+import atalhos
 import guia_inicial
+import preferencias
 from config_usuario import salvar_config
 from motores_traducao import MOTORES, SEM_CHAVE
 from ocr_engine import MotorOCR
@@ -62,6 +66,13 @@ PASTA_DATASET = os.path.join(DIRETORIO_PROJETO, "benchmark", "dataset")
 # Silencia avisos irritantes do PyTorch rodando na CPU
 warnings.filterwarnings("ignore", category=UserWarning, module="torch")
 
+# SetWindowDisplayAffinity: a janela fica de fora dos prints, gravações e transmissões
+# (Windows 10 versão 2004 ou mais novo; nos anteriores, a chamada falha)
+WDA_NONE = 0x00
+WDA_EXCLUDEFROMCAPTURE = 0x11
+# Sem a exclusão, a janela some por este tempo para a captura não pegar a tradução
+ESPERA_JANELA_SUMIR_MS = 300
+
 
 def log_debug(mensagem: str) -> None:
     """Imprime mensagens de log com timestamp apenas se o modo de debug estiver ativado."""
@@ -70,7 +81,18 @@ def log_debug(mensagem: str) -> None:
         print(f"[{agora}] {mensagem}")
 
 
-class OverlayTradutor(QWidget):
+def excluir_da_captura(hwnd: int, excluir: bool) -> bool:
+    """Tira a janela (ou põe de volta) das capturas de tela; devolve se o Windows aceitou."""
+    if sys.platform != "win32":
+        return False
+    user32 = ctypes.windll.user32
+    user32.SetWindowDisplayAffinity.argtypes = [wintypes.HWND, wintypes.DWORD]
+    user32.SetWindowDisplayAffinity.restype = wintypes.BOOL
+    return bool(user32.SetWindowDisplayAffinity(hwnd, WDA_EXCLUDEFROMCAPTURE if excluir
+                                                else WDA_NONE))
+
+
+class OverlayTradutor(QWidget):  # pylint: disable=too-many-instance-attributes
     """Janela de overlay arrastável que alterna entre Tradução e Configurações."""
 
     # Leva o resultado da thread de OCR de volta para a thread da interface
@@ -96,8 +118,15 @@ class OverlayTradutor(QWidget):
         self.tray_icon: Optional[QSystemTrayIcon] = None
         self.tamanho_antes_config: Optional[QSize] = None
 
+        # Atalhos globais e a janela fora da captura (preferencias.json)
+        self.registro_atalhos = atalhos.RegistroDeAtalhos()
+        self.fora_da_captura = False  # o que o Windows aceitou, não só o que foi pedido
+        self._escondida_para_captura = False
+        self._estava_ativa = False
+
         self.init_ui()
         self.init_tray_icon()
+        self.aplicar_preferencias()
         # pylint: disable=no-member
         self.traducao_concluida.connect(self._exibir_resultado)
         # Depois que a janela aparece: na primeira execução, pergunta como traduzir
@@ -121,6 +150,62 @@ class OverlayTradutor(QWidget):
             if escolha == guia_inicial.AZURE and self.widget_config:
                 self.widget_config.selecionar_motor("azure")
             self.ir_para_configuracao()
+
+    def aplicar_preferencias(self) -> None:
+        """Lê o preferencias.json: tira a janela da captura e registra os atalhos.
+
+        Os atalhos que o Windows recusar (em geral, já usados por outro programa) aparecem
+        num aviso da bandeja e na tela de configurações.
+        """
+        prefs = preferencias.carregar()
+        hwnd = int(self.winId())
+        pedido = prefs["fora_da_captura"]
+        self.fora_da_captura = excluir_da_captura(hwnd, pedido) and pedido
+        if pedido and not self.fora_da_captura:
+            log_debug("[CAPTURA] O Windows não tirou a janela da captura; ela vai sumir a "
+                      "cada leitura.")
+        falhas = self.registro_atalhos.registrar(hwnd, prefs["atalhos"])
+        if self.widget_config:
+            self.widget_config.mostrar_falhas_atalhos(falhas)
+        if falhas and self.tray_icon:
+            self.tray_icon.showMessage(
+                "Atalhos que não funcionaram",
+                "\n".join(f"{atalhos.ACOES[acao]}: {motivo}" for acao, motivo in falhas.items())
+                + "\nTroque-os nas configurações (⚙).",
+                QSystemTrayIcon.MessageIcon.Warning,
+            )
+
+    def nativeEvent(self, eventType, message):  # pylint: disable=invalid-name
+        """Recebe os atalhos globais (WM_HOTKEY), que o Windows manda para esta janela."""
+        acao = self.registro_atalhos.acao_da_mensagem(bytes(eventType), int(message))
+        if acao is None:
+            return super().nativeEvent(eventType, message)
+        # Fora do tratamento da mensagem: a tradução chama o processEvents
+        QTimer.singleShot(0, lambda: self._executar_atalho(acao))
+        return True, 0
+
+    def _executar_atalho(self, acao: str) -> None:
+        """Faz o que o atalho pede, sem tirar o foco do jogo."""
+        log_debug(f"[ATALHO] {acao}")
+        if acao == "mostrar":
+            if self.isVisible():
+                self.hide()
+            else:
+                self._mostrar_sem_foco()
+        elif acao == "limpar":
+            self.resetar_overlay()
+        elif acao == "traduzir":
+            if self.paginas is not None and self.paginas.currentIndex() != 0:
+                return
+            if not self.isVisible():
+                self._mostrar_sem_foco()
+            self.processar_traducao_local()
+
+    def _mostrar_sem_foco(self) -> None:
+        """Mostra a janela sem ativá-la: o jogo continua recebendo o teclado."""
+        self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating, True)
+        self.show()
+        self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating, False)
 
     def init_ui(self) -> None:
         """Configura a interface gráfica arrastável e empilhada."""
@@ -230,6 +315,8 @@ class OverlayTradutor(QWidget):
     def ir_para_configuracao(self) -> None:
         """Navega para a página de configurações."""
         if self.paginas:
+            # Os atalhos ficam desligados aqui: a tela precisa das teclas para gravá-los
+            self.registro_atalhos.cancelar()
             # As configurações precisam de mais espaço que a tradução; o tamanho
             # original volta em voltar_para_traducao
             self.tamanho_antes_config = self.size()
@@ -350,6 +437,7 @@ class OverlayTradutor(QWidget):
         if self.tamanho_antes_config is not None:
             self.resize(self.tamanho_antes_config)
             self.tamanho_antes_config = None
+        self.aplicar_preferencias()
 
     def montar_pagina_configuracao(self) -> None:
         """Cria o painel de configurações delegando para o arquivo importado."""
@@ -423,11 +511,11 @@ class OverlayTradutor(QWidget):
         self.resize(500, 180)
 
     def processar_traducao_local(self) -> None:
-        """Etapa 1: Calcula a geometria com ajuste de bordas úteis e oculta a janela."""
+        """Etapa 1: calcula a área útil e, se a janela aparece na captura, esconde-a."""
         if self.label_texto is None or self.processando:
             return
 
-        log_debug("[AÇÃO] Botão 'Traduzir Área' clicado! Ocultando overlay...")
+        log_debug("[AÇÃO] Traduzir Área (botão ou atalho)")
 
         # Impede um segundo OCR enquanto o primeiro ainda roda (o motor não é thread-safe)
         self.processando = True
@@ -456,9 +544,27 @@ class OverlayTradutor(QWidget):
             "height": int(altura),
         }
 
+        if self.fora_da_captura:
+            # A captura não vê a janela: lê a tela sem escondê-la, e nada pisca
+            QTimer.singleShot(0, self._executar_print_e_ocr)
+            return
+
+        self._estava_ativa = self.isActiveWindow()
+        self._escondida_para_captura = True
         self.setVisible(False)
         QApplication.processEvents()
-        QTimer.singleShot(300, self._executar_print_e_ocr)
+        QTimer.singleShot(ESPERA_JANELA_SUMIR_MS, self._executar_print_e_ocr)
+
+    def _voltar_depois_da_captura(self) -> None:
+        """Mostra de novo a janela escondida para a captura; o foco só volta se ela o tinha."""
+        if not self._escondida_para_captura:
+            return
+        self._escondida_para_captura = False
+        if self._estava_ativa:
+            self.setVisible(True)
+            self.activateWindow()
+        else:
+            self._mostrar_sem_foco()
 
     def _executar_print_e_ocr(self) -> None:
         """Etapa 2: Tira o print (thread da interface) e dispara o OCR em segundo plano."""
@@ -468,7 +574,7 @@ class OverlayTradutor(QWidget):
             )
 
             # 1. Captura da imagem bruta com MSS (BGRA -> BGR, direto na memória)
-            with mss.mss() as sct:
+            with mss.MSS() as sct:
                 sct_img = sct.grab(self.regiao_alvo)
             imagem = cv2.cvtColor(np.array(sct_img), cv2.COLOR_BGRA2BGR)
 
@@ -481,14 +587,12 @@ class OverlayTradutor(QWidget):
             log_debug(f"[ERRO CRÍTICO] Captura falhou: {str(e)}")
             if DEBUG_MODE:
                 traceback.print_exc()
-            self.setVisible(True)
-            self.activateWindow()
+            self._voltar_depois_da_captura()
             self._exibir_resultado(f"Erro: {str(e)}")
             return
 
         # 2. Restaura interface para o usuário; ela continua respondendo durante o OCR
-        self.setVisible(True)
-        self.activateWindow()
+        self._voltar_depois_da_captura()
 
         threading.Thread(
             target=self._processar_em_segundo_plano,
@@ -524,7 +628,7 @@ class OverlayTradutor(QWidget):
                 self.traducao_concluida.emit("[Nenhum texto detectado]")
                 return
 
-            # Tradução (Deep Translator faz a magia pesada de entender contexto)
+            # Tradução: o motor escolhido e, se ele falhar, as reservas (tradutor_engine)
             log_debug("[PROCESSO] Enviando para o Tradutor...")
             texto_traduzido = self.tradutor.traduzir_texto(texto_final)
             log_debug(f"[RESULTADO TRADUÇÃO] '{texto_traduzido}'")

@@ -29,7 +29,7 @@ projeto e por que ficou ou saiu.
 | Biblioteca | Versão | Para quê | Por que ela |
 |---|---|---|---|
 | **PySide6** (Qt) | 6.11.1 | Janela transparente por cima do jogo, configurações, ícone na bandeja | Desde o começo do projeto. O OCR e a tradução rodam em segundo plano desde 02/11: antes, a janela congelava de 3 a 5 s a cada tradução |
-| **mss** | 10.2.0 | Print da região embaixo da janela | Trocou o `ImageGrab` do Pillow em 02/11. Entrega o print direto na memória; antes, a captura era gravada em disco |
+| **mss** | 10.2.0 | Print da região embaixo da janela | Trocou o `ImageGrab` do Pillow em 02/11. Entrega o print direto na memória; antes, a captura era gravada em disco. Desde 27/11, a janela fica fora da captura (`SetWindowDisplayAffinity`, do Windows) e não some mais 300 ms a cada leitura |
 | **OpenCV** (`opencv-python-headless`) | 4.13.0.92 | Tons de cinza, recortes, a ampliação Lanczos da segunda leitura, o fundo das abas, as quantidades | A versão *headless* não traz janelas, que o app não usa. O RapidOCR e o EasyOCR também dependem dela |
 | **numpy** | 2.4.6 | Contas sobre a imagem e as caixas | Base do OpenCV e dos dois motores |
 
@@ -267,6 +267,7 @@ instalador refeito e testado depois.
 | 25/11 | O app passa a usar as caixas de palavra e as probabilidades do CTC do RapidOCR |
 | 26/11 | Sai o deep-translator: o Google grátis vira um pedido do próprio app à mesma página, com tempo limite e o bloqueio reconhecido |
 | 27/11 | Sai o Google Tradutor grátis: sem chave, o app traduz offline, e a primeira execução pergunta como traduzir |
+| 27/11 | Atalhos globais (`RegisterHotKey`) e a janela fora da captura (`SetWindowDisplayAffinity`), pelas funções do próprio Windows, sem biblioteca nova |
 
 ## Onde estão os detalhes
 
