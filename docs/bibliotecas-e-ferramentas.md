@@ -94,7 +94,7 @@ As regras de parágrafo rodam em qualquer língua e não usam biblioteca de fora
 
 A ordem de reserva é: o motor escolhido, depois os outros pagos que têm chave, depois o Argos. Quem escolhe o Argos fica só com ele, e o texto não sai do PC. Até 27/11, a primeira reserva era o Google grátis.
 
-Em 26/11, o Argos e três modelos offline foram medidos contra os pagos ([Os tradutores, lado a lado](comparacao-tradutores.md)). O Hy-MT2 1.8B (Tencent, Apache 2.0, pelo llama.cpp) ficou como candidato a offline de qualidade; o M2M100 418M e o OPUS-MT en→pt (pelo CTranslate2) ficaram de fora.
+Em 26/11, o Argos e três modelos offline foram medidos contra os pagos ([Os tradutores, lado a lado](comparacao-tradutores.md)). O Hy-MT2 1.8B (Tencent, Apache 2.0, pelo llama.cpp) ficou como candidato a offline de qualidade; o M2M100 418M e o OPUS-MT en→pt (pelo CTranslate2) ficaram de fora. Em 27/11, a velocidade, as placas de vídeo, a memória e a licença do Hy-MT2 foram medidas ([O Hy-MT2 1.8B, avaliado para o app](avaliacao-hymt2.md)): ele pode entrar ao lado do Argos, com o llama.cpp para o processador.
 
 As chaves das APIs ficam no `config.json` do usuário, criptografadas com o DPAPI do Windows,
 chamado direto pelo `ctypes`, sem biblioteca de fora.
