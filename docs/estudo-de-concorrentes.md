@@ -194,10 +194,34 @@ montagem do texto é o que só nós temos. Nada aqui mexe nos módulos de leitur
 2. **Aviso sobre o modo de tela e a antitrapaça**, na primeira execução e no README.
 3. **O nome novo**, se o dono do projeto decidir trocar.
 
+**Bloco de aceleração, separado em 27/11:** testar as placas de vídeo e as bibliotecas de
+aceleração, sempre como opção que se desliga, com o processador como base. Vem depois do
+bloco 1; a ordem dele com os blocos 2 e 3 fica para o dono do projeto decidir.
+1. **No OCR.** O RapidOCR roda no ONNX Runtime, e o OCR é 99,5% do tempo de cada print. O
+   teste mais barato é o OpenVINO, da Intel, porque o motor já vem no pacote do RapidOCR;
+   depois, o `onnxruntime-gpu` com CUDA, o DirectML (em manutenção, substituído pelo
+   Windows ML) e o Windows ML.
+2. **Na tradução offline**, se o Hy-MT2 entrar, pelo llama.cpp: o CUDA, o Vulkan (um só
+   para NVIDIA, AMD e Intel), o SYCL (Intel), o HIP (AMD) e o OpenVINO. As primeiras
+   medidas, num PC só, estão em [O Hy-MT2 1.8B, avaliado para o app](avaliacao-hymt2.md): neste notebook, o
+   processador ganhou de todas as placas.
+3. **No EasyOCR**, o PyTorch com CUDA, que o app já oferece.
+4. **As licenças dos aceleradores**, numa seção nova de `docs/licencas.md`: a licença do
+   código, a do runtime, se a DLL pode ir no instalador e o que o usuário precisa
+   instalar. O que pede mais cuidado é o CUDA: as bibliotecas da NVIDIA podem ser
+   redistribuídas, mas têm licença própria, e o app é GPL-3.0. Uma saída comum é o dono do
+   código acrescentar uma permissão adicional (seção 7 da GPL-3.0) para usá-las; vale
+   confirmar com quem entende de licenças. O Vulkan vem com o driver da placa, e o código
+   dele no llama.cpp é MIT.
+5. **Conferir duas afirmações da resposta do ChatGPT de 27/11:** que o HIP SDK 7.2, da
+   AMD, documenta só o Windows 11, e que o compilador oneAPI 2026.2, da Intel, deixou o
+   Windows 10.
+
 **Para depois da primeira build:** várias áreas; a tradução sobre cada linha, na posição
 do original; a tela inteira; o controle; a leitura em voz; um modelo offline melhor que o
 Argos. O candidato medido é o Hy-MT2 1.8B ([Os tradutores, lado a
-lado](comparacao-tradutores.md)). **Fora, por ora:** a legenda da voz do jogo, a dublagem, o
+lado](comparacao-tradutores.md)); em 27/11, [O Hy-MT2 1.8B, avaliado para o app](avaliacao-hymt2.md) mostrou que ele pode
+entrar ao lado do Argos, como um segundo offline de download opcional. **Fora, por ora:** a legenda da voz do jogo, a dublagem, o
 OCR por IA de visão, o hook, o estudo de língua e o Steam Deck.
 
 Cada build é medida no benchmark antes de sair, como ficou combinado: a que piorar as

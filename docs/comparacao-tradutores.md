@@ -178,6 +178,12 @@ Com 0,66 s por linha no processador, uma tela de 10 linhas leva uns 7 s no Hy-MT
 próxima medida dele é com a GPU (a MX350 tem 2 GB, e o llama.cpp roda com CUDA ou
 Vulkan) e com a tela inteira num pedido só, em vez de um pedido por linha.
 
+**Feita em 27/11** ([O Hy-MT2 1.8B, avaliado para o app](avaliacao-hymt2.md)): o melhor modo
+é mandar as linhas da tela em 4 pedidos ao mesmo tempo (0,50 s por linha, 4,5 s na
+mediana dos prints); a tela num pedido só quase não ganha e, às vezes, junta duas linhas;
+e, neste PC, nenhuma placa de vídeo ganha do processador, porque a MX350 está freada pela
+temperatura do notebook.
+
 ## As ressalvas
 
 - **As notas são minhas.** A avaliação foi cega, com um avaliador nas 132 linhas. O dono
@@ -196,7 +202,8 @@ Vulkan) e com a tela inteira num pedido só, em vez de um pedido por linha.
 1. **No app, por enquanto, nada.** Os pagos continuam sendo a melhor escolha, e o Argos,
    o offline leve.
 2. **O Hy-MT2 é o candidato a offline de qualidade**, para download opcional, depois das
-   medidas com a GPU e com a tela num pedido só. A licença (Apache 2.0) permite vender o
+   medidas com a GPU e com a tela num pedido só (feitas em 27/11, em
+   [O Hy-MT2 1.8B, avaliado para o app](avaliacao-hymt2.md)). A licença (Apache 2.0) permite vender o
    app com ele.
 3. **O M2M100 e o OPUS-MT ficam de fora.**
 4. **A instrução para os LLMs** (bloco 2) deve pedir "turnos" e os termos de jogo, e
