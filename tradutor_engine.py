@@ -4,26 +4,36 @@ import time
 from typing import Optional
 
 import uso_motores
-from motores_traducao import MOTORES, ErroMotor, traduzir_com
-
-# Se o motor escolhido falhar, tenta estes, nesta ordem
-RESERVAS = ("google_web", "offline")
+from motores_traducao import (
+    MOTORES,
+    PAGOS,
+    SEM_CHAVE,
+    ErroMotor,
+    motor_valido,
+    tem_chave,
+    traduzir_com,
+)
 
 
 class MotorTradutor:
-    """Traduz com o motor escolhido nas configurações e usa as reservas se ele falhar."""
+    """Traduz com o motor escolhido nas configurações e usa as reservas se ele falhar.
+
+    As reservas são os outros motores pagos que têm chave (cada um dentro da trava de custo)
+    e, por último, o offline. Até 27/11/2026, a primeira reserva era o Google Tradutor
+    grátis, que saiu do app.
+    """
 
     def __init__(
         self,
         origem: str = "en",
         destino: str = "pt",
-        motor: str = "google_web",
+        motor: str = SEM_CHAVE,
         credenciais: Optional[dict] = None,
     ) -> None:
         """Inicializa o tradutor com os idiomas e o motor definidos."""
         self.origem = origem
         self.destino = destino
-        self.motor = "google_web"
+        self.motor = SEM_CHAVE
         self.credenciais: dict = {}
         # Motor -> até quando (time.monotonic) ele fica de fora depois de bloqueio ou cota
         self._pausado_ate: dict = {}
@@ -31,10 +41,20 @@ class MotorTradutor:
 
     def configurar(self, motor: str, credenciais: dict) -> None:
         """Troca o motor e as chaves (chamado ao salvar as configurações)."""
-        self.motor = motor if motor in MOTORES else "google_web"
+        self.motor = motor_valido(motor, credenciais)
         self.credenciais = credenciais
         # Chave nova merece uma nova chance
         self._pausado_ate.clear()
+
+    def ordem(self) -> list:
+        """O motor escolhido, os outros pagos com chave e o offline, nesta ordem.
+
+        Quem escolheu o offline fica só com ele: o texto não sai do PC.
+        """
+        if self.motor == SEM_CHAVE:
+            return [SEM_CHAVE]
+        reservas = [m for m in PAGOS if m != self.motor and tem_chave(m, self.credenciais)]
+        return [self.motor] + reservas + [SEM_CHAVE]
 
     def traduzir_texto(self, texto: str) -> str:
         """
@@ -50,7 +70,7 @@ class MotorTradutor:
             return ""
 
         motivos = []
-        for motor in [self.motor] + [m for m in RESERVAS if m != self.motor]:
+        for motor in self.ordem():
             nome = MOTORES[motor].nome_curto
             if time.monotonic() < self._pausado_ate.get(motor, 0.0):
                 motivos.append(f"{nome}: em pausa depois de um bloqueio")

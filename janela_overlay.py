@@ -40,7 +40,9 @@ from PySide6.QtWidgets import (
 
 # 3. Imports Locais do Projeto (Local Application)
 import aceleracao_gpu
-from motores_traducao import MOTORES
+import guia_inicial
+from config_usuario import salvar_config
+from motores_traducao import MOTORES, SEM_CHAVE
 from ocr_engine import MotorOCR
 from tradutor_engine import MotorTradutor
 from interface_config import JanelaConfiguracao
@@ -98,6 +100,27 @@ class OverlayTradutor(QWidget):
         self.init_tray_icon()
         # pylint: disable=no-member
         self.traducao_concluida.connect(self._exibir_resultado)
+        # Depois que a janela aparece: na primeira execução, pergunta como traduzir
+        QTimer.singleShot(400, self.mostrar_guia_se_preciso)
+
+    def mostrar_guia_se_preciso(self) -> None:
+        """Na primeira execução (ou com um motor que saiu do app), pergunta como traduzir.
+
+        O offline já fica salvo; a Azure e a outra chave abrem as configurações, e o guia
+        só some quando a pessoa salvar ali.
+        """
+        if not guia_inicial.precisa_do_guia():
+            return
+        escolha = guia_inicial.perguntar(self)
+        if escolha == guia_inicial.OFFLINE:
+            salvar_config(SEM_CHAVE, self.tradutor.credenciais)
+            self.tradutor.configurar(SEM_CHAVE, self.tradutor.credenciais)
+            if self.widget_config:
+                self.widget_config.selecionar_motor(SEM_CHAVE)
+        elif escolha in (guia_inicial.AZURE, guia_inicial.OUTRA_CHAVE):
+            if escolha == guia_inicial.AZURE and self.widget_config:
+                self.widget_config.selecionar_motor("azure")
+            self.ir_para_configuracao()
 
     def init_ui(self) -> None:
         """Configura a interface gráfica arrastável e empilhada."""
