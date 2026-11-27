@@ -193,8 +193,9 @@ montagem do texto é o que só nós temos. Nada aqui mexe nos módulos de leitur
 3. **O nome novo**, se o dono do projeto decidir trocar.
 
 **Para depois da primeira build:** várias áreas; a tradução sobre cada linha, na posição
-do original; a tela inteira; o controle; a leitura em voz; modelos offline melhores que o
-Argos (NLLB, TranslateGemma). **Fora, por ora:** a legenda da voz do jogo, a dublagem, o
+do original; a tela inteira; o controle; a leitura em voz; um modelo offline melhor que o
+Argos. O candidato medido é o Hy-MT2 1.8B ([Os tradutores, lado a
+lado](comparacao-tradutores.md)). **Fora, por ora:** a legenda da voz do jogo, a dublagem, o
 OCR por IA de visão, o hook, o estudo de língua e o Steam Deck.
 
 Cada build é medida no benchmark antes de sair, como ficou combinado: a que piorar as

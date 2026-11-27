@@ -94,6 +94,8 @@ As regras de parágrafo rodam em qualquer língua e não usam biblioteca de fora
 
 A ordem de reserva é: o motor escolhido, depois o Google grátis, depois o Argos.
 
+Em 26/11, o Argos e três modelos offline foram medidos contra os pagos ([Os tradutores, lado a lado](comparacao-tradutores.md)). O Hy-MT2 1.8B (Tencent, Apache 2.0, pelo llama.cpp) ficou como candidato a offline de qualidade; o M2M100 418M e o OPUS-MT en→pt (pelo CTranslate2) ficaram de fora.
+
 As chaves das APIs ficam no `config.json` do usuário, criptografadas com o DPAPI do Windows,
 chamado direto pelo `ctypes`, sem biblioteca de fora.
 
